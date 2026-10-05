@@ -1,0 +1,758 @@
+{
+  "@@locale": "fa",
+  "appName": "زرین هوشمند",
+  "appTagline": "پلتفرم هوشمند بهینه‌سازی هتل",
+  "demoBadge": "نسخه نمایشی",
+  "retry": "تلاش دوباره",
+  "cancel": "انصراف",
+  "save": "ذخیره",
+  "confirm": "تأیید",
+  "close": "بستن",
+  "seeAll": "مشاهده همه",
+  "more": "بیشتر",
+  "search": "جستجو",
+  "filterAll": "همه",
+  "today": "امروز",
+  "yesterday": "دیروز",
+  "tomorrow": "فردا",
+  "justNow": "همین الان",
+  "minutesAgo": "{n} دقیقه پیش",
+  "@minutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursAgo": "{n} ساعت پیش",
+  "@hoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "daysAgo": "{n} روز پیش",
+  "@daysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "minutesValue": "{n} دقیقه",
+  "@minutesValue": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "currencyRial": "ریال",
+  "optional": "اختیاری",
+  "requiredField": "این فیلد الزامی است",
+  "invalidNumber": "عدد معتبر وارد کنید",
+  "savedSuccessfully": "با موفقیت ذخیره شد",
+  "signOut": "خروج از حساب",
+  "signOutConfirm": "از حساب کاربری خارج می‌شوید؟",
+  "errorGeneric": "خطای غیرمنتظره رخ داد. دوباره تلاش کنید.",
+  "errorNetwork": "ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.",
+  "errorPermission": "شما مجوز انجام این عملیات را ندارید.",
+  "errorNotFound": "مورد درخواستی یافت نشد.",
+  "errorSessionExpired": "نشست شما منقضی شده است. دوباره وارد شوید.",
+  "errorUnsupported": "این قابلیت در این نسخه فعال نیست.",
+  "errorValidation": "اطلاعات وارد شده معتبر نیست.",
+  "errorRoomStatusChanged": "وضعیت اتاق هم‌زمان توسط شخص دیگری تغییر کرده است.",
+  "errorInsufficientStock": "موجودی کافی نیست.",
+  "errorOccupiedExceeds": "تعداد اتاق‌های اشغال بیش از اتاق‌های قابل فروش است.",
+  "errorNationalIdExists": "کاربری با این کد ملی قبلاً ثبت شده است.",
+  "errorTaskChanged": "وضعیت این وظیفه تغییر کرده است.",
+  "emptyGeneric": "موردی برای نمایش وجود ندارد.",
+  "loginTitle": "ورود به سامانه",
+  "loginSubtitle": "با کد ملی و رمز عبوری که مدیر سیستم برای شما تعریف کرده وارد شوید.",
+  "nationalIdLabel": "کد ملی",
+  "nationalIdHint": "۱۰ رقم بدون خط تیره",
+  "nationalIdInvalid": "کد ملی معتبر نیست",
+  "passwordLabel": "رمز عبور",
+  "passwordRequired": "رمز عبور را وارد کنید",
+  "loginButton": "ورود",
+  "showPassword": "نمایش رمز",
+  "hidePassword": "پنهان کردن رمز",
+  "errorInvalidCredentials": "کد ملی یا رمز عبور نادرست است.",
+  "errorAccountDisabled": "حساب شما غیرفعال شده است. با مدیر سیستم تماس بگیرید.",
+  "errorNotProvisioned": "نقش یا هتل برای حساب شما تعریف نشده است.",
+  "errorTooManyRequests": "تلاش‌های ناموفق زیاد بود. چند دقیقه بعد دوباره تلاش کنید.",
+  "forgotPasswordHint": "برای بازیابی رمز عبور با مدیر سیستم هتل تماس بگیرید.",
+  "demoAccountsTitle": "ورود سریع با حساب نمایشی",
+  "demoAccountsHint": "هر نقش، داشبورد و دسترسی‌های مخصوص به خود را می‌بیند.",
+  "demoPasswordNote": "رمز همه حساب‌ها: {password}",
+  "@demoPasswordNote": {
+    "placeholders": {
+      "password": {
+        "type": "String"
+      }
+    }
+  },
+  "loginFooter": "دسترسی هر کاربر بر اساس نقش او در سرور کنترل می‌شود.",
+  "changePasswordTitle": "تغییر رمز عبور",
+  "mustChangePasswordInfo": "برای امنیت حساب، رمز موقت خود را تغییر دهید.",
+  "currentPassword": "رمز فعلی",
+  "newPassword": "رمز جدید",
+  "confirmPassword": "تکرار رمز جدید",
+  "passwordTooWeak": "حداقل ۸ کاراکتر شامل حرف و عدد",
+  "passwordsDontMatch": "رمزها یکسان نیستند",
+  "passwordChanged": "رمز عبور تغییر کرد",
+  "accessDeniedTitle": "دسترسی مجاز نیست",
+  "accessDeniedBody": "این بخش برای نقش شما فعال نیست. اگر فکر می‌کنید به آن نیاز دارید، با مدیر خود هماهنگ کنید.",
+  "goHome": "بازگشت به خانه",
+  "sessionTimedOut": "به دلیل عدم فعالیت از حساب خارج شدید.",
+  "navHome": "خانه",
+  "navDashboard": "داشبورد",
+  "navMyWork": "کارهای من",
+  "navRooms": "اتاق‌ها",
+  "navHousekeeping": "خانه‌داری",
+  "navMaintenance": "تعمیرات",
+  "navEnergy": "انرژی",
+  "navInventory": "انبار",
+  "navStaff": "کارکنان",
+  "navReports": "گزارش‌ها",
+  "navNotifications": "اعلان‌ها",
+  "navInsights": "پیشنهادهای هوشمند",
+  "navAssistant": "دستیار هوشمند",
+  "navUsers": "کاربران",
+  "navProfile": "حساب کاربری",
+  "navDailyOps": "آمار روزانه",
+  "navMore": "بیشتر",
+  "roleSuperAdmin": "مدیر سامانه",
+  "roleHotelOwner": "مالک هتل",
+  "roleGeneralManager": "مدیر کل هتل",
+  "roleOperationsManager": "مدیر عملیات",
+  "roleEnergyManager": "مدیر انرژی",
+  "roleMaintenanceManager": "مدیر تعمیرات",
+  "roleHousekeepingManager": "سرپرست خانه‌داری",
+  "roleRestaurantManager": "مدیر رستوران",
+  "roleInventoryManager": "مدیر انبار",
+  "roleHrManager": "مدیر منابع انسانی",
+  "roleReceptionStaff": "کارمند پذیرش",
+  "roleHousekeepingStaff": "کارمند خانه‌داری",
+  "roleMaintenanceStaff": "تکنسین تعمیرات",
+  "roleRestaurantStaff": "کارمند رستوران",
+  "roleAnalyst": "تحلیلگر",
+  "deptManagement": "مدیریت",
+  "deptFrontOffice": "پذیرش",
+  "deptHousekeeping": "خانه‌داری",
+  "deptMaintenance": "تعمیرات",
+  "deptEnergy": "انرژی",
+  "deptFoodAndBeverage": "رستوران و غذا",
+  "deptInventory": "انبار",
+  "deptHumanResources": "منابع انسانی",
+  "deptAnalytics": "تحلیل داده",
+  "greetingMorning": "صبح بخیر، {name}",
+  "@greetingMorning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingAfternoon": "ظهر بخیر، {name}",
+  "@greetingAfternoon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "greetingEvening": "عصر بخیر، {name}",
+  "@greetingEvening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardSubtitle": "تصویر لحظه‌ای عملکرد {hotel}",
+  "@dashboardSubtitle": {
+    "placeholders": {
+      "hotel": {
+        "type": "String"
+      }
+    }
+  },
+  "opsDashboardSubtitle": "کنسول {department}",
+  "@opsDashboardSubtitle": {
+    "placeholders": {
+      "department": {
+        "type": "String"
+      }
+    }
+  },
+  "kpiOccupancy": "نرخ اشغال",
+  "kpiAdr": "ADR (نرخ میانگین)",
+  "kpiRevpar": "RevPAR (هر اتاق)",
+  "kpiRevenue": "درآمد دیروز",
+  "kpiElectricity": "مصرف برق دیروز",
+  "kpiEnergyIntensity": "شدت مصرف برق",
+  "kpiEnergyIntensityUnit": "kWh به ازای اتاق اشغال",
+  "kpiOpenTickets": "خرابی‌های باز",
+  "kpiOverdueTickets": "{n} مورد خارج از SLA",
+  "@kpiOverdueTickets": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "kpiRoomsReady": "اتاق آماده فروش",
+  "kpiRoomsToClean": "{n} در انتظار نظافت",
+  "@kpiRoomsToClean": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "kpiStaffOnDuty": "کارکنان حاضر",
+  "kpiHousekeeping": "پیشرفت خانه‌داری",
+  "kpiLowStock": "اقلام زیر نقطه سفارش",
+  "vsLastWeek": "{value} نسبت به هفته قبل",
+  "@vsLastWeek": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "vsBaselineShort": "{value} نسبت به خط مبنا",
+  "@vsBaselineShort": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionAlerts": "هشدارها",
+  "sectionInsights": "پیشنهادهای هوشمند",
+  "sectionRoomStatus": "وضعیت اتاق‌ها",
+  "sectionOccupancyTrend": "روند اشغال — ۱۴ روز اخیر",
+  "sectionEnergyTrend": "روند مصرف برق — ۱۴ روز اخیر",
+  "sectionRequests": "درخواست‌های تعمیر باز",
+  "sectionToday": "امروز",
+  "noAlerts": "هشدار فعالی وجود ندارد.",
+  "acknowledge": "تأیید دریافت",
+  "acknowledgedBy": "تأیید شده توسط {name}",
+  "@acknowledgedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "baselineLegend": "خط مبنا",
+  "myWorkTitle": "کارهای من",
+  "myWorkProgress": "{done} از {total} کار امروز انجام شده",
+  "@myWorkProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "shiftToday": "شیفت امروز: {start} تا {end}",
+  "@shiftToday": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "noShiftToday": "امروز شیفتی برای شما ثبت نشده است.",
+  "quickActions": "اقدام سریع",
+  "actionReportFault": "گزارش خرابی",
+  "actionRooms": "وضعیت اتاق‌ها",
+  "actionMyTickets": "تیکت‌های من",
+  "actionRecordDaily": "ثبت آمار امروز",
+  "allTasksDone": "همه کارهای امروز انجام شد. خسته نباشید!",
+  "nextTask": "کار بعدی",
+  "roomsTitle": "وضعیت اتاق‌ها",
+  "roomLabel": "اتاق {number}",
+  "@roomLabel": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "floorLabel": "طبقه {n}",
+  "@floorLabel": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "roomStatusVacantClean": "آماده",
+  "roomStatusVacantDirty": "نیاز به نظافت",
+  "roomStatusCleaningInProgress": "در حال نظافت",
+  "roomStatusOccupied": "اشغال",
+  "roomStatusOutOfOrder": "تعمیر",
+  "roomTypeSingle": "یک‌تخته",
+  "roomTypeDouble": "دوتخته",
+  "roomTypeTwin": "دو تخت جدا",
+  "roomTypeSuite": "سوئیت",
+  "roomTypeDeluxe": "دلوکس",
+  "changeStatus": "تغییر وضعیت",
+  "changeStatusTo": "تغییر به «{status}»",
+  "@changeStatusTo": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "statusUpdated": "وضعیت به‌روزرسانی شد",
+  "noAllowedTransitions": "تغییر وضعیت این اتاق برای نقش شما مجاز نیست.",
+  "lastUpdatedBy": "آخرین تغییر {time} توسط {name}",
+  "@lastUpdatedBy": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "roomsCount": "{n} اتاق",
+  "@roomsCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "reportFaultForRoom": "گزارش خرابی برای این اتاق",
+  "roomTasks": "وظایف خانه‌داری امروز",
+  "hkTitle": "خانه‌داری",
+  "hkMyTasks": "وظایف من",
+  "hkAllTasks": "همه وظایف",
+  "taskTypeCheckoutClean": "نظافت پس از تخلیه",
+  "taskTypeStayoverClean": "نظافت روزانه",
+  "taskTypeDeepClean": "نظافت عمیق",
+  "taskTypeInspection": "بازرسی",
+  "taskTypeTurndown": "آماده‌سازی شبانه",
+  "taskStatusPending": "در انتظار",
+  "taskStatusInProgress": "در حال انجام",
+  "taskStatusDone": "انجام شد",
+  "taskStatusCancelled": "لغو شد",
+  "priorityLow": "کم",
+  "priorityNormal": "عادی",
+  "priorityHigh": "بالا",
+  "priorityUrgent": "فوری",
+  "startTask": "شروع کار",
+  "completeTask": "اتمام و ثبت",
+  "taskStarted": "کار شروع شد",
+  "taskCompleted": "کار ثبت شد. اتاق آماده است.",
+  "taskDuration": "مدت انجام: {minutes} دقیقه",
+  "@taskDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "taskElapsed": "سپری‌شده: {minutes} دقیقه",
+  "@taskElapsed": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "taskTarget": "هدف: {minutes} دقیقه",
+  "@taskTarget": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "dueBy": "مهلت: {time}",
+  "@dueBy": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "assignee": "مسئول",
+  "unassigned": "تخصیص‌نیافته",
+  "newTask": "وظیفه جدید",
+  "selectRoom": "انتخاب اتاق",
+  "selectAssignee": "انتخاب مسئول",
+  "taskTypeLabel": "نوع کار",
+  "priorityLabel": "اولویت",
+  "notesLabel": "توضیحات",
+  "createTask": "ایجاد وظیفه",
+  "taskCreated": "وظیفه ایجاد شد",
+  "noTasksToday": "برای امروز وظیفه‌ای ثبت نشده است.",
+  "overdue": "تأخیر",
+  "completionNotesHint": "نکته‌ای برای سرپرست (اختیاری)",
+  "mntTitle": "تعمیرات و نگهداری",
+  "mntNewTicket": "ثبت خرابی",
+  "ticketTitleLabel": "عنوان خرابی",
+  "ticketTitleHint": "مثلاً: کولر اتاق خنک نمی‌کند",
+  "ticketDescriptionLabel": "شرح",
+  "ticketCategoryLabel": "دسته",
+  "ticketLocationLabel": "محل",
+  "locationRoom": "اتاق",
+  "locationArea": "فضای عمومی",
+  "areaHint": "مثلاً: لابی، آشپزخانه، موتورخانه",
+  "addPhoto": "افزودن عکس",
+  "takePhoto": "گرفتن عکس",
+  "chooseFromGallery": "انتخاب از گالری",
+  "photosCount": "{n} عکس پیوست شد",
+  "@photosCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "submitTicket": "ثبت و ارسال",
+  "ticketCreated": "خرابی ثبت شد و به تیم تعمیرات اطلاع داده شد.",
+  "catHvac": "تهویه و سرمایش",
+  "catElectrical": "برق",
+  "catPlumbing": "لوله‌کشی",
+  "catFurniture": "مبلمان",
+  "catAppliance": "تجهیزات",
+  "catItNetwork": "شبکه و IT",
+  "catStructural": "ساختمانی",
+  "catOther": "سایر",
+  "tPriorityLow": "کم",
+  "tPriorityMedium": "متوسط",
+  "tPriorityHigh": "بالا",
+  "tPriorityCritical": "بحرانی",
+  "tStatusOpen": "باز",
+  "tStatusAssigned": "ارجاع شده",
+  "tStatusInProgress": "در حال تعمیر",
+  "tStatusOnHold": "متوقف",
+  "tStatusResolved": "رفع شد",
+  "tStatusClosed": "بسته شد",
+  "tStatusCancelled": "لغو شد",
+  "slaDue": "مهلت رفع: {time}",
+  "@slaDue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "slaOverdue": "خارج از SLA",
+  "assignTo": "ارجاع به تکنسین",
+  "ticketAssigned": "تیکت ارجاع شد",
+  "reportedBy": "گزارش‌دهنده: {name}",
+  "@reportedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "timeline": "تاریخچه",
+  "eventCreated": "ثبت شد",
+  "eventAssigned": "ارجاع به {name}",
+  "@eventAssigned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "eventStatus": "{from} ← {to}",
+  "@eventStatus": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "eventComment": "یادداشت",
+  "resolutionNoteHint": "شرح اقدام انجام‌شده",
+  "tabActive": "فعال",
+  "tabMine": "مربوط به من",
+  "tabAll": "همه",
+  "noTickets": "تیکتی وجود ندارد.",
+  "ticketStatusChanged": "وضعیت تیکت تغییر کرد",
+  "energyTitle": "مدیریت انرژی",
+  "energyElectricity": "برق",
+  "energyWater": "آب",
+  "energyGas": "گاز",
+  "recordReading": "ثبت مصرف روزانه",
+  "consumptionLabel": "مصرف روز ({unit})",
+  "@consumptionLabel": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "meterValueLabel": "عدد کنتور",
+  "dateLabel": "تاریخ",
+  "readingSaved": "مصرف ثبت شد",
+  "last30Days": "۳۰ روز اخیر",
+  "totalConsumption": "مصرف کل",
+  "dailyAverage": "میانگین روزانه",
+  "baseline": "خط مبنا",
+  "vsPreviousPeriod": "{value} نسبت به دوره قبل",
+  "@vsPreviousPeriod": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "energyIntensity": "شدت مصرف",
+  "perOccupiedRoom": "{value} {unit} / اتاق اشغال",
+  "@perOccupiedRoom": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedCost": "هزینه تخمینی",
+  "anomalyDays": "{n} روز بالاتر از آستانه هشدار",
+  "@anomalyDays": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "noReadings": "هنوز مصرفی ثبت نشده است.",
+  "energyInsightCta": "تحلیل علت با دستیار هوشمند",
+  "invTitle": "انبار و موجودی",
+  "lowStock": "کمبود",
+  "outOfStock": "ناموجود",
+  "onHand": "موجودی",
+  "reorderLevel": "نقطه سفارش",
+  "stockValue": "ارزش موجودی",
+  "recordMovement": "ثبت ورود / خروج",
+  "mvReceive": "ورود به انبار",
+  "mvIssue": "خروج / مصرف",
+  "mvAdjust": "اصلاح موجودی",
+  "mvWaste": "ضایعات",
+  "quantityLabel": "مقدار ({unit})",
+  "@quantityLabel": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reasonLabel": "علت / مقصد",
+  "movementSaved": "گردش کالا ثبت شد",
+  "movements": "گردش کالا",
+  "invCatGuestAmenities": "اقلام مهمان",
+  "invCatLinen": "البسه و ملحفه",
+  "invCatCleaningSupplies": "مواد شوینده",
+  "invCatFoodAndBeverage": "غذا و نوشیدنی",
+  "invCatMaintenanceParts": "قطعات فنی",
+  "invCatOffice": "اداری",
+  "invCatOther": "سایر",
+  "newItem": "کالای جدید",
+  "itemName": "نام کالا",
+  "skuLabel": "کد کالا",
+  "unitLabel": "واحد",
+  "initialQuantity": "موجودی اولیه",
+  "unitCost": "قیمت واحد (ریال)",
+  "locationLabel": "محل نگهداری",
+  "itemCreated": "کالا تعریف شد",
+  "filterLowStock": "فقط کمبودها",
+  "noMovements": "گردشی ثبت نشده است.",
+  "staffTitle": "کارکنان و شیفت‌ها",
+  "shiftsTab": "شیفت‌ها",
+  "staffTab": "کارکنان",
+  "shiftMorning": "صبح",
+  "shiftEvening": "عصر",
+  "shiftNight": "شب",
+  "shiftScheduled": "برنامه‌ریزی شده",
+  "shiftCheckedIn": "حاضر",
+  "shiftCompleted": "پایان یافته",
+  "shiftAbsent": "غایب",
+  "addShift": "افزودن شیفت",
+  "selectStaff": "انتخاب کارمند",
+  "shiftTypeLabel": "نوبت کاری",
+  "shiftCreated": "شیفت ثبت شد",
+  "checkIn": "ثبت حضور",
+  "checkOut": "پایان شیفت",
+  "markAbsent": "ثبت غیبت",
+  "noShifts": "شیفتی برای این روز ثبت نشده است.",
+  "onDutyCount": "{n} نفر حاضر",
+  "@onDutyCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "noAppAccount": "بدون حساب کاربری",
+  "dailyOpsTitle": "ثبت آمار روزانه",
+  "dailyOpsHint": "تا پیش از اتصال به PMS، آمار اشغال و درآمد هر روز اینجا ثبت می‌شود.",
+  "roomsAvailable": "اتاق قابل فروش",
+  "roomsOccupied": "اتاق فروخته‌شده",
+  "guestsLabel": "تعداد مهمان",
+  "roomRevenue": "درآمد اتاق (ریال)",
+  "fnbRevenue": "درآمد رستوران (ریال)",
+  "otherRevenue": "سایر درآمدها (ریال)",
+  "reportsTitle": "گزارش‌ها",
+  "reportExecutive": "خلاصه مدیریتی",
+  "reportEnergy": "گزارش انرژی",
+  "reportMaintenance": "گزارش تعمیرات",
+  "reportHousekeeping": "گزارش خانه‌داری",
+  "reportInventory": "گزارش انبار",
+  "reportPeriod": "بازه گزارش",
+  "last7Days": "۷ روز اخیر",
+  "generatePdf": "تولید گزارش PDF",
+  "generating": "در حال تولید…",
+  "reportReady": "گزارش آماده شد",
+  "recentReports": "گزارش‌های اخیر",
+  "noReports": "هنوز گزارشی تولید نشده است.",
+  "reportBy": "{date} — {name}",
+  "@reportBy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsTitle": "اعلان‌ها",
+  "markAllRead": "علامت‌گذاری همه به‌عنوان خوانده‌شده",
+  "noNotifications": "اعلان تازه‌ای ندارید.",
+  "severityInfo": "اطلاع",
+  "severityWarning": "هشدار",
+  "severityCritical": "بحرانی",
+  "insightsTitle": "پیشنهادهای هوشمند",
+  "insightsSubtitle": "تحلیل خودکار داده‌ها؛ تصمیم نهایی با مدیر است.",
+  "insCatEnergy": "انرژی",
+  "insCatMaintenance": "نگهداری",
+  "insCatHousekeeping": "خانه‌داری",
+  "insCatInventory": "انبار",
+  "insCatRevenue": "درآمد",
+  "insCatStaffing": "نیروی انسانی",
+  "confidenceLabel": "اطمینان {value}",
+  "@confidenceLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "estimatedSaving": "صرفه‌جویی تخمینی ماهانه: {amount}",
+  "@estimatedSaving": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "evidenceLabel": "شواهد",
+  "recommendationLabel": "اقدام پیشنهادی",
+  "acceptInsight": "پذیرش",
+  "dismissInsight": "رد",
+  "implementedInsight": "اجرا شد",
+  "insightUpdated": "وضعیت پیشنهاد ثبت شد",
+  "noInsights": "پیشنهاد فعالی وجود ندارد.",
+  "sourceRuleEngine": "موتور تحلیل",
+  "sourceLlm": "هوش مصنوعی",
+  "assistantTitle": "دستیار هوشمند",
+  "assistantWelcome": "سلام! من دستیار تحلیلی زرین هستم. درباره انرژی، اتاق‌ها، تعمیرات، انبار یا درآمد هتل بپرسید.",
+  "assistantHint": "سؤال خود را بنویسید…",
+  "assistantSuggestion1": "چرا مصرف برق زیاد شده؟",
+  "assistantSuggestion2": "کدام بخش بیشترین اتلاف را دارد؟",
+  "assistantSuggestion3": "وضعیت تعمیرات چطور است؟",
+  "assistantSuggestion4": "چه اقلامی رو به اتمام است؟",
+  "assistantDisclaimer": "پاسخ‌ها بر اساس داده‌های ثبت‌شده تولید می‌شوند؛ تصمیم نهایی با شماست.",
+  "assistantError": "پاسخ دریافت نشد. دوباره تلاش کنید.",
+  "basedOn": "بر اساس داده‌ها:",
+  "send": "ارسال",
+  "thinking": "در حال تحلیل…",
+  "usersTitle": "کاربران و دسترسی‌ها",
+  "newUser": "کاربر جدید",
+  "fullNameLabel": "نام و نام خانوادگی",
+  "phoneLabel": "تلفن همراه",
+  "roleLabel": "نقش",
+  "temporaryPassword": "رمز موقت",
+  "generatePassword": "تولید رمز",
+  "createUser": "ایجاد کاربر",
+  "userCreated": "کاربر ایجاد شد. رمز موقت را به‌صورت حضوری تحویل دهید.",
+  "suspendUser": "تعلیق",
+  "activateUser": "فعال‌سازی",
+  "resetPassword": "بازنشانی رمز",
+  "passwordResetDone": "رمز موقت جدید: {password}",
+  "@passwordResetDone": {
+    "placeholders": {
+      "password": {
+        "type": "String"
+      }
+    }
+  },
+  "userStatusActive": "فعال",
+  "userStatusSuspended": "معلق",
+  "userStatusDisabled": "غیرفعال",
+  "lastLogin": "آخرین ورود: {time}",
+  "@lastLogin": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "neverLoggedIn": "هنوز وارد نشده",
+  "assignableRolesHint": "فقط نقش‌هایی که شما مجاز به تعریف آن هستید نمایش داده می‌شود.",
+  "profileTitle": "حساب کاربری",
+  "languageLabel": "زبان",
+  "languageFa": "فارسی",
+  "languageEn": "English",
+  "activeSessions": "دستگاه‌های فعال",
+  "revokeAllSessions": "خروج از همه دستگاه‌ها",
+  "sessionsRevoked": "همه نشست‌ها باطل شد",
+  "thisDevice": "این دستگاه",
+  "permissionsCount": "{n} مجوز فعال",
+  "@permissionsCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "myPermissions": "مجوزهای من",
+  "appVersionLabel": "نسخه {version}",
+  "@appVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "hotelLabel": "هتل",
+  "statusLabel": "وضعیت",
+  "roomTypeLabel": "نوع اتاق",
+  "recentReadings": "ثبت‌های اخیر"
+}

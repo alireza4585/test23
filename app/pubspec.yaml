@@ -1,0 +1,69 @@
+name: zarin_hooshmand
+description: "Zarin Hooshmand - Smart Optimization Platform for Hospitality"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management + dependency injection
+  flutter_riverpod: ^3.4.3
+  # Declarative routing with role-based guards
+  go_router: ^18.0.2
+
+  # Backend (MVP). Only the data layer imports these packages.
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  firebase_storage: ^13.6.0
+  cloud_functions: ^6.5.0
+  firebase_messaging: ^16.7.0
+
+  # Platform services
+  flutter_secure_storage: ^11.2.0
+  shared_preferences: ^2.5.5
+  image_picker: ^1.2.3
+  device_info_plus: ^13.3.0
+  package_info_plus: ^10.2.2
+
+  # UI, formatting, reports
+  cupertino_icons: ^1.0.8
+  fl_chart: ^1.2.0
+  intl: ^0.20.3
+  shamsi_date: ^1.1.1
+  pdf: ^3.13.1
+  printing: ^5.15.1
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Vazirmatn-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Vazirmatn-Bold.ttf
+          weight: 700
+
+  assets:
+    - assets/fonts/Vazirmatn-Regular.ttf
+    - assets/fonts/Vazirmatn-Bold.ttf
