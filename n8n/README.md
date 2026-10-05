@@ -111,7 +111,16 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
    ZARIN_HOTEL_IDS=<شناسهٔ هتل که create-hotel چاپ می‌کند>
    ```
    سایر متغیرها (`BALE_*`، `KAVENEGAR_API_KEY`، ایمیل) را هم از `.env.example` اضافه کنید.
-2. **Import:** فایل‌های `n8n/workflows/*.json` را از GitHub دانلود کنید و در n8n از مسیر Workflows → ⋯ → Import from File وارد کنید. Credentialهای SMTP و Header Auth را روی نودهای مربوط انتخاب کنید (رجوع کنید به مرحلهٔ ۳ بالا).
+2. **Import:** با یک دستور هر چهار workflow ساخته می‌شوند. اگر قبلاً import شده باشند، به‌روز می‌شوند و نسخهٔ تکراری ساخته نمی‌شود. این دستور به Node 18 یا جدیدتر نیاز دارد. API key را از Settings → n8n API بسازید.
+   ```bash
+   # macOS / Linux
+   N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run N8N_API_KEY=<کلید> node n8n/scripts/import-workflows.mjs
+   ```
+   ```powershell
+   # Windows PowerShell
+   $env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY="<کلید>"; node n8n/scripts/import-workflows.mjs
+   ```
+   workflowها غیرفعال ساخته می‌شوند. Credentialهای SMTP و Header Auth را روی نودهای مربوط انتخاب کنید (رجوع کنید به مرحلهٔ ۳ بالا). روش دستی هم کار می‌کند: Workflows → ⋯ → Import from File.
 3. **اتصال PocketBase به n8n:** در برنامهٔ PocketBase روی لیارا این متغیر را بگذارید:
    ```
    ZH_N8N_WEBHOOK_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/zarin-events
