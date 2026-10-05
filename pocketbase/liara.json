@@ -1,0 +1,6 @@
+{
+  "platform": "docker",
+  "app": "zarin-hoshmand-nieplltrhr",
+  "port": 8090,
+  "disks": [{ "name": "pb-data", "mountTo": "/pb/pb_data" }]
+}

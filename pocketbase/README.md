@@ -61,6 +61,40 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
 
 اگر سرور به GitHub دسترسی ندارد، فایل `pocketbase_0.40.4_linux_amd64.zip` را دستی دانلود کنید، با نام `pocketbase.zip` کنار `Dockerfile` بگذارید و دوباره build کنید.
 
+### لیارا (Liara)
+
+لیارا HTTPS را خودش فراهم می‌کند، پس Caddy لازم نیست. تنظیمات استقرار در `pocketbase/liara.json` آماده است: پلتفرم Docker، پورت ۸۰۹۰ و دیسک دائمی `pb-data` روی `/pb/pb_data`.
+
+1. **نوع برنامه:** برنامه در لیارا باید از نوع **Docker** باشد. اگر آن را به‌صورت «برنامهٔ آماده (One-click) PocketBase» ساخته‌اید، hookها و migrationهای ما روی آن نصب نمی‌شوند. در این حالت یک برنامهٔ Docker بسازید و نام آن را در فیلد `app` فایل `liara.json` بگذارید.
+2. **ابزار و ورود:**
+   ```bash
+   npm i -g @liara/cli && liara login
+   ```
+3. **دیسک دائمی** (یک بار؛ داده و فایل‌ها روی آن می‌مانند):
+   ```bash
+   liara disk create --app zarin-hoshmand-nieplltrhr --name pb-data --size 1
+   ```
+4. **متغیرهای محیطی** (از پنل لیارا یا با دستور):
+   ```bash
+   liara env:set ZH_INTEGRATION_SECRET=$(openssl rand -hex 32) --app zarin-hoshmand-nieplltrhr
+   ```
+   بقیهٔ متغیرهای جدول پایین هم به همین شکل تنظیم می‌شوند.
+5. **استقرار:**
+   ```bash
+   cd pocketbase && liara deploy
+   ```
+   اگر سرور build لیارا به GitHub دسترسی نداشت، فایل `pocketbase_0.40.4_linux_amd64.zip` را با نام `pocketbase.zip` کنار `Dockerfile` بگذارید و دوباره deploy کنید.
+6. **حساب مدیر سرور:** دو راه دارید.
+   - با `liara app logs --app zarin-hoshmand-nieplltrhr` لینک `…/_/#/pbinstall/…` را از لاگ بردارید و در مرورگر باز کنید.
+   - یا با `liara app shell --app zarin-hoshmand-nieplltrhr` وارد شوید و این دستور را اجرا کنید:
+     ```bash
+     /pb/pocketbase superuser upsert admin@hotel.ir 'رمز-قوی' --dir=/pb/pb_data
+     ```
+7. **ساخت هتل و اتصال اپ:** بخش «پس از نصب» در پایین را با این آدرس انجام دهید:
+   ```
+   ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+   ```
+
 ### بدون Docker (systemd)
 
 ```bash
