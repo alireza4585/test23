@@ -47,18 +47,24 @@ Sign in by tapping a role chip on the login screen, or with a national ID and th
 
 ## Firebase backend
 
+Firebase project: **`zarin-hoshmand`** (the default in `.firebaserc`).
+
 ```bash
-npm i -g firebase-tools
+npm i -g firebase-tools && firebase login
+dart pub global activate flutterfire_cli
 cd firebase/functions && npm ci
 
-# Local: emulators + seed (same accounts as above)
-cd ../.. && firebase emulators:start
-cd firebase/functions && FIRESTORE_EMULATOR_HOST=localhost:8080 \
-  FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 GCLOUD_PROJECT=demo-zarin npm run seed
+# Connect the app (registers the Android/iOS apps, writes lib/firebase_options.dart,
+# google-services.json and GoogleService-Info.plist). Commit the generated files.
+cd ../../app && flutterfire configure --project=zarin-hoshmand --platforms=android,ios
 
-# App against Firebase
-cd app && flutterfire configure        # then set DefaultFirebaseOptions.isConfigured = true
-flutter run --dart-define=ZH_BACKEND=firebase [--dart-define=ZH_USE_EMULATORS=true]
+# Local: emulators + seed (same accounts as above)
+cd .. && firebase emulators:start
+cd firebase/functions && FIRESTORE_EMULATOR_HOST=localhost:8080 \
+  FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 GCLOUD_PROJECT=zarin-hoshmand npm run seed
+
+# App against Firebase (or the emulators)
+cd app && flutter run --dart-define=ZH_BACKEND=firebase [--dart-define=ZH_USE_EMULATORS=true]
 
 # Deploy
 firebase functions:secrets:set ANTHROPIC_API_KEY

@@ -83,7 +83,7 @@
 
 ## کارهای فنی باقی‌مانده پیش از تولید
 
-1. `flutterfire configure` برای هر محیط و تنظیم `DefaultFirebaseOptions.isConfigured = true`.
+1. `flutterfire configure --project=zarin-hoshmand` (و برای هر محیط اضافه، پروژهٔ جداگانه). فایل تولیدشده بدون تغییر جایگزین placeholder می‌شود.
 2. امضای release: Android keystore (فعلاً debug signing) و iOS provisioning/APNs key در Firebase.
 3. Secretها: `firebase functions:secrets:set ANTHROPIC_API_KEY INTEGRATION_SECRET`، و `N8N_WEBHOOK_URL` در `.env.<project>`.
 4. Firebase App Check (Play Integrity و App Attest) برای جلوگیری از کلاینت‌های جعلی.

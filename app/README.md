@@ -14,7 +14,7 @@ flutter run
 
 # Firebase backend
 dart pub global activate flutterfire_cli
-flutterfire configure            # regenerates lib/firebase_options.dart (set isConfigured = true)
+flutterfire configure --project=zarin-hoshmand --platforms=android,ios   # writes lib/firebase_options.dart
 flutter run --dart-define=ZH_BACKEND=firebase
 
 # Firebase emulators (from repo root: firebase emulators:start)

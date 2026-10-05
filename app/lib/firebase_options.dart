@@ -1,16 +1,17 @@
-// Placeholder — replace by running `flutterfire configure` in `app/`.
+// Placeholder for Firebase project `zarin-hoshmand`. Regenerate in `app/`:
 //
-// The generated file defines `DefaultFirebaseOptions.currentPlatform` for
-// Android and iOS. Until then the app runs on the offline demo backend.
-// (Keep the `isConfigured` getter when regenerating, or set it to true.)
+//   dart pub global activate flutterfire_cli
+//   flutterfire configure --project=zarin-hoshmand --platforms=android,ios
+//
+// The generated file replaces this one as-is. Until then `bootstrap.dart`
+// sees the REPLACE_ME values and runs the offline demo backend.
+// ignore_for_file: type=lint
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 
-abstract final class DefaultFirebaseOptions {
-  /// `true` once real options are generated.
-  static const bool isConfigured = false;
-
+class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -18,7 +19,9 @@ abstract final class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       default:
-        throw UnsupportedError('Zarin Hooshmand targets Android and iOS.');
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
     }
   }
 
@@ -26,16 +29,16 @@ abstract final class DefaultFirebaseOptions {
     apiKey: 'REPLACE_ME',
     appId: 'REPLACE_ME',
     messagingSenderId: 'REPLACE_ME',
-    projectId: 'zarin-hooshmand-dev',
-    storageBucket: 'zarin-hooshmand-dev.appspot.com',
+    projectId: 'zarin-hoshmand',
+    storageBucket: 'zarin-hoshmand.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'REPLACE_ME',
     appId: 'REPLACE_ME',
     messagingSenderId: 'REPLACE_ME',
-    projectId: 'zarin-hooshmand-dev',
-    storageBucket: 'zarin-hooshmand-dev.appspot.com',
+    projectId: 'zarin-hoshmand',
+    storageBucket: 'zarin-hoshmand.firebasestorage.app',
     iosBundleId: 'com.zarinhooshmand.zarinHooshmand',
   );
 }

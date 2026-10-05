@@ -121,7 +121,7 @@ Rules هم همین انتقال‌ها را برای نقش `housekeepingStaff`
 
 | جزء | محیط |
 |---|---|
-| Firebase | سه پروژه، یکی برای هر محیط: `dev`، `staging`، `prod` (`.firebaserc`). Region توابع: `europe-west3`. Timezone: `Asia/Tehran` |
+| Firebase | پروژهٔ `zarin-hoshmand` (پیش‌فرض در `.firebaserc`). توصیه: پروژهٔ جداگانه برای `dev` و `staging` پیش از پایلوت. Region توابع: `europe-west3`. Timezone: `Asia/Tehran` |
 | Secrets | `ANTHROPIC_API_KEY` و `INTEGRATION_SECRET` در Secret Manager. هیچ کلیدی داخل اپ نیست |
 | n8n | Docker روی VPS (ترجیحاً داخل ایران) با PostgreSQL. پشت TLS ([`n8n/`](../n8n)) |
 | اپ | `--dart-define` برای backend، env و region. Flavorها از طریق `ZH_ENV` |

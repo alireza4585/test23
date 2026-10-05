@@ -3,7 +3,7 @@
  *
  *   firebase emulators:start            # in another terminal
  *   FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
- *   GCLOUD_PROJECT=demo-zarin npm run seed
+ *   GCLOUD_PROJECT=zarin-hoshmand npm run seed   # the app's projectId
  *
  * Refuses to touch a real project unless ZH_SEED_ALLOW_REMOTE=1.
  */
