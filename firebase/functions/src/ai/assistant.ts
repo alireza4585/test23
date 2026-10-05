@@ -36,6 +36,16 @@ user's question using only that data:
 - Keep answers under 220 words and use short paragraphs or a brief numbered list.
 You advise; managers decide. Never invent figures that are not in the data.`;
 
+/** `1234.5` → `۱٬۲۳۴٫۵` (matches the app's Persian number formatting). */
+function faNumber(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 })
+    .format(value)
+    .replace(/,/g, "٬")
+    .replace(/\./g, "٫")
+    .replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+}
+
 /** Simple fixed-window rate limit per user (cost control). */
 async function consumeQuota(uid: string, now: Date): Promise<void> {
   const window = now.toISOString().slice(0, 13); // yyyy-MM-ddTHH
@@ -98,9 +108,9 @@ export async function answerQuestion(
     dataPoints:
       input.locale === "fa"
         ? [
-            `اشغال ${latest?.occupancyRate ?? "—"}٪`,
-            `برق ${latest?.energy.electricity ?? "—"} kWh`,
-            `تیکت باز ${context.openTickets.length}`,
+            `اشغال ${faNumber(latest?.occupancyRate)}٪`,
+            `برق ${faNumber(latest?.energy.electricity)} kWh`,
+            `تیکت باز ${faNumber(context.openTickets.length)}`,
           ]
         : [
             `occupancy ${latest?.occupancyRate ?? "—"}%`,

@@ -1,0 +1,469 @@
+{
+  "name": "Zarin · 01 · Event router (alerts → Bale / SMS / e-mail)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zarin-events",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "fb1ac3ae-e4b2-5f3f-ac26-d1c1a55312e1",
+      "name": "Zarin events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "59805ccb-2700-52f0-9894-1ad774a3b985"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reject anything not signed by the Zarin backend (shared INTEGRATION_SECRET).\nconst crypto = require('crypto');\nconst item = $input.first().json;\nconst headers = item.headers || {};\nconst timestamp = Number(headers['x-zarin-timestamp']);\nconst signature = String(headers['x-zarin-signature'] || '');\nconst raw = JSON.stringify(item.body);\nconst expected = crypto.createHmac('sha256', $env.ZARIN_INTEGRATION_SECRET).update(`${timestamp}.${raw}`).digest('hex');\nconst fresh = Number.isFinite(timestamp) && Math.abs(Date.now() / 1000 - timestamp) < 300;\nconst valid = signature.length === expected.length &&\n  crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'));\nif (!fresh || !valid) throw new Error('Invalid or stale Zarin signature');\nreturn [{ json: item.body }];"
+      },
+      "id": "ee720016-24aa-5586-85cd-2d7517942fc6",
+      "name": "Verify signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "af4aeaee-ce85-473b-baee-5553658e325d",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "alert.raised"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "alert"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "afe879e8-db90-447f-89cc-069c36169e24",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "maintenance.ticket.created"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ticket"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "73d8e9ee-f498-4b33-96d8-0a81df840f19",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "inventory.lowStock"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lowStock"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "a8022c63-9da6-4a83-9a53-ed9065ef3fdc",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "energy.anomaly"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "energy"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e7933cc4-3afe-50bf-8ce5-f5cb46ebcff8",
+      "name": "Route by event type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nconst icon = { critical: '🔴', warning: '🟠', info: '🔵' }[e.data.severity] || '•';\nreturn [{ json: { ...e, text: `${icon} ${e.data.title}\\n${e.data.message}\\nهتل: ${e.hotelId}` } }];"
+      },
+      "id": "df1fa0c5-08f5-5cb7-a06f-f42c0f07f90f",
+      "name": "Format alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $env.BALE_MANAGEMENT_CHAT_ID, text: $json.text }) }}"
+      },
+      "id": "34d11cc1-6234-5d7b-aab8-93703dd9083d",
+      "name": "Bale · management group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "6d7b12c3-56b9-4950-9696-0ef1a1007d04",
+              "leftValue": "={{ $json.data.severity }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "critical"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c5eccf98-ca16-5c2b-a487-39e9ae897c10",
+      "name": "Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.kavenegar.com/v1/{{ $env.KAVENEGAR_API_KEY }}/sms/send.json",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "receptor",
+              "value": "={{ $env.ONCALL_MANAGER_MOBILE }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.text }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "1de0c152-207b-59ff-9324-0d3af0041c68",
+      "name": "SMS · on-call manager (Kavenegar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "daea52fd-4b30-41ca-8f10-9a68f5ac350d",
+              "leftValue": "={{ ['critical','high'].includes($json.data.priority) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "34386cfa-7aa7-55b5-8266-44a00718af95",
+      "name": "High or critical fault?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $env.BALE_MAINTENANCE_CHAT_ID, text: `🛠 خرابی ${$json.data.priority}: ${$json.data.title}\\nمحل: ${$json.data.location}\\nگزارش: ${$json.data.reportedByName}` }) }}"
+      },
+      "id": "00fc0f67-c5d2-50a9-9f45-36d8911936e4",
+      "name": "Bale · maintenance group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ZARIN_MAIL_FROM }}",
+        "toEmail": "={{ $env.PROCUREMENT_EMAIL }}",
+        "subject": "=درخواست خرید: {{ $json.data.name }} ({{ $json.data.sku }})",
+        "emailFormat": "html",
+        "html": "=<div dir=\"rtl\" style=\"font-family:Tahoma\"><h3>درخواست خرید خودکار — زرین هوشمند</h3><p>کالا: <b>{{ $json.data.name }}</b> ({{ $json.data.sku }})</p><p>موجودی فعلی: {{ $json.data.quantity }} — نقطه سفارش: {{ $json.data.reorderLevel }}</p><p>مقدار پیشنهادی سفارش: <b>{{ $json.data.reorderQuantity }}</b></p><p>هتل: {{ $json.hotelId }}</p></div>",
+        "options": {}
+      },
+      "id": "68e4bebe-ae1b-5f4c-8b04-d33bf08e11b4",
+      "name": "Purchase request e-mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $env.BALE_ENERGY_CHAT_ID, text: `⚡️ مصرف ${$json.data.type} در ${$json.data.day}: ${Math.round($json.data.consumption)} (${Math.round($json.data.deviation)}٪ بالاتر از خط مبنا)` }) }}"
+      },
+      "id": "c1e4e203-a4dd-5e8c-981b-62108d37b455",
+      "name": "Bale · energy group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        620
+      ]
+    }
+  ],
+  "connections": {
+    "Zarin events": {
+      "main": [
+        [
+          {
+            "node": "Verify signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify signature": {
+      "main": [
+        [
+          {
+            "node": "Route by event type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by event type": {
+      "main": [
+        [
+          {
+            "node": "Format alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "High or critical fault?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Purchase request e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bale · energy group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format alert": {
+      "main": [
+        [
+          {
+            "node": "Bale · management group",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical?": {
+      "main": [
+        [
+          {
+            "node": "SMS · on-call manager (Kavenegar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High or critical fault?": {
+      "main": [
+        [
+          {
+            "node": "Bale · maintenance group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Receives signed domain events from Cloud Functions (N8N_WEBHOOK_URL) and fans them out to Bale groups, SMS (Kavenegar) and e-mail."
+  },
+  "tags": [
+    {
+      "name": "zarin-hooshmand"
+    }
+  ]
+}

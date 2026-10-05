@@ -1,0 +1,138 @@
+{
+  "name": "Zarin · 04 · Smart-meter / IoT energy ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meter-readings",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d514b759-9b9f-5e3b-869f-21b19553cf53",
+      "name": "Meter gateway webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "96e82a62-a5f6-55e5-b781-4fb56451144d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Accepts the gateway's daily totals and maps them to Zarin's reading shape:\n//   { hotelId, meterId, type: 'electricity'|'water'|'gas', day: 'yyyy-MM-dd', value }\n// Vendor-specific mapping lives here; the platform side never changes.\nconst allowed = new Set(['electricity', 'water', 'gas']);\nconst readings = [].concat($input.first().json.body.readings || []);\nreturn readings\n  .filter((r) => allowed.has(r.type) && /^\\d{4}-\\d{2}-\\d{2}$/.test(r.day) && Number(r.value) >= 0)\n  .map((r) => ({ json: {\n    hotelId: r.hotelId,\n    requestBody: { type: r.type, day: r.day, consumption: Number(r.value), meterId: r.meterId, source: 'smartMeter' },\n  } }));"
+      },
+      "id": "228d32d1-8d59-5b6f-9e28-778e30f1c3dc",
+      "name": "Normalise readings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API (HMAC-SHA256 over `${timestamp}.${body}`).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nreturn $input.all().map((item) => {\n  const body = item.json.requestBody ? JSON.stringify(item.json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const signature = crypto\n    .createHmac('sha256', $env.ZARIN_INTEGRATION_SECRET)\n    .update(`${timestamp}.${body}`)\n    .digest('hex');\n  return { json: { ...item.json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature } };\n});"
+      },
+      "id": "8c6c90eb-131e-528c-9e86-3851597c8056",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/energy/readings",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}"
+      },
+      "id": "a11e111b-3fcd-5d3a-8cb7-ed7a278900cf",
+      "name": "POST energy reading",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Meter gateway webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalise readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise readings": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "POST energy reading",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Receives daily totals from a meter gateway, normalises them and writes them through the Zarin API (same shape as manual entry, so analytics, alerts and AI work unchanged)."
+  },
+  "tags": [
+    {
+      "name": "zarin-hooshmand"
+    }
+  ]
+}

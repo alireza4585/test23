@@ -1,0 +1,224 @@
+{
+  "name": "Zarin · 02 · Daily management briefing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "fff70fac-f62a-5680-bf3a-e4354f34dc0f",
+      "name": "Every day 07:15",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per hotel served by this n8n instance (comma-separated env var).\nreturn ($env.ZARIN_HOTEL_IDS || '').split(',').map((h) => h.trim()).filter(Boolean)\n  .map((hotelId) => ({ json: { hotelId } }));"
+      },
+      "id": "90f4509c-ba00-5928-8677-f2a88e51301e",
+      "name": "Hotels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API (HMAC-SHA256 over `${timestamp}.${body}`).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nreturn $input.all().map((item) => {\n  const body = item.json.requestBody ? JSON.stringify(item.json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const signature = crypto\n    .createHmac('sha256', $env.ZARIN_INTEGRATION_SECRET)\n    .update(`${timestamp}.${body}`)\n    .digest('hex');\n  return { json: { ...item.json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature } };\n});"
+      },
+      "id": "33acfd61-22f9-5aab-9b7c-2961025f2384",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/summary?narrative=fa",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "3be6f2d2-702a-5e86-8fb6-74a2e0fd386f",
+      "name": "GET summary + AI briefing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// RTL HTML e-mail + short Bale text from the summary payload.\nconst fa = (n) => (n == null ? '—' : Number(n).toLocaleString('fa-IR', { maximumFractionDigits: 1 }));\nreturn $input.all().map(({ json: s }) => {\n  const m = s.metrics;\n  const rows = [\n    ['نرخ اشغال', `${fa(m.occupancyRate)}٪`],\n    ['ADR (ریال)', fa(m.adr)],\n    ['RevPAR (ریال)', fa(m.revpar)],\n    ['درآمد کل (ریال)', fa(m.totalRevenue)],\n    ['برق (kWh)', `${fa(m.energy.electricity)} (${fa(m.electricityVsBaselinePct)}٪ نسبت به خط مبنا)`],\n    ['خرابی‌های باز / معوق', `${fa(m.maintenance.open)} / ${fa(m.maintenance.overdue)}`],\n    ['اقلام زیر نقطه سفارش', fa(m.inventory.lowStock)],\n  ].map(([k, v]) => `<tr><td style=\"padding:6px 12px;color:#555\">${k}</td><td style=\"padding:6px 12px\"><b>${v}</b></td></tr>`).join('');\n  const alerts = (s.alerts || []).map((a) => `<li>${a.title}</li>`).join('');\n  const insights = (s.insights || []).map((i) => `<li>${i.title} — ${i.recommendation}</li>`).join('');\n  const html = `<div dir=\"rtl\" style=\"font-family:Tahoma;max-width:640px\">\n    <h2 style=\"color:#94742F\">گزارش صبحگاهی ${s.hotel} — ${s.day}</h2>\n    ${s.narrative ? `<p style=\"white-space:pre-line;line-height:1.9\">${s.narrative}</p>` : ''}\n    <table style=\"border-collapse:collapse;border:1px solid #ddd\">${rows}</table>\n    ${alerts ? `<h3>هشدارهای باز</h3><ul>${alerts}</ul>` : ''}\n    ${insights ? `<h3>پیشنهادهای هوشمند</h3><ul>${insights}</ul>` : ''}\n    <p style=\"color:#888;font-size:12px\">زرین هوشمند — Smart Optimization Platform for Hospitality</p></div>`;\n  return { json: { hotelId: s.hotelId, subject: `گزارش صبحگاهی ${s.hotel} — ${s.day}`, html,\n    text: s.narrative || `اشغال ${fa(m.occupancyRate)}٪ · برق ${fa(m.energy.electricity)} kWh · خرابی باز ${fa(m.maintenance.open)}` } };\n});"
+      },
+      "id": "9c7ee306-2ec1-5eac-a6b2-ab7184e12ce4",
+      "name": "Build report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ZARIN_MAIL_FROM }}",
+        "toEmail": "={{ $env.ZARIN_REPORT_RECIPIENTS }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "1bc0d616-72ec-5889-a19a-99346f6eba94",
+      "name": "E-mail GM & owner",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $env.BALE_MANAGEMENT_CHAT_ID, text: $json.text }) }}"
+      },
+      "id": "993a0e9d-485f-5b9b-8d2b-b520e98f457c",
+      "name": "Bale · management group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 07:15": {
+      "main": [
+        [
+          {
+            "node": "Hotels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hotels": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "GET summary + AI briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET summary + AI briefing": {
+      "main": [
+        [
+          {
+            "node": "Build report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build report": {
+      "main": [
+        [
+          {
+            "node": "E-mail GM & owner",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bale · management group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "07:15 Tehran: pulls KPIs + alerts + insights (+ AI narrative generated server-side) for each hotel and sends an RTL e-mail and a Bale message."
+  },
+  "tags": [
+    {
+      "name": "zarin-hooshmand"
+    }
+  ]
+}

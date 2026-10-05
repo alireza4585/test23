@@ -38,8 +38,8 @@ export class AnthropicProvider implements LlmProvider {
     const response = await this.client.beta.messages.create({
       model: this.model,
       max_tokens: request.maxTokens ?? 16000,
-      // Opus 5.5 always thinks adaptively; effort keeps chat answers snappy
-      // while leaving room for multi-step analysis questions.
+      // Medium effort keeps chat answers snappy while leaving room for
+      // multi-step analysis questions.
       output_config: { effort: "medium" },
       // Re-run safety-classifier declines on Anthropic's recommended
       // fallback model inside the same call.

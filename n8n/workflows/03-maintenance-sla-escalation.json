@@ -1,0 +1,311 @@
+{
+  "name": "Zarin · 03 · Maintenance SLA escalation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "c6931ce4-f16c-58a9-be6d-907ee1dd9e30",
+      "name": "Every 30 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per hotel served by this n8n instance (comma-separated env var).\nreturn ($env.ZARIN_HOTEL_IDS || '').split(',').map((h) => h.trim()).filter(Boolean)\n  .map((hotelId) => ({ json: { hotelId } }));"
+      },
+      "id": "8bffdb7b-f87e-5898-b9e0-e26a36d16fe1",
+      "name": "Hotels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API (HMAC-SHA256 over `${timestamp}.${body}`).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nreturn $input.all().map((item) => {\n  const body = item.json.requestBody ? JSON.stringify(item.json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const signature = crypto\n    .createHmac('sha256', $env.ZARIN_INTEGRATION_SECRET)\n    .update(`${timestamp}.${body}`)\n    .digest('hex');\n  return { json: { ...item.json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature } };\n});"
+      },
+      "id": "d2080791-efe2-5962-bcfb-77e283370b70",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/maintenance/overdue",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "e65811ec-f5e1-5828-8ee3-ec551f39f4f2",
+      "name": "GET overdue tickets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Escalate tickets more than 60 min past SLA (once per run window).\nconst out = [];\nfor (const [i, { json }] of $input.all().entries()) {\n  const hotelId = $('Hotels').all()[i].json.hotelId;\n  const late = (json.tickets || []).filter((t) => t.overdueMinutes >= 60);\n  if (late.length === 0) continue;\n  const lines = late.slice(0, 5).map((t) => `• ${t.title} (${t.location ?? '—'}) — ${Math.round(t.overdueMinutes / 60)} ساعت تأخیر`);\n  out.push({ json: {\n    hotelId,\n    critical: late.some((t) => t.priority === 'critical'),\n    smsText: `زرین: ${late.length} خرابی از SLA گذشته\\n${lines.join('\\n')}`,\n    requestBody: {\n      roles: ['maintenanceManager', 'generalManager', 'operationsManager'],\n      title: `${late.length} خرابی خارج از SLA`,\n      body: lines.join('\\n'),\n      severity: 'critical',\n      category: 'maintenance',\n      route: '/maintenance',\n    },\n  } });\n}\nreturn out;"
+      },
+      "id": "d3084daf-e74a-52ab-8b87-619fee2aa6a3",
+      "name": "Escalation payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API (HMAC-SHA256 over `${timestamp}.${body}`).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nreturn $input.all().map((item) => {\n  const body = item.json.requestBody ? JSON.stringify(item.json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const signature = crypto\n    .createHmac('sha256', $env.ZARIN_INTEGRATION_SECRET)\n    .update(`${timestamp}.${body}`)\n    .digest('hex');\n  return { json: { ...item.json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature } };\n});"
+      },
+      "id": "31c9a1e5-61eb-5c43-83d4-ada96d016b82",
+      "name": "Sign notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/notifications",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}"
+      },
+      "id": "03340526-9b6c-5806-ad4b-4e4c5463c067",
+      "name": "POST in-app notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "04444f6a-e3ac-47b6-87dc-5efcd9a8f2ab",
+              "leftValue": "={{ $json.critical }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "55279011-4e8a-5f69-a29e-78aaa07e503c",
+      "name": "Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.kavenegar.com/v1/{{ $env.KAVENEGAR_API_KEY }}/sms/send.json",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "receptor",
+              "value": "={{ $env.MAINTENANCE_MANAGER_MOBILE }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.smsText }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "c64b1ac5-2ade-58ff-a5ff-fdcf5a15c184",
+      "name": "SMS · maintenance manager",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Every 30 minutes": {
+      "main": [
+        [
+          {
+            "node": "Hotels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hotels": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "GET overdue tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET overdue tickets": {
+      "main": [
+        [
+          {
+            "node": "Escalation payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation payload": {
+      "main": [
+        [
+          {
+            "node": "Sign notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign notification": {
+      "main": [
+        [
+          {
+            "node": "POST in-app notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical?": {
+      "main": [
+        [
+          {
+            "node": "SMS · maintenance manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Every 30 min: finds tickets >60 min past SLA, pushes an in-app + push notification to managers via the Zarin API and SMS for critical ones."
+  },
+  "tags": [
+    {
+      "name": "zarin-hooshmand"
+    }
+  ]
+}

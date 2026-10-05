@@ -1,0 +1,50 @@
+# n8n for Zarin Hooshmand (single node, PostgreSQL-backed).
+#   cp .env.example .env   # fill in the values
+#   docker compose up -d
+# Put n8n behind TLS (reverse proxy) before exposing the webhooks.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD}
+      POSTGRES_DB: n8n
+    volumes:
+      - n8n_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      retries: 5
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5678:5678"
+    env_file: .env
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      GENERIC_TIMEZONE: Asia/Tehran
+      TZ: Asia/Tehran
+      # Code nodes verify/sign HMAC requests with Node's crypto module.
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+      # Workflows read their configuration from $env.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:?set N8N_PUBLIC_URL}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+
+volumes:
+  n8n_db:
+  n8n_data:

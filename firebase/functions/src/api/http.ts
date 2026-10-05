@@ -6,7 +6,8 @@ import { runInsightsForHotel } from "../analytics/scheduled";
 import { loadHotelData } from "../analytics/loader";
 import { computeDailyMetrics } from "../analytics/metrics";
 import { isActiveTicket } from "../analytics/types";
-import { INTEGRATION_SECRET, REGION, TIMEZONE } from "../config";
+import { AnthropicProvider } from "../ai/provider";
+import { AI_MODEL, ANTHROPIC_API_KEY, INTEGRATION_SECRET, REGION, TIMEZONE } from "../config";
 import { ROLES } from "../domain/rbac";
 import { addDays, dayKey, db, FieldValue, paths, Timestamp } from "../lib/admin";
 import { writeAudit } from "../lib/audit";
@@ -17,7 +18,8 @@ import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from "../lib/signature";
  * Integration API (v1) for n8n, IoT gateways and future partners.
  *
  *   GET  /v1/health
- *   GET  /v1/hotels/:hotelId/summary?day=yyyy-MM-dd   KPIs + alerts + insights
+ *   GET  /v1/hotels/:hotelId/summary?day=yyyy-MM-dd[&narrative=fa|en]
+ *                                                     KPIs + alerts + insights (+ AI briefing)
  *   GET  /v1/hotels/:hotelId/maintenance/overdue      SLA breaches (escalation)
  *   POST /v1/hotels/:hotelId/notifications            in-app + push to roles/users
  *   POST /v1/hotels/:hotelId/insights                 store an external/LLM insight
@@ -28,7 +30,7 @@ import { SIGNATURE_HEADER, TIMESTAMP_HEADER, verify } from "../lib/signature";
  * resource-oriented contract is what the dedicated backend will expose.
  */
 export const api = onRequest(
-  { region: REGION, secrets: [INTEGRATION_SECRET], cors: false, timeoutSeconds: 120 },
+  { region: REGION, secrets: [INTEGRATION_SECRET, ANTHROPIC_API_KEY], cors: false, timeoutSeconds: 180 },
   async (req, res) => {
     const rawBody = req.rawBody?.toString("utf8") ?? "";
     const path = req.path.replace(/\/+$/, "");
@@ -64,9 +66,16 @@ export const api = onRequest(
     try {
       const route = `${req.method} ${sub}`;
       switch (route) {
-        case "GET /summary":
-          res.json(await summary(hotelId, req.query.day as string | undefined));
+        case "GET /summary": {
+          const result = await summary(hotelId, req.query.day as string | undefined);
+          const locale = req.query.narrative;
+          if (locale === "fa" || locale === "en") {
+            res.json({ ...result, narrative: await narrate(result, locale) });
+          } else {
+            res.json(result);
+          }
           return;
+        }
         case "GET /maintenance/overdue":
           res.json(await overdue(hotelId));
           return;
@@ -129,6 +138,30 @@ async function summary(hotelId: string, day?: string) {
       estimatedMonthlySaving: d.get("estimatedMonthlySaving") ?? null,
     })),
   };
+}
+
+/**
+ * Executive narrative for scheduled reports (n8n → e-mail / Bale). The LLM
+ * only rephrases the computed summary; numbers come from the analytics engine.
+ */
+async function narrate(data: Awaited<ReturnType<typeof summary>>, locale: "fa" | "en"): Promise<string | null> {
+  try {
+    const provider = new AnthropicProvider(ANTHROPIC_API_KEY.value(), AI_MODEL.value());
+    const result = await provider.complete({
+      system:
+        "You write the morning management briefing for a hotel general manager. Use only the JSON you are given. " +
+        "Structure: one-sentence headline; 3–5 bullet points with the most decision-relevant numbers (occupancy, ADR, " +
+        "RevPAR, energy vs baseline, maintenance backlog, low stock); then 'Today's priorities' with up to 3 actions " +
+        "drawn from the alerts and insights. Max 180 words. Write in " +
+        (locale === "fa" ? "Persian with Persian digits." : "English."),
+      messages: [{ role: "user", content: JSON.stringify(data) }],
+      maxTokens: 8000,
+    });
+    return result.status === "ok" ? result.text : null;
+  } catch (err) {
+    logger.warn("narrative failed", { err: String(err) });
+    return null;
+  }
 }
 
 async function overdue(hotelId: string) {

@@ -7,6 +7,9 @@ database-debug*.log
 pubsub-debug*.log
 *.local
 
+# n8n runtime configuration (template: n8n/.env.example)
+n8n/.env
+
 # OS / editors
 .DS_Store
 .idea/
