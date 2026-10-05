@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "demo-zarin",
+    "dev": "zarin-hooshmand-dev",
+    "staging": "zarin-hooshmand-staging",
+    "prod": "zarin-hooshmand-prod"
+  }
+}

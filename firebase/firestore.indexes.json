@@ -1,0 +1,108 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "maintenanceTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reportedById", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assigneeId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reportedById", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceTickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assigneeId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "inventoryMovements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "itemId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "audienceRoles", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "audienceRoles", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aiInsights",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "kind", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "assigneeId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "role", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "auditLogs",
+      "fieldPath": "changes",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "aiConversations",
+      "fieldPath": "answer",
+      "indexes": []
+    }
+  ]
+}

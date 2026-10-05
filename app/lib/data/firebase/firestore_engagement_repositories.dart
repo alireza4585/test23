@@ -194,8 +194,9 @@ class FunctionsAiAssistantRepository implements AiAssistantRepository {
       'hotelId': hotelId,
       'question': question,
       'locale': localeCode,
+      // Most recent 12 turns.
       'history': [
-        for (final m in history.where((m) => !m.isError).take(12))
+        for (final m in history.where((m) => !m.isError).toList().reversed.take(12).toList().reversed)
           {'role': m.role.name, 'text': m.text},
       ],
     });
@@ -284,10 +285,11 @@ class FirebaseUserAdminRepository implements UserAdminRepository {
   final FirebaseFirestore _db;
   final FirebaseFunctions _functions;
 
+  /// Hotel directory `hotels/{id}/members` — maintained only by Cloud
+  /// Functions, readable by roles with `users.manage`.
   @override
   Stream<List<ManagedUser>> watchUsers(String hotelId) => _db
-      .collection('users')
-      .where('hotelIds', arrayContains: hotelId)
+      .collection('hotels/$hotelId/members')
       .limit(500)
       .snapshots()
       .map(

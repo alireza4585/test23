@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Zarin Hooshmand — Cloud Storage rules.
+// Objects are private; the app reads them through authenticated SDK calls
+// (never public URLs). Role checks use the same custom claims as Firestore.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function memberOf(hotelId) {
+      return signedIn() && (
+        role() == 'superAdmin' ||
+        (request.auth.token.hotelIds is list && hotelId in request.auth.token.hotelIds)
+      );
+    }
+
+    // Maintenance photos — anyone allowed to report a fault may attach
+    // images (≤ 8 MB, images only); all hotel members with maintenance
+    // access may view them.
+    match /hotels/{hotelId}/maintenance/{ticketId}/{fileName} {
+      allow read: if memberOf(hotelId);
+      allow create: if memberOf(hotelId)
+        && role() != 'analyst'
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
+    }
+
+    // Generated PDF reports.
+    match /hotels/{hotelId}/reports/{fileName} {
+      allow read: if memberOf(hotelId) && role() in [
+        'superAdmin', 'hotelOwner', 'generalManager', 'operationsManager', 'energyManager',
+        'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager',
+        'hrManager', 'analyst'
+      ];
+      allow create: if memberOf(hotelId) && role() in [
+        'superAdmin', 'hotelOwner', 'generalManager', 'operationsManager', 'energyManager',
+        'maintenanceManager', 'inventoryManager', 'analyst'
+      ]
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
