@@ -1,0 +1,12 @@
+{$ZH_DOMAIN} {
+	encode gzip
+	# Realtime (SSE) needs unbuffered proxying.
+	reverse_proxy pocketbase:8090 {
+		flush_interval -1
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}

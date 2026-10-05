@@ -1,0 +1,20 @@
+{
+  "name": "zarin-pocketbase",
+  "private": true,
+  "description": "Zarin Hooshmand backend on PocketBase: schema, API rules, JS hooks, seed and tests",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:core": "node scripts/build-core.mjs",
+    "check:core": "node scripts/build-core.mjs --check",
+    "serve": "./bin/pocketbase serve --dir=./pb_data --hooksDir=./pb_hooks --migrationsDir=./pb_migrations",
+    "seed": "node scripts/seed.mjs",
+    "test": "npm run check:core && vitest run"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "pocketbase": "^0.28.1",
+    "vitest": "^5.0.3"
+  }
+}

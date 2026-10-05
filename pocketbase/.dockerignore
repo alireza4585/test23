@@ -1,0 +1,8 @@
+node_modules
+bin
+pb_data
+test
+deploy
+core
+scripts
+*.log

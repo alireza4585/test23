@@ -1,0 +1,33 @@
+# Production stack on one server: PocketBase behind Caddy (automatic HTTPS).
+#   cp .env.example .env   # set ZH_DOMAIN and the secrets
+#   docker compose up -d --build
+#   docker compose exec pocketbase /pb/pocketbase superuser upsert you@example.ir 'strong-password' --dir=/pb/pb_data
+services:
+  pocketbase:
+    build: ..
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - pb_data:/pb/pb_data
+    expose:
+      - "8090"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ZH_DOMAIN: ${ZH_DOMAIN:?set ZH_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pb_data:
+  caddy_data:
+  caddy_config:

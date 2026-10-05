@@ -49,14 +49,22 @@ export interface EngineInput {
   rooms: RoomRow[];
 }
 
-const fmt = (v: number, d = 0) =>
-  v.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
+/**
+ * `1234.5` → `1,234.5` with exactly [d] decimals. Hand-rolled (no Intl) so
+ * the engine also runs inside PocketBase's JS hooks, which lack Intl.
+ */
+const fmt = (v: number, d = 0) => {
+  const fixed = Math.abs(v).toFixed(d);
+  const [int, frac] = fixed.split(".");
+  const sign = v < 0 && Number(fixed) !== 0 ? "-" : "";
+  return sign + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac ? `.${frac}` : "");
+};
 
 /**
  * Deterministic, explainable rule engine — the first "AI" layer. Every
  * insight carries the evidence it was derived from. LLM narration and
- * forecasting models plug in on top (see docs/09-ai-integration.md); they
- * never replace the auditable numbers here.
+ * forecasting models plug in on top (see docs/07-ai.md); they never replace
+ * the auditable numbers here.
  */
 export function generateInsights(input: EngineInput): InsightDraft[] {
   return [
