@@ -97,6 +97,27 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 5. **Activate.** هر چهار workflow را فعال کنید. آدرس `…/webhook/…` (production) فقط وقتی workflow فعال است پاسخ می‌دهد.
 
+## n8n روی لیارا
+
+آدرس n8n: `https://zarin-hoshmand-jexcz8u8pp.liara.run`
+
+1. **متغیرهای محیطی:** در پنل لیارا، در برنامهٔ n8n، بخش «متغیرهای محیطی» این‌ها را اضافه کنید و برنامه را restart کنید:
+   ```
+   NODE_FUNCTION_ALLOW_BUILTIN=crypto
+   N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+   GENERIC_TIMEZONE=Asia/Tehran
+   ZARIN_API_BASE=https://<آدرس برنامهٔ PocketBase>.liara.run
+   ZARIN_INTEGRATION_SECRET=<همان مقدار ZH_INTEGRATION_SECRET در برنامهٔ PocketBase>
+   ZARIN_HOTEL_IDS=<شناسهٔ هتل که create-hotel چاپ می‌کند>
+   ```
+   سایر متغیرها (`BALE_*`، `KAVENEGAR_API_KEY`، ایمیل) را هم از `.env.example` اضافه کنید.
+2. **Import:** فایل‌های `n8n/workflows/*.json` را از GitHub دانلود کنید و در n8n از مسیر Workflows → ⋯ → Import from File وارد کنید. Credentialهای SMTP و Header Auth را روی نودهای مربوط انتخاب کنید (رجوع کنید به مرحلهٔ ۳ بالا).
+3. **اتصال PocketBase به n8n:** در برنامهٔ PocketBase روی لیارا این متغیر را بگذارید:
+   ```
+   ZH_N8N_WEBHOOK_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/zarin-events
+   ```
+4. **فعال‌سازی:** هر چهار workflow را Active کنید. برای آزمایش اتصال، از n8n یک درخواست امضاشده به `GET {ZARIN_API_BASE}/v1/hotels/{id}/summary` بزنید (workflow شمارهٔ ۲ را دستی اجرا کنید).
+
 ## تست دستی
 
 ```bash
