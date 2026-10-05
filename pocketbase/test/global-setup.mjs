@@ -37,7 +37,7 @@ export default async function setup({ provide }) {
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
   const log = createWriteStream(join(dir, "serve.log"));
-  const proc = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, ...paths], {
+  const proc = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, "--automigrate=false", ...paths], {
     env: { ...process.env, ZH_INTEGRATION_SECRET: SECRET, ZH_AI_PROVIDER: "none", ZH_N8N_WEBHOOK_URL: "" },
     stdio: ["ignore", "pipe", "pipe"],
   });

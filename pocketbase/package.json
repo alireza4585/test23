@@ -8,7 +8,7 @@
   "scripts": {
     "build:core": "node scripts/build-core.mjs",
     "check:core": "node scripts/build-core.mjs --check",
-    "serve": "./bin/pocketbase serve --dir=./pb_data --hooksDir=./pb_hooks --migrationsDir=./pb_migrations",
+    "serve": "./bin/pocketbase serve --automigrate=false --dir=./pb_data --hooksDir=./pb_hooks --migrationsDir=./pb_migrations",
     "seed": "node scripts/seed.mjs",
     "test": "npm run check:core && vitest run"
   },
