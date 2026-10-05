@@ -10,6 +10,13 @@ API سه سطح دارد. هر سه از یک ماتریس RBAC و یک لایه
 
 > هر عملیاتی که فقط باید روی سرور انجام شود، مثل ساختن کاربر، تغییر claim، فراخوانی LLM یا ارسال اعلان، **هرگز** از کلاینت مستقیم در Firestore نوشته نمی‌شود.
 
+> **PocketBase:** همین سه سطح با این معادل‌ها پیاده شده است:
+> - CRUD استاندارد `/api/collections/*`، محدود به API rules.
+> - routeهای `/api/zarin/*` به‌جای callableها: `users`، `sessions`، `rooms/{id}/status`، `tasks/{id}/transition`، `tickets/{id}/status·assign`، `inventory/{id}/movements` و `ai/ask`.
+> - همان قرارداد **`/v1`** امضاشده برای n8n، به‌اضافهٔ `metrics/rollup`.
+>
+> جزئیات در [`pocketbase/README.md`](../pocketbase/README.md#api) است. کدهای خطا در `data.code.code` برمی‌گردند (مثلاً `insufficient_stock`، `room_status_changed`، `role_not_assignable`).
+
 ## Callable Functions (region: `europe-west3`)
 
 | نام | ورودی | مجوز | خروجی | خطاها |

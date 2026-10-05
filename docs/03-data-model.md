@@ -125,6 +125,16 @@ erDiagram
 | aiInsights | `status ↑, createdAt ↓` | پیشنهادهای فعال |
 | members | `role ↑, status ↑` | هدف‌گیری اعلان بر اساس نقش |
 
+## پیاده‌سازی در PocketBase
+
+همین مدل در `pocketbase/pb_migrations` به‌صورت collectionهای تخت پیاده شده است. به‌جای زیرمجموعه‌های `hotels/{id}/…`، هر رکورد یک relation به نام `hotel` دارد.
+
+- نام collectionها همان نام‌های بالاست. استثناها: `ticketEvents` (به‌جای زیرمجموعهٔ events)، `inbox` (با فیلد `user`)، `sessions` و `aiUsage`.
+- فیلدهای actor (مثل `updatedBy` و `reportedBy`) relation به `users` هستند و نام هر کدام در یک فیلد متنی کنار آن (`…Name`) ذخیره می‌شود.
+- عکس خرابی‌ها و PDF گزارش‌ها فیلد فایل **protected** همان رکورد هستند (حداکثر ۸MB و ۲۰MB).
+- کلیدهای یکتا با ایندکس UNIQUE تعریف شده‌اند: `(hotel, number)` برای اتاق، `(hotel, day, type)` برای انرژی، `(hotel, day)` برای عملیات روزانه و KPI، و `(hotel, dedupeKey)` برای هشدار.
+- `users` همان collection auth پیش‌فرض PocketBase است با این فیلدها: `nationalId` (hidden و unique، فیلد identity ورود)، `role`، `permissions` (relation به کاتالوگ، محاسبه‌شده توسط سرور)، `hotels`، `primaryHotel`، `status` و `mustChangePassword`.
+
 ## نگاشت به PostgreSQL (فاز بک‌اند اختصاصی)
 
 Schema به‌گونه‌ای طراحی شده که مهاجرت به PostgreSQL مکانیکی باشد:

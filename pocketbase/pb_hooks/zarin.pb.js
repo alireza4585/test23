@@ -39,6 +39,7 @@ routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).as
 
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));
+routerAdd("POST", "/v1/outbox/flush", (e) => require(`${__hooks}/lib/integration.js`).flushNow(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/summary", (e) => require(`${__hooks}/lib/integration.js`).summary(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/maintenance/overdue", (e) => require(`${__hooks}/lib/integration.js`).overdue(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/notifications", (e) => require(`${__hooks}/lib/integration.js`).postNotification(e));

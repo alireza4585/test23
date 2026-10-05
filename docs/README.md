@@ -17,7 +17,7 @@
 | ۱۱ | AI Integration Plan | [07-ai.md](07-ai.md) |
 | ۱۲ | MVP Roadmap | [08-roadmap.md](08-roadmap.md#mvp-roadmap-۱۲-هفته-تا-پایلوت-پولی) |
 | ۱۳ | Future Roadmap | [08-roadmap.md](08-roadmap.md#future-roadmap) |
-| ۱۴ | کد اولیه | [`app/`](../app) (Flutter) · [`firebase/`](../firebase) (Rules و Functions) · [`n8n/`](../n8n) |
+| ۱۴ | کد اولیه | [`app/`](../app) (Flutter) · [`pocketbase/`](../pocketbase) (بک‌اند پیشنهادی) · [`firebase/`](../firebase) (جایگزین) · [`n8n/`](../n8n) |
 | ۱۵ | صفحات قابل اجرا | `cd app && flutter run` (بک‌اند دمو). راهنما در [README اصلی](../README.md) |
 
 موضوعات تکمیلی درخواستی:
@@ -28,4 +28,5 @@
 - Dependency Injection ← [04](04-flutter-architecture.md#dependency-injection)
 - Repository و Service Layer ← [04](04-flutter-architecture.md#repository--service-layer)
 - Audit Log و Session Management ← [02](02-roles-and-security.md#audit-log)
+- استقرار روی سرور (PocketBase) ← [`pocketbase/README.md`](../pocketbase/README.md)
 - ریسک‌ها (تحریم، Push، داده) ← [01](01-architecture.md#ریسک‌ها-و-ملاحظات-مهم-برای-بازار-ایران) و [08](08-roadmap.md#ریسک‌ها-و-راهکارها)

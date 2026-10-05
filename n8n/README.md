@@ -80,6 +80,14 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
    - **Header Auth**: نود *Meter gateway webhook*، مثلاً `X-Meter-Key: <random>`. همین کلید را به گیت‌وی کنتور بدهید.
 
 4. **اتصال بک‌اند به n8n**
+
+   **PocketBase (پیشنهادی):** در `pocketbase/deploy/.env` این دو را تنظیم کنید:
+   - `ZH_INTEGRATION_SECRET` (همان `ZARIN_INTEGRATION_SECRET`)
+   - `ZH_N8N_WEBHOOK_URL=https://<n8n>/webhook/zarin-events`
+
+   در `n8n/.env` هم `ZARIN_API_BASE=https://<دامنهٔ سرور PocketBase>` را بگذارید. شناسهٔ هتل‌ها را خروجی `npm run create-hotel` نشان می‌دهد.
+
+   **Firebase:**
    ```bash
    cd firebase/functions
    firebase functions:secrets:set INTEGRATION_SECRET      # همان ZARIN_INTEGRATION_SECRET

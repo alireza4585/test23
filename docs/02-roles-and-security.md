@@ -105,6 +105,15 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 | ۵. **Cloud Functions** | callableها `requireCaller` → `requireHotel` → `requirePermission` را صدا می‌زنند. ورودی‌ها با Zod اعتبارسنجی می‌شوند | `lib/guards.ts` |
 | ۶. Storage Rules | عکس خرابی فقط برای اعضای هتل (تصویر، کمتر از ۸MB) و PDF گزارش فقط برای `reports.view` | `firebase/storage.rules` |
 
+## اجرا در بک‌اند PocketBase
+
+دفاع چندلایه در PocketBase هم برقرار است. لایه‌های ۴ و ۵ جدول بالا در PocketBase این‌ها هستند:
+
+- **API rules:** ایزوله‌سازی با `@request.auth.hotels.id ?= hotel` و مجوز با `@request.auth.permissions.code ?= '…'`. مجوزها را سرور از قالب نقش محاسبه می‌کند.
+- **hookها و routeهای تراکنشی:** انتقال وضعیت بر اساس نقش، whitelist فیلدها، پر کردن actor توسط سرور، و ممنوعیت ارجاع به رکورد هتل دیگر.
+
+۴۲ تست روی سرور واقعی همهٔ موارد این بخش را بررسی می‌کنند ([`pocketbase/test`](../pocketbase/test)). جزئیات در [`pocketbase/README.md`](../pocketbase/README.md#امنیت-در-pocketbase) است.
+
 ## نکات کلیدی Security Rules
 
 - **انتقال وضعیت اتاق بر اساس نقش** (`roomTransitions()`). مستخدم فقط می‌تواند `vacantDirty → cleaningInProgress → vacantClean` را انجام دهد. پذیرش فقط `vacantClean → occupied → vacantDirty`. فیلد `previousStatus` باید با وضعیت فعلی برابر باشد، که مانع race condition و جعل می‌شود.

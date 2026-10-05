@@ -10,7 +10,9 @@
     "check:core": "node scripts/build-core.mjs --check",
     "serve": "./bin/pocketbase serve --automigrate=false --dir=./pb_data --hooksDir=./pb_hooks --migrationsDir=./pb_migrations",
     "seed": "node scripts/seed.mjs",
-    "test": "npm run check:core && vitest run"
+    "test": "npm run check:core && vitest run",
+    "create-hotel": "node scripts/create-hotel.mjs",
+    "test-server": "node scripts/test-server.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

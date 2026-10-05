@@ -154,7 +154,8 @@ function runInsights(e) {
 function flushOutbox(app) {
   const url = $os.getenv("ZH_N8N_WEBHOOK_URL");
   const secret = $os.getenv("ZH_INTEGRATION_SECRET");
-  if (!url || !secret) return;
+  let delivered = 0;
+  if (!url || !secret) return delivered;
   for (const rec of z.findMany(app, "outbox", "deliveredAt = '' && attempts < 8", {}, "created", 50)) {
     const body = JSON.stringify(z.jsonOf(rec, "payload") || {});
     const ts = Math.floor(Date.now() / 1000);
@@ -166,6 +167,7 @@ function flushOutbox(app) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         rec.set("deliveredAt", z.pbDate(new Date()));
         rec.set("lastError", "");
+        delivered++;
       } else {
         rec.set("lastError", `HTTP ${res.statusCode}`);
       }
@@ -175,6 +177,13 @@ function flushOutbox(app) {
     rec.set("attempts", rec.getInt("attempts") + 1);
     app.save(rec);
   }
+  return delivered;
 }
 
-module.exports = { sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, flushOutbox };
+/** POST /v1/outbox/flush — deliver queued events now (ops / tests). */
+function flushNow(e) {
+  verified(e);
+  return e.json(200, { delivered: flushOutbox(e.app) });
+}
+
+module.exports = { sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, flushOutbox, flushNow };

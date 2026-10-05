@@ -12,6 +12,9 @@ flutter pub get
 # Offline demo backend (seeded 60-room hotel, 16 demo roles) — default
 flutter run
 
+# PocketBase backend (self-hosted, see ../pocketbase)
+flutter run --dart-define=ZH_BACKEND=pocketbase --dart-define=ZH_PB_URL=https://api.example.ir
+
 # Firebase backend
 dart pub global activate flutterfire_cli
 flutterfire configure --project=zarin-hoshmand --platforms=android,ios   # writes lib/firebase_options.dart
@@ -27,7 +30,8 @@ Demo logins: any role chip on the login screen, or national ID + `Zarin@2026`
 
 | `--dart-define` | Default | Meaning |
 |---|---|---|
-| `ZH_BACKEND` | `demo` | `demo` or `firebase` |
+| `ZH_BACKEND` | `demo` | `pocketbase`, `firebase` or `demo` |
+| `ZH_PB_URL` | — | PocketBase server URL (required for `pocketbase`) |
 | `ZH_ENV` | `dev` | `dev` / `staging` / `prod` |
 | `ZH_FUNCTIONS_REGION` | `europe-west3` | Cloud Functions region |
 | `ZH_USE_EMULATORS` | `false` | Connect to the local emulator suite |
@@ -38,6 +42,7 @@ Demo logins: any role chip on the login screen, or national ID + `Zarin@2026`
 ```bash
 flutter analyze
 flutter test                                   # unit + widget (demo backend)
+ZH_PB_TEST_URL=http://127.0.0.1:PORT flutter test test/pocketbase   # adapters vs live PocketBase
 flutter test --update-goldens tool/screenshots_test.dart   # regenerate tool/screenshots/*.png
 ```
 
@@ -48,8 +53,9 @@ lib/
 ├── main.dart / bootstrap.dart / app.dart   # entry, composition root, MaterialApp.router
 ├── core/        config · di · error · l10n · platform · preferences · routing · security · theme · utils · widgets
 ├── data/        backend.dart · repository_providers.dart (port → adapter binding)
-│   ├── demo/      in-memory backend + seed + simulated automations + demo AI analyst
-│   └── firebase/  Firestore / Auth / Storage / Functions adapters
+│   ├── demo/        in-memory backend + seed + simulated automations + demo AI analyst
+│   ├── pocketbase/  PocketBase adapters (live queries over realtime, /api/zarin commands)
+│   └── firebase/    Firestore / Auth / Storage / Functions adapters
 ├── features/<feature>/{domain,application,presentation}
 └── l10n/        app_fa.arb (template) · app_en.arb · generated/
 ```

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, inject, it } from "vitest";
 
 import { hotelId, login, NID, signed, superuser, url } from "./helpers.mjs";
 
@@ -94,5 +94,20 @@ describe("integration API v1 (n8n / IoT)", () => {
     });
     const gm = await login(NID.gm);
     expect((await gm.collection("aiInsights").getOne(json.id)).source).toBe("external");
+  });
+
+  it("delivers queued events to n8n with signatures n8n can verify", async () => {
+    const hk = await login(NID.housekeeper);
+    await hk.collection("maintenanceTickets").create({
+      hotel: hotelId(), title: "آسانسور شماره ۲ متوقف شد", category: "appliance", priority: "high", area: "لابی",
+    });
+    let delivered = 1;
+    while (delivered > 0) delivered = (await signed("/v1/outbox/flush", { method: "POST", body: {} })).json.delivered;
+    const events = await (await fetch(`${inject("n8nUrl")}/received`)).json();
+    const ticket = events.find((ev) => ev.type === "maintenance.ticket.created" && ev.data.title === "آسانسور شماره ۲ متوقف شد");
+    expect(ticket).toBeTruthy();
+    expect(ticket.data.priority).toBe("high");
+    expect(events.some((ev) => ev.type === "alert.raised")).toBe(true);
+    expect(events.every((ev) => ev.signatureOk)).toBe(true);
   });
 });

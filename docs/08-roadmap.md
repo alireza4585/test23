@@ -8,6 +8,7 @@
 | RBAC سه‌لایه (UI، Router، Rules و Functions) با تست drift | ✅ |
 | Firestore Rules، Storage Rules و Indexes، با ۲۰ تست rules | ✅ |
 | Cloud Functions: کاربران، نشست، triggerها، Audit، تحلیل روزانه، موتور قواعد، دستیار AI و API v1 | ✅ ۱۸ تست واحد و ۷ تست یکپارچه روی emulator |
+| **بک‌اند PocketBase** (قابل میزبانی داخل ایران): طرح دیتابیس، قوانین دسترسی، hookها، seed، Docker و Caddy | ✅ ۴۲ تست روی سرور واقعی و ۸ تست adapter در Flutter |
 | n8n: ۴ workflow (هشدار، گزارش صبحگاهی، Escalation، ورود دادهٔ IoT) | ✅ آمادهٔ import |
 | گزارش PDF فارسی (RTL، Vazirmatn) | ✅ |
 
@@ -30,6 +31,7 @@
 
 ### فاز ۲: «هتل متصل» (ماه ۴ تا ۹)
 
+- ✅ **میزبانی داخل ایران با PocketBase** انجام شده است ([`pocketbase/`](../pocketbase)). گام بعدی فقط وقتی مقیاس آن را لازم کند:
 - **بک‌اند اختصاصی داخل ایران:**
   - NestJS یا Go با **PostgreSQL** (و TimescaleDB برای سری زمانی).
   - Redis، و Keycloak یا Auth داخلی.
@@ -74,7 +76,7 @@
 
 | ریسک | احتمال | اثر | راهکار |
 |---|---|---|---|
-| **تحریم و محدودیت دسترسی** به Firebase، FCM، Google Cloud یا Anthropic از ایران، یا مسدودسازی از سمت ارائه‌دهنده | بالا | بالا | معماری backend-agnostic (ports & adapters)، API v1 مستقل از Firebase، fallback قواعد به‌جای LLM، و برنامهٔ فاز ۲ برای بک‌اند و Push داخلی. **پیشنهاد: برای مشتریان داخل ایران، فاز ۲ زودتر آغاز شود** |
+| **تحریم و محدودیت دسترسی** به Firebase، FCM، Google Cloud یا Anthropic از ایران، یا مسدودسازی از سمت ارائه‌دهنده | بالا | بالا | **بک‌اند PocketBase روی سرور داخلی** (انجام‌شده)، API v1 مستقل از ارائه‌دهنده، و پاسخ‌های قاعده‌محور به‌جای LLM خارجی. Push از طریق n8n به سرویس داخلی |
 | اختلال اینترنت بین‌الملل | متوسط | بالا | Firestore offline cache، بک‌اند دمو و n8n داخلی. در فاز ۲ همه‌چیز داخل کشور |
 | مقاومت پرسنل در ثبت داده | متوسط | بالا | UX یک‌لمسی، آموزش نقش‌به‌نقش، و KPI مشارکت در داشبورد مدیر |
 | کیفیت دادهٔ دستی | متوسط | متوسط | اعتبارسنجی در Rules (غیرمنفی، کلید روز)، تشخیص ناهنجاری، و نمایش «داده ثبت نشده» به‌جای صفر |
@@ -83,7 +85,7 @@
 
 ## کارهای فنی باقی‌مانده پیش از تولید
 
-1. `flutterfire configure --project=zarin-hoshmand` (و برای هر محیط اضافه، پروژهٔ جداگانه). فایل تولیدشده بدون تغییر جایگزین placeholder می‌شود.
+1. **PocketBase:** استقرار با `pocketbase/deploy`، فعال کردن پشتیبان روزانه، و ساخت هتل با `npm run create-hotel`. **Firebase (در صورت استفاده):** اجرای `flutterfire configure --project=zarin-hoshmand`.
 2. امضای release: Android keystore (فعلاً debug signing) و iOS provisioning/APNs key در Firebase.
 3. Secretها: `firebase functions:secrets:set ANTHROPIC_API_KEY INTEGRATION_SECRET`، و `N8N_WEBHOOK_URL` در `.env.<project>`.
 4. Firebase App Check (Play Integrity و App Attest) برای جلوگیری از کلاینت‌های جعلی.

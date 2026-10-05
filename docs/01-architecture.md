@@ -58,12 +58,14 @@ flowchart LR
 | حلقه | پیاده‌سازی در MVP | محل کد |
 |---|---|---|
 | Frontend | Flutter (Material 3، RTL، ریسپانسیو) | `app/` |
-| Firebase | Auth + Firestore + Storage. امنیت در Security Rules | `firebase/*.rules` |
+| Backend | **PocketBase** (پیشنهادی، روی سرور خودتان): Auth با کد ملی، دیتابیس، فایل، Realtime، قوانین دسترسی و hookها. **Firebase** هم به‌عنوان جایگزین مدیریت‌شده موجود است | `pocketbase/` · `firebase/` |
 | API Layer | Callable Functions برای اپ و REST v1 با امضای HMAC برای n8n و IoT | `firebase/functions/src/{admin,auth,ai,api}` |
 | n8n | ۴ workflow: مسیریابی رویداد، گزارش صبحگاهی، Escalation، ورود داده از کنتور | `n8n/workflows` |
 | AI Services | پورت `LlmProvider` با پیاده‌سازی Claude: دستیار گفتگو و خلاصهٔ مدیریتی | `firebase/functions/src/ai` |
 | Analytics Engine | محاسبهٔ روزانهٔ KPI و موتور قواعد قابل‌توضیح (Explainable rules) | `firebase/functions/src/analytics` |
 | Dashboard | داشبورد اختصاصی هر نقش (Executive / Operations / Staff) | `app/lib/features/dashboard` |
+
+> در استقرار PocketBase، جعبهٔ «Firebase» در نمودار بالا یک سرور PocketBase است: Auth، دیتابیس (SQLite)، فایل‌ها، Realtime، hookهای JavaScript (به‌جای Cloud Functions) و cron. API نسخهٔ v1، رویدادهای n8n و منطق تحلیل در هر دو پیاده‌سازی یکسان‌اند. کد TypeScript مشترک (RBAC و موتور تحلیل) برای PocketBase در `pb_hooks/lib/core.js` bundle می‌شود.
 
 ## اصول معماری
 
@@ -121,8 +123,9 @@ Rules هم همین انتقال‌ها را برای نقش `housekeepingStaff`
 
 | جزء | محیط |
 |---|---|
-| Firebase | پروژهٔ `zarin-hoshmand` (پیش‌فرض در `.firebaserc`). توصیه: پروژهٔ جداگانه برای `dev` و `staging` پیش از پایلوت. Region توابع: `europe-west3`. Timezone: `Asia/Tehran` |
-| Secrets | `ANTHROPIC_API_KEY` و `INTEGRATION_SECRET` در Secret Manager. هیچ کلیدی داخل اپ نیست |
+| PocketBase (پیشنهادی) | Docker روی VPS (ترجیحاً داخل ایران) با Caddy برای HTTPS خودکار. داده و فایل‌ها در volume `pb_data` با پشتیبان روزانه ([`pocketbase/`](../pocketbase)) |
+| Firebase (جایگزین) | پروژهٔ `zarin-hoshmand` (پیش‌فرض در `.firebaserc`). Region توابع: `europe-west3`. Timezone: `Asia/Tehran` |
+| Secrets | PocketBase: متغیرهای محیطی سرور (`ZH_INTEGRATION_SECRET`، `ZH_AI_API_KEY`). Firebase: Secret Manager. هیچ کلیدی داخل اپ نیست |
 | n8n | Docker روی VPS (ترجیحاً داخل ایران) با PostgreSQL. پشت TLS ([`n8n/`](../n8n)) |
 | اپ | `--dart-define` برای backend، env و region. Flavorها از طریق `ZH_ENV` |
 
@@ -145,7 +148,7 @@ Rules هم همین انتقال‌ها را برای نقش `housekeepingStaff`
 | UI | Flutter 3 و Material 3 | یک کدبیس برای دو پلتفرم، با RTL و تایپوگرافی فارسی (Vazirmatn) |
 | State و DI | Riverpod 3 | DI تایپ‌شده و قابل override در تست، Stream-first برای دادهٔ real-time |
 | Routing | go_router | Guard مرکزی (`redirect`)، Deep link و ShellRoute |
-| Backend MVP | Firebase | زمان رسیدن به بازار، Real-time، Rules، Serverless |
+| Backend | PocketBase (و Firebase به‌عنوان جایگزین) | یک فایل اجرایی، قابل میزبانی داخل کشور، Realtime و API rules. بدون وابستگی به Google |
 | Functions | TypeScript و Zod | اعتبارسنجی ورودی و هم‌خوانی تایپ‌ها |
 | Automation | n8n | تغییر کانال‌ها و workflowها بدون deploy، self-hosted |
 | AI | Claude از پشت پورت `LlmProvider` | Fallback سمت سرور، Prompt caching. قابل تعویض |
@@ -154,7 +157,7 @@ Rules هم همین انتقال‌ها را برای نقش `housekeepingStaff`
 
 | ریسک | اثر | راهکار در طراحی |
 |---|---|---|
-| **تحریم و محدودیت دسترسی** به سرویس‌های Google (Firebase، FCM) یا Anthropic از داخل ایران | قطعی یا نیاز به زیرساخت واسط | معماری backend-agnostic، API نسخهٔ v1 که «همان قرارداد بک‌اند اختصاصی» است، اپ دموی آفلاین، و نقشهٔ مهاجرت به PostgreSQL داخلی ([۰۸](08-roadmap.md)) |
+| **تحریم و محدودیت دسترسی** به سرویس‌های Google (Firebase، FCM) یا Anthropic از داخل ایران | قطعی یا نیاز به زیرساخت واسط | **بک‌اند PocketBase روی سرور داخلی** (پیاده‌سازی‌شده)، API نسخهٔ v1 مستقل از ارائه‌دهنده، دستیار AI با پاسخ مستند به داده‌ها بدون نیاز به LLM خارجی، و امکان اتصال مدل self-hosted |
 | Push در ایران | FCM ممکن است ناپایدار باشد | `PushService` قابل تعویض است (مثلاً با Pushe/Najva). اعلان درون‌برنامه‌ای (inbox) مستقل از Push کار می‌کند |
 | Data residency و قوانین داخلی | دادهٔ مهمان و پرسنل | کد ملی ماسک‌شده در لیست‌ها. فاز ۲: میزبانی داخل کشور |
 | هزینهٔ LLM | بودجهٔ ماهانه | سقف ۳۰ درخواست در ساعت برای هر کاربر، cache سیستم پرامپت، و استفاده از موتور قواعد به‌جای LLM برای پیشنهادهای روزانه |

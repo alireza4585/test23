@@ -30,7 +30,7 @@ function freePort() {
   });
 }
 
-export async function startTestServer({ keepData = false } = {}) {
+export async function startTestServer({ keepData = false, webhookUrl = "" } = {}) {
   const bin = resolve(root, process.env.PB_BIN ?? "bin/pocketbase");
   if (!existsSync(bin)) {
     throw new Error(`PocketBase binary not found at ${bin}. Run scripts/get-pocketbase.sh or set PB_BIN.`);
@@ -44,7 +44,7 @@ export async function startTestServer({ keepData = false } = {}) {
   const url = `http://127.0.0.1:${port}`;
   const log = createWriteStream(join(dir, "serve.log"));
   const proc = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, "--automigrate=false", ...paths], {
-    env: { ...process.env, ZH_INTEGRATION_SECRET: SECRET, ZH_AI_PROVIDER: "none", ZH_N8N_WEBHOOK_URL: "" },
+    env: { ...process.env, ZH_INTEGRATION_SECRET: SECRET, ZH_AI_PROVIDER: "none", ZH_N8N_WEBHOOK_URL: webhookUrl },
     stdio: ["ignore", "pipe", "pipe"],
   });
   proc.stdout.pipe(log);
