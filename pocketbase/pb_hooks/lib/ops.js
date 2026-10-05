@@ -49,7 +49,7 @@ function roomStatus(e) {
     const hotelId = z.requireHotel(c, room.getString("hotel"));
     if (!z.has(c, "rooms.view")) throw z.notFound();
     const from = room.getString("status");
-    if (b.from && b.from !== from) throw z.bad("stale_room_status", { current: from });
+    if (b.from && b.from !== from) throw z.bad("room_status_changed", { current: from });
     if (!canMoveRoom(c, from, b.to)) throw z.forbidden("transition_not_allowed", { from, to: b.to });
     applyRoomStatus(tx, room, b.to, c, b.note);
     z.audit(tx, hotelId, {
@@ -62,7 +62,7 @@ function roomStatus(e) {
 }
 
 // ------------------------------------------------------------------ tasks
-/** POST /api/zarin/tasks/{id}/transition  {status, notes?, roomChange?: {roomId, from, to}} */
+/** POST /api/zarin/tasks/{id}/transition  {status, expected?, notes?, roomChange?: {roomId, from, to}} */
 function taskTransition(e) {
   const c = z.caller(e);
   const b = e.requestInfo().body || {};
@@ -72,6 +72,7 @@ function taskTransition(e) {
     const hotelId = z.requireHotel(c, task.getString("hotel"));
     if (!z.has(c, "housekeeping.viewAll") && task.getString("assignee") !== c.id) throw z.notFound();
     const from = task.getString("status");
+    if (b.expected && b.expected !== from) throw z.bad("task_status_changed", { current: from });
     const to = b.status;
     const assigner = z.has(c, "housekeeping.assign");
     const ownStep = z.has(c, "housekeeping.complete") && task.getString("assignee") === c.id &&
@@ -95,7 +96,7 @@ function taskTransition(e) {
       const room = z.sameHotel(tx, "rooms", b.roomChange.roomId, hotelId);
       if (room.id !== task.getString("room")) throw z.bad("room_mismatch");
       const current = room.getString("status");
-      if (b.roomChange.from && b.roomChange.from !== current) throw z.bad("stale_room_status", { current });
+      if (b.roomChange.from && b.roomChange.from !== current) throw z.bad("room_status_changed", { current });
       if (!canMoveRoom(c, current, b.roomChange.to)) throw z.forbidden("transition_not_allowed", { from: current, to: b.roomChange.to });
       applyRoomStatus(tx, room, b.roomChange.to, c);
     }
@@ -262,7 +263,7 @@ function canSeeTicket(c, t) {
   return z.has(c, "maintenance.viewAll") || t.getString("reportedBy") === c.id || t.getString("assignee") === c.id;
 }
 
-/** POST /api/zarin/tickets/{id}/status  {to, note?} */
+/** POST /api/zarin/tickets/{id}/status  {to, expected?, note?} */
 function ticketStatus(e) {
   const c = z.caller(e);
   const b = e.requestInfo().body || {};
@@ -273,6 +274,7 @@ function ticketStatus(e) {
     const hotelId = z.requireHotel(c, t.getString("hotel"));
     if (!canSeeTicket(c, t)) throw z.notFound();
     from = t.getString("status");
+    if (b.expected && b.expected !== from) throw z.bad("ticket_status_changed", { current: from });
     let allowed = TICKET_FLOW[from] || [];
     if (!z.has(c, "maintenance.manage")) {
       allowed = z.has(c, "maintenance.work") && t.getString("assignee") === c.id

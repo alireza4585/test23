@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
@@ -20,6 +21,7 @@ import 'core/platform/platform_services.dart';
 import 'core/preferences/preferences.dart';
 import 'data/backend.dart';
 import 'data/demo/demo_store.dart';
+import 'data/pocketbase/pb_auth_repository.dart';
 import 'firebase_options.dart';
 
 /// Composition root. Resolves configuration, initialises the selected backend
@@ -32,22 +34,25 @@ Future<void> bootstrap() async {
   await initializeDateFormatting('en');
   final prefs = await SharedPreferences.getInstance();
 
+  final secureStore = FlutterSecureStore();
   final overrides = <Override>[
     sharedPreferencesProvider.overrideWithValue(prefs),
-    secureStoreProvider.overrideWithValue(FlutterSecureStore()),
+    secureStoreProvider.overrideWithValue(secureStore),
   ];
 
   Backend backend;
-  if (config.backend == BackendKind.firebase && _firebaseOptionsReady()) {
+  if (config.backend == BackendKind.pocketbase && config.pocketBaseUrl.isNotEmpty) {
+    backend = await _initPocketBase(config, secureStore);
+  } else if (config.backend == BackendKind.firebase && _firebaseOptionsReady()) {
     backend = await _initFirebase(config);
     overrides.add(
       pushServiceProvider.overrideWithValue(FirebasePushService(FirebaseMessaging.instance)),
     );
   } else {
-    if (config.backend == BackendKind.firebase) {
+    if (config.backend != BackendKind.demo) {
       debugPrint(
-        'ZH: Firebase requested but lib/firebase_options.dart is not configured '
-        '(run `flutterfire configure`). Falling back to the demo backend.',
+        'ZH: ${config.backend.name} requested but not configured '
+        '(ZH_PB_URL / lib/firebase_options.dart). Falling back to the demo backend.',
       );
       config = config.copyWith(backend: BackendKind.demo);
     }
@@ -60,6 +65,20 @@ Future<void> bootstrap() async {
   ]);
 
   runApp(ProviderScope(overrides: overrides, child: const ZarinApp()));
+}
+
+/// PocketBase client whose session survives restarts in Keychain/Keystore.
+Future<PocketBaseBackend> _initPocketBase(AppConfig config, SecureStore secureStore) async {
+  final client = PocketBase(
+    config.pocketBaseUrl,
+    lang: 'fa-IR',
+    authStore: AsyncAuthStore(
+      initial: await secureStore.read(PbAuthKeys.auth),
+      save: (data) => secureStore.write(PbAuthKeys.auth, data),
+      clear: () => secureStore.delete(PbAuthKeys.auth),
+    ),
+  );
+  return PocketBaseBackend(client: client, secureStore: secureStore);
 }
 
 /// Whether `lib/firebase_options.dart` holds real values for this platform.

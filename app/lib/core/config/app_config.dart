@@ -1,24 +1,27 @@
 /// Which backend implementation the app wires its repositories to.
 ///
-/// * [firebase] – production MVP backend (Auth, Firestore, Storage, Functions).
+/// * [pocketbase] – self-hosted PocketBase server (`pocketbase/` in the repo):
+///   schema, API rules and hooks; can run in-country. Needs `ZH_PB_URL`.
+/// * [firebase] – managed Firebase backend (Auth, Firestore, Storage, Functions).
 /// * [demo] – fully offline in-memory backend with seeded hotel data. Used for
 ///   sales demos, UI development and widget tests. It exercises exactly the
 ///   same domain + presentation code as the Firebase backend, which is how we
 ///   keep the app independent from any single backend vendor.
 /// * A future `rest` kind (dedicated server + PostgreSQL) only needs a new set
 ///   of repository implementations — no UI or domain changes.
-enum BackendKind { firebase, demo }
+enum BackendKind { pocketbase, firebase, demo }
 
 /// Immutable runtime configuration, resolved once at startup from
 /// `--dart-define` values.
 ///
 /// ```sh
-/// flutter run --dart-define=ZH_BACKEND=firebase --dart-define=ZH_ENV=staging
+/// flutter run --dart-define=ZH_BACKEND=pocketbase --dart-define=ZH_PB_URL=https://api.example.ir
 /// ```
 class AppConfig {
   const AppConfig({
     required this.backend,
     required this.environment,
+    this.pocketBaseUrl = '',
     this.functionsRegion = 'europe-west3',
     this.useEmulators = false,
     this.emulatorHost = 'localhost',
@@ -32,6 +35,7 @@ class AppConfig {
       defaultValue: 'demo',
     );
     const env = String.fromEnvironment('ZH_ENV', defaultValue: 'dev');
+    const pbUrl = String.fromEnvironment('ZH_PB_URL');
     const region = String.fromEnvironment(
       'ZH_FUNCTIONS_REGION',
       defaultValue: 'europe-west3',
@@ -56,6 +60,7 @@ class AppConfig {
         orElse: () => BackendKind.demo,
       ),
       environment: env,
+      pocketBaseUrl: pbUrl,
       functionsRegion: region,
       useEmulators: useEmulators,
       emulatorHost: emulatorHost,
@@ -68,6 +73,9 @@ class AppConfig {
 
   /// `dev`, `staging` or `prod`.
   final String environment;
+
+  /// Base URL of the PocketBase server (e.g. `https://api.example.ir`).
+  final String pocketBaseUrl;
 
   /// Region where Cloud Functions are deployed.
   final String functionsRegion;
@@ -90,6 +98,7 @@ class AppConfig {
     return AppConfig(
       backend: backend ?? this.backend,
       environment: environment,
+      pocketBaseUrl: pocketBaseUrl,
       functionsRegion: functionsRegion,
       useEmulators: useEmulators,
       emulatorHost: emulatorHost,

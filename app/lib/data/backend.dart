@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:pocketbase/pocketbase.dart';
 
+import '../core/platform/platform_services.dart';
 import 'demo/demo_store.dart';
 
 /// The concrete backend the repositories are bound to.
@@ -28,6 +30,15 @@ final class FirebaseBackend extends Backend {
   final FirebaseFirestore firestore;
   final FirebaseStorage storage;
   final FirebaseFunctions functions;
+}
+
+/// Self-hosted PocketBase (see `pocketbase/`). The auth token lives in
+/// [secureStore] (Keychain / Keystore) via the client's auth store.
+final class PocketBaseBackend extends Backend {
+  const PocketBaseBackend({required this.client, required this.secureStore});
+
+  final PocketBase client;
+  final SecureStore secureStore;
 }
 
 final class DemoBackend extends Backend {

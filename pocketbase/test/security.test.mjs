@@ -108,7 +108,7 @@ describe("role-based access", () => {
     expect((await errorOf(post(hk, `/api/zarin/rooms/${clean.id}/status`, { to: "occupied" }))).code).toBe("transition_not_allowed");
     expect((await post(reception, `/api/zarin/rooms/${clean.id}/status`, { to: "occupied" })).status).toBe("occupied");
     expect((await errorOf(post(reception, `/api/zarin/rooms/${dirty.id}/status`, { to: "vacantClean" }))).code).toBe("transition_not_allowed");
-    expect((await errorOf(post(hk, `/api/zarin/rooms/${dirty.id}/status`, { to: "vacantClean", from: "vacantDirty" }))).code).toBe("stale_room_status");
+    expect((await errorOf(post(hk, `/api/zarin/rooms/${dirty.id}/status`, { to: "vacantClean", from: "vacantDirty" }))).code).toBe("room_status_changed");
   });
 
   it("staff cannot edit rooms directly", async () => {

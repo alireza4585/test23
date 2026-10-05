@@ -1,0 +1,3 @@
+tags:
+  pocketbase:
+    # Needs a live server: ZH_PB_TEST_URL (see test/pocketbase/pb_adapter_test.dart).

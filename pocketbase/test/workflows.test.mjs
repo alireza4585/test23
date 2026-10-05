@@ -37,6 +37,13 @@ describe("housekeeping: one-tap cleaning", () => {
     expect((await hk.collection("tasks").getOne(task.id)).status).toBe("pending");
   });
 
+  it("rejects a stale client state", async () => {
+    const hk = await login(NID.housekeeper);
+    const task = await hk.collection("tasks").getFirstListItem('roomNumber = "205"');
+    const err = await errorOf(post(hk, `/api/zarin/tasks/${task.id}/transition`, { status: "inProgress", expected: "pending" }));
+    expect(err.code).toBe("task_status_changed");
+  });
+
   it("a housekeeper cannot advance someone else's task", async () => {
     const other = await login(NID.housekeeper2);
     const hkm = await login(NID.housekeepingManager);
