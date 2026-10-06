@@ -460,10 +460,5 @@
   "meta": {
     "templateCredsSetupCompleted": false,
     "notes": "Receives signed domain events from Cloud Functions (N8N_WEBHOOK_URL) and fans them out to Bale groups, SMS (Kavenegar) and e-mail."
-  },
-  "tags": [
-    {
-      "name": "zarin-hooshmand"
-    }
-  ]
+  }
 }

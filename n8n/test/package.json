@@ -1,0 +1,16 @@
+{
+  "name": "zarin-n8n-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Runs the four Zarin workflows on a real n8n against a local PocketBase, with Bale / SMS / SMTP mocked",
+  "engines": {
+    "node": ">=22.22"
+  },
+  "scripts": {
+    "e2e": "node e2e.mjs"
+  },
+  "devDependencies": {
+    "n8n": "2.35.7",
+    "smtp-server": "^3.19.17"
+  }
+}

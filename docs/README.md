@@ -29,4 +29,5 @@
 - Repository و Service Layer ← [04](04-flutter-architecture.md#repository--service-layer)
 - Audit Log و Session Management ← [02](02-roles-and-security.md#audit-log)
 - استقرار روی سرور (PocketBase) ← [`pocketbase/README.md`](../pocketbase/README.md)
+- راه‌اندازی روی لیارا (PocketBase و n8n): متغیرها، Credentialها، فعال‌سازی و آزمون ← [09](09-liara-runbook.md)
 - ریسک‌ها (تحریم، Push، داده) ← [01](01-architecture.md#ریسک‌ها-و-ملاحظات-مهم-برای-بازار-ایران) و [08](08-roadmap.md#ریسک‌ها-و-راهکارها)

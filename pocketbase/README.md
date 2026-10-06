@@ -65,6 +65,8 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
 
 لیارا HTTPS را خودش فراهم می‌کند، پس Caddy لازم نیست. تنظیمات استقرار در `pocketbase/liara.json` آماده است: پلتفرم Docker، پورت ۸۰۹۰ و دیسک دائمی `pb-data` روی `/pb/pb_data`.
 
+ترتیب کامل راه‌اندازی، همراه با n8n، در [راهنمای راه‌اندازی لیارا](../docs/09-liara-runbook.md) آمده است. طبق آن راهنما، `ZH_N8N_WEBHOOK_URL` را پس از فعال شدن workflowهای n8n تنظیم کنید.
+
 1. **نوع برنامه:** برنامه در لیارا باید از نوع **Docker** باشد. اگر آن را به‌صورت «برنامهٔ آماده (One-click) PocketBase» ساخته‌اید، hookها و migrationهای ما روی آن نصب نمی‌شوند. در این حالت یک برنامهٔ Docker بسازید و نام آن را در فیلد `app` فایل `liara.json` بگذارید.
 2. **ابزار و ورود:**
    ```bash
@@ -76,9 +78,9 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
    ```
 4. **متغیرهای محیطی** (از پنل لیارا یا با دستور):
    ```bash
-   liara env:set ZH_INTEGRATION_SECRET=$(openssl rand -hex 32) --app zarin-hoshmand-nieplltrhr
+   liara env:set ZH_INTEGRATION_SECRET=<سکرت مشترک> --app zarin-hoshmand-nieplltrhr
    ```
-   بقیهٔ متغیرهای جدول پایین هم به همین شکل تنظیم می‌شوند.
+   سکرت مشترک را یک بار بسازید (مرحلهٔ ۰ [راهنمای لیارا](../docs/09-liara-runbook.md)). همین مقدار در n8n هم با نام `ZARIN_INTEGRATION_SECRET` تنظیم می‌شود. بقیهٔ متغیرهای جدول پایین هم به همین شکل تنظیم می‌شوند.
 5. **استقرار:**
    ```bash
    cd pocketbase && liara deploy
@@ -134,7 +136,7 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
 | `ZH_DOMAIN` | دامنهٔ عمومی سرور (برای Caddy) |
 | `ZH_INTEGRATION_SECRET` | کلید HMAC مشترک با n8n. بدون آن API نسخهٔ v1 همهٔ درخواست‌ها را رد می‌کند |
 | `ZH_N8N_WEBHOOK_URL` | Webhook دریافت رویدادها در n8n. اگر خالی باشد، رویدادی ارسال نمی‌شود |
-| `ZH_PUSH_VIA_N8N` | با مقدار `1`، درخواست Push برای n8n صف می‌شود تا از طریق سرویس Push دلخواه ارسال شود |
+| `ZH_PUSH_VIA_N8N` | با مقدار `1`، رویداد `push.requested` برای n8n صف می‌شود تا از طریق سرویس Push دلخواه ارسال شود. workflowهای فعلی این رویداد را مصرف نمی‌کنند، پس تا ساخت آن workflow خالی بماند |
 | `ZH_AI_PROVIDER` | `none` (پیش‌فرض: پاسخ قاعده‌محور از داده‌های هتل)، `anthropic`، یا `openai_compatible` (مدل self-hosted مثل Ollama یا vLLM) |
 | `ZH_AI_API_KEY` / `ZH_AI_MODEL` / `ZH_AI_BASE_URL` | تنظیمات ارائه‌دهندهٔ AI |
 

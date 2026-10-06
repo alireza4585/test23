@@ -215,10 +215,5 @@
   "meta": {
     "templateCredsSetupCompleted": false,
     "notes": "07:15 Tehran: pulls KPIs + alerts + insights (+ AI narrative generated server-side) for each hotel and sends an RTL e-mail and a Bale message."
-  },
-  "tags": [
-    {
-      "name": "zarin-hooshmand"
-    }
-  ]
+  }
 }

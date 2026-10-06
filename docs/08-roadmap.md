@@ -8,8 +8,8 @@
 | RBAC سه‌لایه (UI، Router، Rules و Functions) با تست drift | ✅ |
 | Firestore Rules، Storage Rules و Indexes، با ۲۰ تست rules | ✅ |
 | Cloud Functions: کاربران، نشست، triggerها، Audit، تحلیل روزانه، موتور قواعد، دستیار AI و API v1 | ✅ ۱۸ تست واحد و ۷ تست یکپارچه روی emulator |
-| **بک‌اند PocketBase** (قابل میزبانی داخل ایران): طرح دیتابیس، قوانین دسترسی، hookها، seed، Docker و Caddy | ✅ ۴۲ تست روی سرور واقعی و ۸ تست adapter در Flutter |
-| n8n: ۴ workflow (هشدار، گزارش صبحگاهی، Escalation، ورود دادهٔ IoT) | ✅ آمادهٔ import |
+| **بک‌اند PocketBase** (قابل میزبانی داخل ایران): طرح دیتابیس، قوانین دسترسی، hookها، seed، Docker و Caddy | ✅ ۴۳ تست روی سرور واقعی و ۸ تست adapter در Flutter |
+| n8n: ۴ workflow (هشدار، گزارش صبحگاهی، Escalation، ورود دادهٔ IoT) | ✅ import شده در n8n لیارا (غیرفعال). اجرای انتها‌به‌انتها روی n8n 2.35 و PocketBase محلی موفق بود. ادامهٔ کار در [راهنمای لیارا](09-liara-runbook.md) |
 | گزارش PDF فارسی (RTL، Vazirmatn) | ✅ |
 
 ## MVP Roadmap (۱۲ هفته تا پایلوت پولی)
@@ -85,7 +85,7 @@
 
 ## کارهای فنی باقی‌مانده پیش از تولید
 
-1. **PocketBase:** استقرار با `pocketbase/deploy`، فعال کردن پشتیبان روزانه، و ساخت هتل با `npm run create-hotel`. **Firebase (در صورت استفاده):** اجرای `flutterfire configure --project=zarin-hoshmand`.
+1. **PocketBase و n8n روی لیارا:** مراحل [راهنمای لیارا](09-liara-runbook.md)، و فعال کردن پشتیبان روزانهٔ PocketBase. **Firebase (در صورت استفاده):** اجرای `flutterfire configure --project=zarin-hoshmand`.
 2. امضای release: Android keystore (فعلاً debug signing) و iOS provisioning/APNs key در Firebase.
 3. Secretها: `firebase functions:secrets:set ANTHROPIC_API_KEY INTEGRATION_SECRET`، و `N8N_WEBHOOK_URL` در `.env.<project>`.
 4. Firebase App Check (Play Integrity و App Attest) برای جلوگیری از کلاینت‌های جعلی.

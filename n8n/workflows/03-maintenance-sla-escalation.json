@@ -302,10 +302,5 @@
   "meta": {
     "templateCredsSetupCompleted": false,
     "notes": "Every 30 min: finds tickets >60 min past SLA, pushes an in-app + push notification to managers via the Zarin API and SMS for critical ones."
-  },
-  "tags": [
-    {
-      "name": "zarin-hooshmand"
-    }
-  ]
+  }
 }

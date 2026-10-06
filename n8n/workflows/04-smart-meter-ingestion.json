@@ -129,10 +129,5 @@
   "meta": {
     "templateCredsSetupCompleted": false,
     "notes": "Receives daily totals from a meter gateway, normalises them and writes them through the Zarin API (same shape as manual entry, so analytics, alerts and AI work unchanged)."
-  },
-  "tags": [
-    {
-      "name": "zarin-hooshmand"
-    }
-  ]
+  }
 }

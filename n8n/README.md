@@ -21,7 +21,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله |
 | `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. |
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. |
-| `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. |
+| `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
 
 ## قرارداد رویدادها (Backend → n8n)
 
@@ -47,7 +47,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `insight.created` | `insightId, title, priority` |
 | `user.created` | `uid, role` |
 
-ارسال رویداد به‌صورت *fire-and-forget* است. اگر n8n در دسترس نباشد، عملیات اصلی (مثل ثبت تیکت) شکست نمی‌خورد. هشدار و اعلان درون‌برنامه‌ای همیشه توسط خود بک‌اند ساخته می‌شوند و n8n فقط کانال‌های **بیرونی** را اضافه می‌کند.
+ارسال رویداد به‌صورت *fire-and-forget* است. اگر n8n در دسترس نباشد، عملیات اصلی (مثل ثبت تیکت) شکست نمی‌خورد. در PocketBase، رویدادها در صف `outbox` می‌مانند و هر دقیقه دوباره ارسال می‌شوند (حداکثر ۸ بار). هر ارسال پیش از فرستادن، رویداد را برای خودش رزرو می‌کند، پس اگر cron و `POST /v1/outbox/flush` هم‌زمان اجرا شوند، رویداد تکراری ارسال نمی‌شود. هشدار و اعلان درون‌برنامه‌ای همیشه توسط خود بک‌اند ساخته می‌شوند و n8n فقط کانال‌های **بیرونی** را اضافه می‌کند.
 
 ## امنیت: امضای HMAC در هر دو جهت
 
@@ -99,33 +99,22 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 ## n8n روی لیارا
 
-آدرس n8n: `https://zarin-hoshmand-jexcz8u8pp.liara.run`
+آدرس n8n: `https://zarin-hoshmand-jexcz8u8pp.liara.run`. هر چهار workflow در این نمونه import شده‌اند و فعلاً غیرفعال‌اند.
 
-1. **متغیرهای محیطی:** در پنل لیارا، در برنامهٔ n8n، بخش «متغیرهای محیطی» این‌ها را اضافه کنید و برنامه را restart کنید:
-   ```
-   NODE_FUNCTION_ALLOW_BUILTIN=crypto
-   N8N_BLOCK_ENV_ACCESS_IN_NODE=false
-   GENERIC_TIMEZONE=Asia/Tehran
-   ZARIN_API_BASE=https://<آدرس برنامهٔ PocketBase>.liara.run
-   ZARIN_INTEGRATION_SECRET=<همان مقدار ZH_INTEGRATION_SECRET در برنامهٔ PocketBase>
-   ZARIN_HOTEL_IDS=<شناسهٔ هتل که create-hotel چاپ می‌کند>
-   ```
-   سایر متغیرها (`BALE_*`، `KAVENEGAR_API_KEY`، ایمیل) را هم از `.env.example` اضافه کنید.
-2. **Import:** با یک دستور هر چهار workflow ساخته می‌شوند. اگر قبلاً import شده باشند، به‌روز می‌شوند و نسخهٔ تکراری ساخته نمی‌شود. این دستور به Node 18 یا جدیدتر نیاز دارد. API key را از Settings → n8n API بسازید.
-   ```bash
-   # macOS / Linux
-   N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run N8N_API_KEY=<کلید> node n8n/scripts/import-workflows.mjs
-   ```
-   ```powershell
-   # Windows PowerShell
-   $env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY="<کلید>"; node n8n/scripts/import-workflows.mjs
-   ```
-   workflowها غیرفعال ساخته می‌شوند. Credentialهای SMTP و Header Auth را روی نودهای مربوط انتخاب کنید (رجوع کنید به مرحلهٔ ۳ بالا). روش دستی هم کار می‌کند: Workflows → ⋯ → Import from File.
-3. **اتصال PocketBase به n8n:** در برنامهٔ PocketBase روی لیارا این متغیر را بگذارید:
-   ```
-   ZH_N8N_WEBHOOK_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/zarin-events
-   ```
-4. **فعال‌سازی:** هر چهار workflow را Active کنید. برای آزمایش اتصال، از n8n یک درخواست امضاشده به `GET {ZARIN_API_BASE}/v1/hotels/{id}/summary` بزنید (workflow شمارهٔ ۲ را دستی اجرا کنید).
+مراحل باقی‌مانده به ترتیب اجرا، همراه با جدول کامل متغیرهای محیطی، Credentialها، ترتیب فعال‌سازی، آزمون نهایی و عیب‌یابی، در **[راهنمای راه‌اندازی لیارا](../docs/09-liara-runbook.md)** آمده است.
+
+**به‌روزرسانی workflowها در آینده:** اگر فایلی در `workflows/` تغییر کند، این دستور workflowها را با نام پیدا و در همان جا به‌روز می‌کند. نسخهٔ تکراری ساخته نمی‌شود، Credentialهایی که در Editor انتخاب کرده‌اید حفظ می‌شوند، و workflowهای فعال با نسخهٔ جدید دوباره منتشر می‌شوند. این دستور به Node 18 یا جدیدتر و یک API key نیاز دارد (Settings → n8n API). کلید را فقط در همان ترمینال تنظیم کنید و جایی ذخیره نکنید.
+
+```bash
+# macOS / Linux
+N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run N8N_API_KEY=<کلید> node n8n/scripts/import-workflows.mjs
+```
+```powershell
+# Windows PowerShell
+$env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY="<کلید>"; node n8n/scripts/import-workflows.mjs
+```
+
+> فایل‌های workflow عمداً tag ندارند. n8n CLI (`import:workflow --separate`) وقتی چند فایل یک tag تازهٔ مشترک داشته باشند، با خطای `UNIQUE constraint failed: tag_entity.name` متوقف می‌شود. در صورت نیاز، tagها را پس از import در Editor اضافه کنید.
 
 ## تست دستی
 
@@ -140,6 +129,22 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 ```
 
 > نود *Verify signature* بدنه را دوباره با `JSON.stringify` سریال می‌کند. این کار برای رویدادهای بک‌اند، که خودشان با `JSON.stringify` ساخته می‌شوند، دقیقاً همان رشته را تولید می‌کند. برای تست دستی، بدنه را فشرده (بدون فاصلهٔ اضافه) بفرستید.
+
+## تست انتها‌به‌انتها (اختیاری)
+
+`test/e2e.mjs` هر چهار workflow را روی یک n8n واقعی (نسخهٔ 2.35.7) و یک PocketBase محلیِ seedشده اجرا می‌کند. بله، کاوه‌نگار و SMTP با سرویس‌های ساختگی محلی جایگزین می‌شوند، پس هیچ پیامی واقعاً ارسال نمی‌شود. این موارد بررسی می‌شوند:
+
+- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، و رد شدن رویداد جعلی.
+- گزارش صبحگاهی RTL در ۰۲، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
+- نبودِ ارسال تکراری.
+- اجرای دوبارهٔ `import-workflows.mjs` بدون از دست رفتن Credentialها.
+
+```bash
+(cd pocketbase && npm install && ./scripts/get-pocketbase.sh)
+cd n8n/test && npm install && npm run e2e     # Node 22.22+، نصب n8n حدود ۱ گیگابایت
+```
+
+پس از هر تغییر در workflowها یا API نسخهٔ v1 آن را اجرا کنید. پورت‌های ۵۶۸۸، ۵۶۸۹ و ۲۵۲۶ باید آزاد باشند.
 
 ## افزودن workflow جدید
 
