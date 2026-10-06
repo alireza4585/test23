@@ -5,26 +5,34 @@
 // password is public). Superusers (`_superusers`), settings and other hotels
 // are not touched. Dry run unless --yes is given.
 //
-//   ZH_PB_URL=https://… ZH_PB_SUPERUSER_EMAIL=… ZH_PB_SUPERUSER_PASSWORD=… npm run reset-demo
-//   … npm run reset-demo -- --yes
+//   ZH_PB_URL=https://….liara.run npm run reset-demo
 //
-// HOTEL_ID=<id> removes another hotel instead of the seed's.
+// Shows what would be deleted, then (in a terminal) asks you to type "yes".
+// The superuser e-mail and password are asked for unless
+// ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD are set; `-- --yes`
+// deletes without asking (automation). HOTEL_ID=<id> removes another hotel
+// instead of the seed's.
 import PocketBase from "pocketbase";
 import { pathToFileURL } from "node:url";
 
+import { confirmed, interactive, serverUrl, superuserLogin } from "./prompt.mjs";
 import { ACCOUNTS, HOTEL_ID as SEED_HOTEL_ID } from "./seed.mjs";
 
 /**
+ * `pb`: a client signed in as superuser (or `url` + `email` + `password`).
  * `accounts`: national IDs of extra users to remove when they belong to no
  * other hotel (by default the seed's accounts, when resetting the seed hotel).
  */
 export async function resetHotel({
-  url, email, password, hotelId = SEED_HOTEL_ID, apply = false, log = console.log,
+  pb: client, url, email, password, hotelId = SEED_HOTEL_ID, apply = false, log = console.log,
   accounts = hotelId === SEED_HOTEL_ID ? ACCOUNTS.map(([nid]) => nid) : [],
 }) {
-  const pb = new PocketBase(url);
-  pb.autoCancellation(false);
-  await pb.collection("_superusers").authWithPassword(email, password);
+  const pb = client ?? new PocketBase(url);
+  if (!client) {
+    pb.autoCancellation(false);
+    await pb.collection("_superusers").authWithPassword(email, password);
+  }
+  url = pb.baseURL ?? pb.baseUrl ?? url;
 
   let hotel = null;
   try {
@@ -63,10 +71,7 @@ export async function resetHotel({
   if (shared.length) log(`Kept (also in other hotels; only the link to this hotel goes): ${shared.map((u) => u.fullName).join(", ")}`);
 
   const result = { found: !!hotel, counts, users: users.length };
-  if (!apply) {
-    log("\nDry run: nothing was deleted. Re-run with --yes to delete.");
-    return { ...result, deleted: false };
-  }
+  if (!apply) return { ...result, deleted: false };
   for (const u of users) await pb.collection("users").delete(u.id);
   if (hotel) await pb.collection("hotels").delete(hotel.id);
   log(`\nDeleted ${hotel ? `hotel ${hotel.id} and ` : ""}${users.length} users.`);
@@ -74,20 +79,21 @@ export async function resetHotel({
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  for (const name of ["ZH_PB_URL", "ZH_PB_SUPERUSER_EMAIL", "ZH_PB_SUPERUSER_PASSWORD"]) {
-    if (!process.env[name]) {
-      console.error(`missing ${name}`);
-      process.exit(1);
+  try {
+    const pb = new PocketBase(await serverUrl());
+    pb.autoCancellation(false);
+    await superuserLogin(pb);
+    const hotelId = process.env.HOTEL_ID || SEED_HOTEL_ID;
+    const plan = await resetHotel({ pb, hotelId });
+    if (plan.found || plan.users) {
+      if (process.argv.includes("--yes") || (interactive() && (await confirmed('\nDelete all of the above? Type "yes" to confirm: ')))) {
+        await resetHotel({ pb, hotelId, apply: true, log: (line) => line.startsWith("\nDeleted") && console.log(line) });
+      } else {
+        console.log("\nNothing was deleted.");
+      }
     }
-  }
-  resetHotel({
-    url: process.env.ZH_PB_URL,
-    email: process.env.ZH_PB_SUPERUSER_EMAIL,
-    password: process.env.ZH_PB_SUPERUSER_PASSWORD,
-    hotelId: process.env.HOTEL_ID || SEED_HOTEL_ID,
-    apply: process.argv.includes("--yes"),
-  }).catch((err) => {
+  } catch (err) {
     console.error(err?.response ?? err);
     process.exit(1);
-  });
+  }
 }

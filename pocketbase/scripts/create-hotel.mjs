@@ -2,64 +2,83 @@
 // General Manager (who must change the temporary password at first login).
 // Everyone else is then created by that manager inside the app.
 //
-//   ZH_PB_URL=https://api.example.ir \
-//   ZH_PB_SUPERUSER_EMAIL=… ZH_PB_SUPERUSER_PASSWORD=… \
-//   HOTEL_NAME="هتل نمونه" HOTEL_CITY="اصفهان" HOTEL_ROOMS=80 \
-//   GM_NATIONAL_ID=0012345679 GM_NAME="نام مدیر" GM_TEMP_PASSWORD='Temp-2026a' \
-//   npm run create-hotel
-import { createRequire } from "node:module";
+//   ZH_PB_URL=https://….liara.run npm run create-hotel
+//
+// Whatever is not set in the environment is asked for, passwords without
+// echo, and checked as it is typed: ZH_PB_SUPERUSER_EMAIL,
+// ZH_PB_SUPERUSER_PASSWORD, HOTEL_NAME, HOTEL_CITY, HOTEL_ROOMS, HOTEL_STARS,
+// GM_NAME, GM_NATIONAL_ID (10 digits with a valid check digit, not already
+// used) and GM_TEMP_PASSWORD (8+ characters with letters and digits).
 import PocketBase from "pocketbase";
 
-const core = createRequire(import.meta.url)("../pb_hooks/lib/core.js");
+import { confirmed, serverUrl, superuserLogin, value } from "./prompt.mjs";
+import { core, nationalIdError, passwordError, wholeNumberError } from "./rules.mjs";
 
-function need(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`missing ${name}`);
-  return v;
+const ASKED = ["HOTEL_NAME", "GM_NAME", "GM_NATIONAL_ID", "GM_TEMP_PASSWORD"].some((k) => !process.env[k]);
+
+try {
+  const url = await serverUrl();
+  const pb = new PocketBase(url);
+  pb.autoCancellation(false);
+  await superuserLogin(pb);
+
+  const taken = async (nid) =>
+    (await pb.collection("users").getList(1, 1, { filter: pb.filter("nationalId = {:n}", { n: nid }), fields: "id" })).totalItems > 0;
+
+  const name = await value("HOTEL_NAME", { question: "Hotel name: " });
+  const city = await value("HOTEL_CITY", { question: "City (optional): ", fallback: "" });
+  const rooms = Number(await value("HOTEL_ROOMS", { question: "Number of rooms (optional): ", fallback: "0", validate: (v) => wholeNumberError(v) }));
+  const stars = Number(await value("HOTEL_STARS", { question: "Stars, 0-7 (optional): ", fallback: "0", validate: (v) => wholeNumberError(v, { max: 7 }) }));
+  const fullName = await value("GM_NAME", { question: "General manager's full name: " });
+  const nid = core.normalizeNationalId(await value("GM_NATIONAL_ID", {
+    question: "General manager's national ID (10 digits): ",
+    validate: async (v) => nationalIdError(v) ??
+      ((await taken(core.normalizeNationalId(v))) ? "A user with this national ID already exists on this server." : undefined),
+  }));
+  const tempPassword = await value("GM_TEMP_PASSWORD", {
+    question: "Temporary password for the manager (8+ characters, letters and digits): ",
+    hidden: true, confirm: true, validate: passwordError,
+  });
+
+  console.log(`\nHotel «${name}»${city ? `, ${city}` : ""}, ${rooms} rooms. General manager: ${fullName} (${core.maskNationalId(nid)}).`);
+  if (ASKED && !(await confirmed("Create it? [y/N] "))) {
+    console.log("Nothing was created.");
+    process.exit(0);
+  }
+
+  const hotel = await pb.collection("hotels").create({
+    name, city, stars, roomCount: rooms, timezone: "Asia/Tehran", currency: "IRR", status: "active", settings: {},
+  });
+  let gm = null;
+  try {
+    gm = await pb.collection("users").create({
+      nationalId: nid,
+      nationalIdMasked: core.maskNationalId(nid),
+      fullName,
+      role: "generalManager",
+      hotels: [hotel.id],
+      primaryHotel: hotel.id,
+      status: "active",
+      mustChangePassword: true,
+      locale: "fa",
+      password: tempPassword,
+      passwordConfirm: tempPassword,
+    });
+    const staff = await pb.collection("staff").create({
+      hotel: hotel.id, fullName, department: "management", position: "generalManager", role: "generalManager",
+      user: gm.id, active: true,
+    });
+    await pb.collection("users").update(gm.id, { staffId: staff.id });
+  } catch (err) {
+    // Leave nothing half-made behind.
+    if (gm) await pb.collection("users").delete(gm.id).catch(() => {});
+    await pb.collection("hotels").delete(hotel.id).catch(() => {});
+    throw err;
+  }
+
+  console.log(`Hotel ${hotel.id} created; GM ${core.maskNationalId(nid)} must change the password at first login.`);
+  console.log(`For n8n: ZARIN_HOTEL_IDS=${hotel.id}`);
+} catch (err) {
+  console.error(err?.response ?? err);
+  process.exit(1);
 }
-
-const url = need("ZH_PB_URL");
-const nid = core.normalizeNationalId(need("GM_NATIONAL_ID"));
-if (!core.isValidNationalId(nid)) throw new Error("GM_NATIONAL_ID is not a valid national ID");
-const tempPassword = need("GM_TEMP_PASSWORD");
-if (tempPassword.length < 8 || !/[A-Za-z]/.test(tempPassword) || !/\d/.test(tempPassword)) {
-  throw new Error("GM_TEMP_PASSWORD needs 8+ characters with letters and digits");
-}
-
-const pb = new PocketBase(url);
-pb.autoCancellation(false);
-await pb.collection("_superusers").authWithPassword(need("ZH_PB_SUPERUSER_EMAIL"), need("ZH_PB_SUPERUSER_PASSWORD"));
-
-const hotel = await pb.collection("hotels").create({
-  name: need("HOTEL_NAME"),
-  city: process.env.HOTEL_CITY ?? "",
-  stars: Number(process.env.HOTEL_STARS ?? 0),
-  roomCount: Number(process.env.HOTEL_ROOMS ?? 0),
-  timezone: "Asia/Tehran",
-  currency: "IRR",
-  status: "active",
-  settings: {},
-});
-
-const fullName = need("GM_NAME");
-const gm = await pb.collection("users").create({
-  nationalId: nid,
-  nationalIdMasked: core.maskNationalId(nid),
-  fullName,
-  role: "generalManager",
-  hotels: [hotel.id],
-  primaryHotel: hotel.id,
-  status: "active",
-  mustChangePassword: true,
-  locale: "fa",
-  password: tempPassword,
-  passwordConfirm: tempPassword,
-});
-const staff = await pb.collection("staff").create({
-  hotel: hotel.id, fullName, department: "management", position: "generalManager", role: "generalManager",
-  user: gm.id, active: true,
-});
-await pb.collection("users").update(gm.id, { staffId: staff.id });
-
-console.log(`Hotel ${hotel.id} created; GM ${core.maskNationalId(nid)} must change the password at first login.`);
-console.log(`For n8n: ZARIN_HOTEL_IDS=${hotel.id}`);

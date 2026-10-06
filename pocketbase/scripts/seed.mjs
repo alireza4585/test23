@@ -1,11 +1,17 @@
 // Seeds the demo hotel (same accounts as the app's offline demo) into a
 // PocketBase server, as a superuser.
 //
-//   ZH_PB_URL=http://127.0.0.1:8090 ZH_PB_SUPERUSER_EMAIL=… ZH_PB_SUPERUSER_PASSWORD=… npm run seed
+//   ZH_PB_URL=http://127.0.0.1:8090 npm run seed
 //
-// Refuses to run against a server that already has hotels unless ZH_SEED_FORCE=1.
+// The superuser e-mail and password are asked for unless
+// ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD are set. Every demo account
+// uses the public password below: never leave it on a server people can
+// reach (npm run reset-demo removes it). Refuses to run against a server
+// that already has hotels unless ZH_SEED_FORCE=1.
 import PocketBase from "pocketbase";
 import { pathToFileURL } from "node:url";
+
+import { confirmed, interactive, serverUrl, superuserLogin } from "./prompt.mjs";
 
 export const HOTEL_ID = "zarintehran0001";
 export const PASSWORD = "Zarin@2026";
@@ -52,10 +58,13 @@ function rng(seed) {
   };
 }
 
-export async function seed({ url, email, password, force = false, log = console.log }) {
-  const pb = new PocketBase(url);
-  pb.autoCancellation(false);
-  await pb.collection("_superusers").authWithPassword(email, password);
+/** `pb`: a client signed in as superuser (or `url` + `email` + `password`). */
+export async function seed({ pb: client, url, email, password, force = false, log = console.log }) {
+  const pb = client ?? new PocketBase(url);
+  if (!client) {
+    pb.autoCancellation(false);
+    await pb.collection("_superusers").authWithPassword(email, password);
+  }
 
   const existing = await pb.collection("hotels").getList(1, 1);
   if (existing.totalItems > 0 && !force) {
@@ -220,14 +229,19 @@ export async function seed({ url, email, password, force = false, log = console.
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const url = process.env.ZH_PB_URL ?? "http://127.0.0.1:8090";
-  seed({
-    url,
-    email: process.env.ZH_PB_SUPERUSER_EMAIL,
-    password: process.env.ZH_PB_SUPERUSER_PASSWORD,
-    force: process.env.ZH_SEED_FORCE === "1",
-  }).catch((err) => {
-    console.error(err?.response ?? err);
+  try {
+    const url = await serverUrl({ fallback: "http://127.0.0.1:8090" });
+    const local = /^https?:\/\/(127\.0\.0\.1|localhost)([:/]|$)/.test(url);
+    if (!local && interactive() && !(await confirmed(`Demo accounts use a public password. Seed ${url} anyway? [y/N] `))) {
+      console.log("Nothing was seeded.");
+      process.exit(0);
+    }
+    const pb = new PocketBase(url);
+    pb.autoCancellation(false);
+    await superuserLogin(pb);
+    await seed({ pb, force: process.env.ZH_SEED_FORCE === "1" });
+  } catch (err) {
+    console.error(err?.response ?? err?.message ?? err);
     process.exit(1);
-  });
+  }
 }
