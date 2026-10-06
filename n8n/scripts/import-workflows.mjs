@@ -3,10 +3,12 @@
 //
 //   N8N_URL=https://your-n8n.example N8N_API_KEY=… node n8n/scripts/import-workflows.mjs
 //
-// New workflows are created inactive: pick the SMTP / Header Auth credentials
-// on their nodes in the editor, then activate them there. Re-running updates
-// the existing workflows in place, keeping those credentials; an active
-// workflow is republished with the new version.
+// New workflows are created inactive. Channels whose variables are empty are
+// skipped, so they can be activated before Bale / SMS / e-mail are set up;
+// the e-mail nodes start switched off until an SMTP credential is picked.
+// Re-running updates the existing workflows in place, keeping credentials
+// (and the on/off state of nodes that have one); an active workflow is
+// republished with the new version.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,12 +36,20 @@ async function api(method, path, body) {
 /**
  * The public API accepts only these fields (the rest are read-only). An update
  * replaces every node, and the files carry no credentials, so the ones picked
- * in the editor are carried over by node name.
+ * in the editor are carried over by node name. A node configured that way
+ * also keeps its on/off state: the files ship the e-mail nodes switched off
+ * (they need an SMTP credential before n8n lets the workflow be published),
+ * and switching one on in the editor must survive later updates.
  */
 function payload(workflow, existing) {
   const { name, nodes, connections, settings } = workflow;
-  const picked = new Map((existing?.nodes ?? []).filter((n) => n.credentials).map((n) => [n.name, n.credentials]));
-  const merged = nodes.map((n) => (n.credentials || !picked.has(n.name) ? n : { ...n, credentials: picked.get(n.name) }));
+  const configured = new Map((existing?.nodes ?? []).filter((n) => n.credentials).map((n) => [n.name, n]));
+  const merged = nodes.map((n) => {
+    const old = configured.get(n.name);
+    if (!old || n.credentials) return n;
+    const { disabled, ...rest } = n;
+    return { ...rest, credentials: old.credentials, ...(old.disabled ? { disabled: true } : {}) };
+  });
   return { name, nodes: merged, connections, settings: settings ?? {} };
 }
 
@@ -49,17 +59,18 @@ for (const file of files) {
   const workflow = JSON.parse(readFileSync(join(dir, file), "utf8"));
   try {
     const existing = (await api("GET", `/workflows?name=${encodeURIComponent(workflow.name)}&limit=10`)).data ?? [];
-    const match = existing.find((w) => w.name === workflow.name);
+    const match = existing.find((w) => w.name === workflow.name && !w.isArchived);
     const body = match ? payload(workflow, await api("GET", `/workflows/${match.id}`)) : payload(workflow);
     const saved = match ? await api("PUT", `/workflows/${match.id}`, body) : await api("POST", "/workflows", body);
-    const missing = body.nodes.some(
-      (n) => (n.type === "n8n-nodes-base.emailSend" || n.parameters?.authentication === "headerAuth") && !n.credentials,
-    );
-    console.log(`${match ? "updated" : "created"}  ${saved.id}  ${workflow.name}${missing ? "  (set credentials before activating)" : ""}`);
+    const needs = (n) => n.type === "n8n-nodes-base.emailSend" || n.parameters?.authentication === "headerAuth";
+    const missing = body.nodes.some((n) => needs(n) && !n.disabled && !n.credentials);
+    const off = body.nodes.filter((n) => needs(n) && n.disabled && !n.credentials).map((n) => n.name);
+    const notes = [missing && "set credentials before activating", off.length && `switched off until SMTP is set: ${off.join(", ")}`];
+    console.log(`${match ? "updated" : "created"}  ${saved.id}  ${workflow.name}${notes.filter(Boolean).map((t) => `  (${t})`).join("")}`);
   } catch (err) {
     failed++;
     console.error(`failed   ${file}: ${err.message}`);
   }
 }
-console.log(failed ? `\n${failed} workflow(s) failed.` : `\nDone. Open ${base}/home/workflows, set credentials, then activate.`);
+console.log(failed ? `\n${failed} workflow(s) failed.` : `\nDone. Open ${base}/home/workflows to review credentials and activate.`);
 process.exit(failed ? 1 : 0);

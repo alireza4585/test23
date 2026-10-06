@@ -155,6 +155,50 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c127f761-5d2c-44aa-b261-323bbe9b1a3a",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5ad4b659-2fb7-412f-8a46-64b10f51d1f2",
+              "leftValue": "={{ $env.BALE_MANAGEMENT_CHAT_ID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ea085646-1cf4-41ac-bac1-040d33a972be",
+      "name": "Bale configured? · management",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        0
+      ],
+      "notes": "Skips this channel while BALE_BOT_TOKEN or BALE_MANAGEMENT_CHAT_ID is empty."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
         "options": {
@@ -179,7 +223,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        940,
+        1180,
         0
       ]
     },
@@ -217,6 +261,50 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "2e776206-6868-4009-9036-65bfe5f66eef",
+              "leftValue": "={{ $env.KAVENEGAR_API_KEY || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "1a4bfb8d-9ea9-4365-bc22-16ef0d64d881",
+              "leftValue": "={{ $env.ONCALL_MANAGER_MOBILE || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7604edf8-41e8-4f10-a0da-2c6cd9ac0ff3",
+      "name": "SMS configured? · on-call",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        140
+      ],
+      "notes": "Skips this channel while KAVENEGAR_API_KEY or ONCALL_MANAGER_MOBILE is empty."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://api.kavenegar.com/v1/{{ $env.KAVENEGAR_API_KEY }}/sms/send.json",
         "sendBody": true,
@@ -242,7 +330,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1180,
+        1420,
         140
       ]
     },
@@ -279,6 +367,50 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "eadafc8c-0380-4bf9-8080-8f9c56b91f62",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "57aece24-2a04-47a0-b41f-7f2cf508e5ca",
+              "leftValue": "={{ $env.BALE_MAINTENANCE_CHAT_ID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9e097ff9-f6e5-405b-9c6c-84d1896170e3",
+      "name": "Bale configured? · maintenance",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        300
+      ],
+      "notes": "Skips this channel while BALE_BOT_TOKEN or BALE_MAINTENANCE_CHAT_ID is empty."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
         "options": {
@@ -303,9 +435,53 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        940,
+        1180,
         300
       ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "4d201033-4a11-4d4d-b461-0d4024c65b3e",
+              "leftValue": "={{ $env.ZARIN_MAIL_FROM || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4e6e0efb-6b8f-4fee-8e43-b6860b802cc5",
+              "leftValue": "={{ $env.PROCUREMENT_EMAIL || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6f6f132-5fda-471f-9d82-9550112729d0",
+      "name": "E-mail configured? · procurement",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        460
+      ],
+      "notes": "Skips this channel while ZARIN_MAIL_FROM or PROCUREMENT_EMAIL is empty."
     },
     {
       "parameters": {
@@ -321,9 +497,54 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        700,
+        940,
         460
-      ]
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "471c56b2-1760-4dc8-8aec-7b869f705343",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e2060084-07d7-4b05-bab9-d437319cceda",
+              "leftValue": "={{ $env.BALE_ENERGY_CHAT_ID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "333c7030-ef68-4035-9cb7-ffa210d725e3",
+      "name": "Bale configured? · energy",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        620
+      ],
+      "notes": "Skips this channel while BALE_BOT_TOKEN or BALE_ENERGY_CHAT_ID is empty."
     },
     {
       "parameters": {
@@ -351,7 +572,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        700,
+        940,
         620
       ]
     }
@@ -397,14 +618,14 @@
         ],
         [
           {
-            "node": "Purchase request e-mail",
+            "node": "E-mail configured? · procurement",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Bale · energy group",
+            "node": "Bale configured? · energy",
             "type": "main",
             "index": 0
           }
@@ -415,7 +636,7 @@
       "main": [
         [
           {
-            "node": "Bale · management group",
+            "node": "Bale configured? · management",
             "type": "main",
             "index": 0
           },
@@ -431,7 +652,7 @@
       "main": [
         [
           {
-            "node": "SMS · on-call manager (Kavenegar)",
+            "node": "SMS configured? · on-call",
             "type": "main",
             "index": 0
           }
@@ -442,7 +663,62 @@
       "main": [
         [
           {
+            "node": "Bale configured? · maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · management": {
+      "main": [
+        [
+          {
+            "node": "Bale · management group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS configured? · on-call": {
+      "main": [
+        [
+          {
+            "node": "SMS · on-call manager (Kavenegar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · maintenance": {
+      "main": [
+        [
+          {
             "node": "Bale · maintenance group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-mail configured? · procurement": {
+      "main": [
+        [
+          {
+            "node": "Purchase request e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · energy": {
+      "main": [
+        [
+          {
+            "node": "Bale · energy group",
             "type": "main",
             "index": 0
           }

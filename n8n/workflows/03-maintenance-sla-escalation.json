@@ -178,6 +178,50 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "2158c24f-df1d-44ab-9fba-c01e628da49d",
+              "leftValue": "={{ $env.KAVENEGAR_API_KEY || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3ed88467-fa5b-481e-bc6d-5bbc33ab389a",
+              "leftValue": "={{ $env.MAINTENANCE_MANAGER_MOBILE || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cf10c14a-0845-42b6-8a4d-4c76db2f6743",
+      "name": "SMS configured? · maintenance",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        400
+      ],
+      "notes": "Skips this channel while KAVENEGAR_API_KEY or MAINTENANCE_MANAGER_MOBILE is empty."
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "=https://api.kavenegar.com/v1/{{ $env.KAVENEGAR_API_KEY }}/sms/send.json",
         "sendBody": true,
@@ -203,7 +247,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1560,
         400
       ]
     }
@@ -281,6 +325,17 @@
       ]
     },
     "Critical?": {
+      "main": [
+        [
+          {
+            "node": "SMS configured? · maintenance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS configured? · maintenance": {
       "main": [
         [
           {

@@ -96,6 +96,50 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b36a4d27-7cc8-40e0-8f4b-84e6c0ecaab1",
+              "leftValue": "={{ $env.ZARIN_MAIL_FROM || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "250f9fa6-ac4d-4da2-90a3-2de2170004e7",
+              "leftValue": "={{ $env.ZARIN_REPORT_RECIPIENTS || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7e25d868-2819-446f-8820-c58554c6fb2b",
+      "name": "E-mail configured? · GM & owner",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        220
+      ],
+      "notes": "Skips this channel while ZARIN_MAIL_FROM or ZARIN_REPORT_RECIPIENTS is empty."
+    },
+    {
+      "parameters": {
         "fromEmail": "={{ $env.ZARIN_MAIL_FROM }}",
         "toEmail": "={{ $env.ZARIN_REPORT_RECIPIENTS }}",
         "subject": "={{ $json.subject }}",
@@ -108,9 +152,54 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1100,
+        1340,
         220
-      ]
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "937a98c0-5462-475f-afd8-d0c4dfa50d5f",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cda2fbe1-1b5d-4d02-96a7-50774bfd2a94",
+              "leftValue": "={{ $env.BALE_MANAGEMENT_CHAT_ID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "680101af-cf31-4368-910e-5b80f6fdcbb8",
+      "name": "Bale configured? · management",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        380
+      ],
+      "notes": "Skips this channel while BALE_BOT_TOKEN or BALE_MANAGEMENT_CHAT_ID is empty."
     },
     {
       "parameters": {
@@ -138,7 +227,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1100,
+        1340,
         380
       ]
     }
@@ -192,10 +281,32 @@
       "main": [
         [
           {
-            "node": "E-mail GM & owner",
+            "node": "E-mail configured? · GM & owner",
             "type": "main",
             "index": 0
           },
+          {
+            "node": "Bale configured? · management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-mail configured? · GM & owner": {
+      "main": [
+        [
+          {
+            "node": "E-mail GM & owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · management": {
+      "main": [
+        [
           {
             "node": "Bale · management group",
             "type": "main",
