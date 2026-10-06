@@ -1,6 +1,6 @@
 {
   "platform": "docker",
-  "app": "zarin-hoshmand-nieplltrhr",
+  "app": "change-me-new-docker-app",
   "port": 8090,
   "disks": [{ "name": "pb-data", "mountTo": "/pb/pb_data" }]
 }

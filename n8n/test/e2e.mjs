@@ -88,7 +88,7 @@ console.log(`channels: ${CHANNELS ? "all" : "none"} · PocketBase ${PB} · n8n $
 const channelEnv = {
   BALE_BOT_TOKEN: "bale-token", BALE_MANAGEMENT_CHAT_ID: "mgmt", BALE_MAINTENANCE_CHAT_ID: "mnt", BALE_ENERGY_CHAT_ID: "nrg",
   KAVENEGAR_API_KEY: "kave-key", ONCALL_MANAGER_MOBILE: "09120000001", MAINTENANCE_MANAGER_MOBILE: "09120000002",
-  PROCUREMENT_EMAIL: "procurement@example.ir", ZARIN_REPORT_RECIPIENTS: "gm@example.ir,owner@example.ir",
+  PROCUREMENT_EMAIL: "procurement@example.ir",
 };
 const env = {
   ...process.env,
@@ -99,7 +99,8 @@ const env = {
   // The settings and variables docs/09-liara-runbook.md asks for:
   NODE_FUNCTION_ALLOW_BUILTIN: "crypto", N8N_BLOCK_ENV_ACCESS_IN_NODE: "false", GENERIC_TIMEZONE: "Asia/Tehran",
   ZARIN_INTEGRATION_SECRET: SECRET, ZARIN_API_BASE: PB, ZARIN_HOTEL_IDS: pbServer.hotelId,
-  ZARIN_MAIL_FROM: "no-reply@example.ir",
+  // Set on Liara before SMTP exists: the e-mail gate passes, the switched-off node no-ops.
+  ZARIN_MAIL_FROM: "no-reply@example.ir", ZARIN_REPORT_RECIPIENTS: "gm@example.ir,owner@example.ir",
   ...(CHANNELS ? channelEnv : {}),
 };
 for (const k of Object.keys(channelEnv)) if (!CHANNELS) delete env[k];

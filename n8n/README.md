@@ -23,6 +23,35 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. |
 | `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
 
+## کانال‌ها: یکی‌یکی فعال کنید
+
+هر نود ارسال (بله، پیامک، ایمیل) پشت یک نود IF با نام «… configured?» قرار دارد. این نود فقط وقتی متغیرهای همان کانال پر باشند اجازهٔ عبور می‌دهد. پس می‌توانید workflowها را پیش از راه‌اندازی هر کانالی فعال کنید و کانال‌ها را بعداً یکی‌یکی اضافه کنید. وقتی متغیرهای یک کانال خالی است، همان شاخه رد می‌شود و اجرا موفق تمام می‌شود (با `npm run e2e:no-channels` تست شده است).
+
+| کانال | متغیرها | نودهای گیت | کار اضافه |
+|---|---|---|---|
+| بله | `BALE_BOT_TOKEN` به‌علاوهٔ `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID` یا `BALE_ENERGY_CHAT_ID` | `Bale configured? · management / maintenance / energy` در ۰۱، و `· management` در ۰۲ | — |
+| پیامک (کاوه‌نگار) | `KAVENEGAR_API_KEY` به‌علاوهٔ `ONCALL_MANAGER_MOBILE` یا `MAINTENANCE_MANAGER_MOBILE` | `SMS configured? · on-call` در ۰۱، و `· maintenance` در ۰۳ | — |
+| ایمیل | `ZARIN_MAIL_FROM` به‌علاوهٔ `PROCUREMENT_EMAIL` یا `ZARIN_REPORT_RECIPIENTS` | `E-mail configured? · procurement` در ۰۱، و `· GM & owner` در ۰۲ | Credential SMTP و روشن کردن نود ایمیل (پایین) |
+
+هر گروه بله جداگانه بررسی می‌شود. مثلاً اگر فقط `BALE_ENERGY_CHAT_ID` خالی باشد، فقط پیام انرژی رد می‌شود.
+
+**روشن کردن ایمیل.** نودهای *Purchase request e-mail* (۰۱) و *E-mail GM & owner* (۰۲) در فایل‌ها خاموش (Deactivated) هستند. دلیلش این است که n8n workflowی را که نود ایمیلش Credential ندارد منتشر نمی‌کند و خطای «1 node has issues» می‌دهد. وقتی SMTP آماده شد:
+1. در Credentials یک Credential از نوع SMTP بسازید (مشخصات در پایین).
+2. در هر دو workflow روی نود ایمیل دوبار کلیک کنید و این Credential را انتخاب کنید.
+3. نود را روشن کنید: آن را انتخاب کنید و کلید `D` را بزنید، یا راست‌کلیک ← Activate. سپس workflow را Save کنید و اگر قبلاً منتشر شده، دوباره Publish کنید.
+
+`import-workflows.mjs` در به‌روزرسانی‌های بعدی، Credential و روشن بودن این نودها را نگه می‌دارد.
+
+**شناسهٔ چت بله.** مقدار `BALE_*_CHAT_ID` باید **شناسهٔ عددی** چت باشد، نه نام کاربری یا لینک گروه (`@…`):
+1. ربات را عضو گروه کنید. برای کانال، ربات باید ادمین باشد.
+2. یک پیام در گروه بفرستید.
+3. در مرورگر سیستم خودتان `https://tapi.bale.ai/bot<TOKEN>/getUpdates` را باز کنید. مقدار `message.chat.id` همان شناسه است. این عدد برای گروه‌ها ممکن است منفی باشد؛ آن را با همان علامت وارد کنید.
+
+**SMTP.**
+- **Gmail:** رمز معمولی حساب کار نمی‌کند. باید تأیید دومرحله‌ای (2-Step Verification) روشن باشد و یک **App Password** بسازید (Google Account ← Security ← App passwords). تنظیمات: Host `smtp.gmail.com`، Port `465` با گزینهٔ SSL/TLS روشن. توجه کنید که n8n روی سرور داخل ایران است و اتصال به SMTP گوگل از ایران ممکن است مسدود یا ناپایدار باشد.
+- **جایگزین پیشنهادی: سرویس ایمیل لیارا.** در پنل لیارا یک سرویس ایمیل بسازید، دامنهٔ فرستنده را طبق راهنمای همان بخش تأیید کنید، و Host، Port، نام کاربری و رمز SMTP را از همان صفحه بردارید. `ZARIN_MAIL_FROM` باید آدرسی روی همان دامنه باشد.
+- هر سرویس SMTP داخلی دیگری هم کار می‌کند.
+
 ## قرارداد رویدادها (Backend → n8n)
 
 همهٔ رویدادها به یک Webhook فرستاده می‌شوند:
@@ -76,8 +105,8 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
    ```
 
 3. **Credentials** (پس از import، روی نودهای مربوط انتخاب کنید):
-   - **SMTP**: نودهای *E-mail GM & owner* و *Purchase request e-mail*.
-   - **Header Auth**: نود *Meter gateway webhook*، مثلاً `X-Meter-Key: <random>`. همین کلید را به گیت‌وی کنتور بدهید.
+   - **Header Auth**: نود *Meter gateway webhook*، مثلاً `X-Meter-Key: <random>`. همین کلید را به گیت‌وی کنتور بدهید. n8n بدون این Credential اجازهٔ فعال کردن workflow ۰۴ را نمی‌دهد.
+   - **SMTP** (اختیاری): نودهای *E-mail GM & owner* و *Purchase request e-mail*. این نودها خاموش import می‌شوند و پس از انتخاب Credential باید روشن شوند (بخش «کانال‌ها» در بالا).
 
 4. **اتصال بک‌اند به n8n**
 
@@ -103,16 +132,30 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 مراحل باقی‌مانده به ترتیب اجرا، همراه با جدول کامل متغیرهای محیطی، Credentialها، ترتیب فعال‌سازی، آزمون نهایی و عیب‌یابی، در **[راهنمای راه‌اندازی لیارا](../docs/09-liara-runbook.md)** آمده است.
 
-**به‌روزرسانی workflowها در آینده:** اگر فایلی در `workflows/` تغییر کند، این دستور workflowها را با نام پیدا و در همان جا به‌روز می‌کند. نسخهٔ تکراری ساخته نمی‌شود، Credentialهایی که در Editor انتخاب کرده‌اید حفظ می‌شوند، و workflowهای فعال با نسخهٔ جدید دوباره منتشر می‌شوند. این دستور به Node 18 یا جدیدتر و یک API key نیاز دارد (Settings → n8n API). کلید را فقط در همان ترمینال تنظیم کنید و جایی ذخیره نکنید.
+**به‌روزرسانی workflowها:** وقتی فایلی در `workflows/` تغییر کند، این دستور workflowها را با نام پیدا و در همان جا به‌روز می‌کند:
+- نسخهٔ تکراری ساخته نمی‌شود.
+- Credentialهایی که در Editor انتخاب کرده‌اید، و روشن یا خاموش بودن نودهایی که Credential دارند، حفظ می‌شوند.
+- workflowهای فعال با نسخهٔ جدید دوباره منتشر می‌شوند.
 
-```bash
-# macOS / Linux
-N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run N8N_API_KEY=<کلید> node n8n/scripts/import-workflows.mjs
+این دستور به Node 18 یا جدیدتر و یک API key نیاز دارد (Settings ← n8n API). کلید را در پیام یا فایل ننویسید؛ دستور آن را می‌پرسد:
+
+```zsh
+# macOS (zsh)، در پوشهٔ مخزن
+export N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run
+read -s "N8N_API_KEY?n8n API key: "; echo; export N8N_API_KEY
+node n8n/scripts/import-workflows.mjs
+unset N8N_API_KEY
 ```
+
+در bash به‌جای خط `read` از `read -rsp "n8n API key: " N8N_API_KEY; echo; export N8N_API_KEY` استفاده کنید. در Windows PowerShell 7:
 ```powershell
-# Windows PowerShell
-$env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY="<کلید>"; node n8n/scripts/import-workflows.mjs
+$env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY = Read-Host -MaskInput "n8n API key"
+node n8n/scripts/import-workflows.mjs; Remove-Item Env:N8N_API_KEY
 ```
+
+اگر کلید را فقط برای همین کار ساخته‌اید، پس از اجرا آن را در n8n حذف کنید.
+
+**روش دستی:** workflow را در Editor باز کنید، از منوی ⋯ گزینهٔ *Import from File* را بزنید، فایل JSON را انتخاب کنید و Save کنید. این روش کل بوم را جایگزین می‌کند، پس Credentialها را دوباره انتخاب کنید و نودهای ایمیلی را که روشن کرده بودید دوباره روشن کنید.
 
 > فایل‌های workflow عمداً tag ندارند. n8n CLI (`import:workflow --separate`) وقتی چند فایل یک tag تازهٔ مشترک داشته باشند، با خطای `UNIQUE constraint failed: tag_entity.name` متوقف می‌شود. در صورت نیاز، tagها را پس از import در Editor اضافه کنید.
 
@@ -138,10 +181,14 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 - گزارش صبحگاهی RTL در ۰۲، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
 - نبودِ ارسال تکراری.
 - اجرای دوبارهٔ `import-workflows.mjs` بدون از دست رفتن Credentialها.
+- هیچ اجرای ناموفقی در n8n ثبت نشود.
+- در حالت بدون کانال (همان وضعیت لیارا پیش از تنظیم بله، پیامک و SMTP): همهٔ اجراها موفق باشند و هیچ پیامی ارسال نشود.
 
 ```bash
 (cd pocketbase && npm install && ./scripts/get-pocketbase.sh)
-cd n8n/test && npm install && npm run e2e     # Node 22.22+، نصب n8n حدود ۱ گیگابایت
+cd n8n/test && npm install      # Node 22.22+، نصب n8n حدود ۱ گیگابایت
+npm run e2e                     # همهٔ کانال‌ها تنظیم شده (۲۱ بررسی)
+npm run e2e:no-channels         # هیچ کانالی تنظیم نشده: همهٔ اجراها باید موفق باشند (۱۶ بررسی)
 ```
 
 پس از هر تغییر در workflowها یا API نسخهٔ v1 آن را اجرا کنید. پورت‌های ۵۶۸۸، ۵۶۸۹ و ۲۵۲۶ باید آزاد باشند.

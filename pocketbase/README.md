@@ -11,8 +11,8 @@ pocketbase/
 │   ├── zarin.pb.js       ثبت route‌ها، hook‌ها و cron‌ها
 │   └── lib/              منطق: users · ops · analytics · ai · integration · audit · zarin (helpers)
 │       └── core.js       تولیدشده از کد TypeScript مشترک (RBAC، کد ملی، KPI، موتور قواعد)
-├── scripts/              seed دمو · create-hotel · test-server · build-core · get-pocketbase
-├── test/                 ۴۲ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی)
+├── scripts/              seed دمو · reset-demo · create-hotel · test-server · build-core · get-pocketbase
+├── test/                 ۴۴ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی، reset-demo)
 ├── Dockerfile            ایمیج سرور
 └── deploy/               docker-compose + Caddy (HTTPS خودکار) + .env.example
 ```
@@ -34,9 +34,11 @@ pocketbase/
 cd pocketbase
 npm install
 ./scripts/get-pocketbase.sh          # دانلود PocketBase 0.40.4 در ./bin (یا PB_BIN=…)
-npm test                             # ۴۲ تست روی یک سرور موقت
+npm test                             # ۴۴ تست روی یک سرور موقت (Node 22.12 به بالا)
 npm run test-server                  # سرور موقت seedشده، برای اجرای اپ یا تست‌های Flutter
 ```
+
+اسکریپت‌های مدیریتی (`seed`، `create-hotel`، `reset-demo`) با **Node 18** هم اجرا می‌شوند و فقط به SDK نیاز دارند: `npm ci --omit=dev`. اجرای تست‌ها Node 22.12 یا جدیدتر لازم دارد (روی macOS: `brew install node@22`).
 
 اپ را با این دستور به سرور وصل کنید:
 
@@ -63,39 +65,57 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
 
 ### لیارا (Liara)
 
-لیارا HTTPS را خودش فراهم می‌کند، پس Caddy لازم نیست. تنظیمات استقرار در `pocketbase/liara.json` آماده است: پلتفرم Docker، پورت ۸۰۹۰ و دیسک دائمی `pb-data` روی `/pb/pb_data`.
+لیارا HTTPS را خودش فراهم می‌کند، پس Caddy لازم نیست. راهنمای قدم‌به‌قدم کل استقرار، شامل n8n، پاک کردن دادهٔ دمو و چک‌لیست امنیتی، در [راهنمای لیارا](../docs/09-liara-runbook.md) آمده است.
 
-ترتیب کامل راه‌اندازی، همراه با n8n، در [راهنمای راه‌اندازی لیارا](../docs/09-liara-runbook.md) آمده است. طبق آن راهنما، `ZH_N8N_WEBHOOK_URL` را پس از فعال شدن workflowهای n8n تنظیم کنید.
+#### روش اصلی: برنامهٔ آمادهٔ PocketBase با دیسک (one-click)
 
-1. **نوع برنامه:** برنامه در لیارا باید از نوع **Docker** باشد. اگر آن را به‌صورت «برنامهٔ آماده (One-click) PocketBase» ساخته‌اید، hookها و migrationهای ما روی آن نصب نمی‌شوند. در این حالت یک برنامهٔ Docker بسازید و نام آن را در فیلد `app` فایل `liara.json` بگذارید.
-2. **ابزار و ورود:**
+برنامهٔ `zarin-hoshmand-nieplltrhr` از ایمیج آمادهٔ لیارا (`one-click-apps/pocketbase:0.40.4`) اجرا می‌شود، نه از `Dockerfile` این پوشه. hookها و migrationهای ما روی دیسک‌های دائمی آن کپی می‌شوند:
+
+| مسیر روی سرور | محتوا |
+|---|---|
+| `/usr/local/bin/pocketbase` | فایل اجرایی |
+| `/pb_data` | دیتابیس و فایل‌ها (دیسک دائمی) |
+| `/pb_hooks` | محتوای `pocketbase/pb_hooks` (دیسک دائمی) |
+| `/pb_migrations` | محتوای `pocketbase/pb_migrations` (دیسک دائمی) |
+| `/pb_public` | فایل‌های استاتیک (فعلاً استفاده نمی‌شود) |
+
+**نصب و به‌روزرسانی.** هر بار که `pb_hooks` یا `pb_migrations` در این مخزن تغییر کند، در پنل لیارا ← برنامهٔ PocketBase ← «خط فرمان» این دستور را اجرا کنید:
+
+```sh
+B=claude/awesome-ramanujan-cvthpx
+cd /tmp && rm -rf test23-* s.tgz \
+  && wget -qO s.tgz "https://codeload.github.com/alireza4585/test23/tar.gz/refs/heads/$B" \
+  && tar xzf s.tgz \
+  && cp -r test23-*/pocketbase/pb_migrations/. /pb_migrations/ \
+  && cp -r test23-*/pocketbase/pb_hooks/. /pb_hooks/ \
+  && rm -rf test23-* s.tgz && echo "copied"
+```
+
+- migrationها **قبل از** hookها کپی می‌شوند. PocketBase تغییر `/pb_hooks` را خودش تشخیص می‌دهد، restart می‌شود و هنگام شروع migrationهای جدید را اجرا می‌کند. اگر ترتیب برعکس باشد، ممکن است restart پیش از رسیدن migrationها رخ دهد.
+- **بررسی:** `/v1/health` باید `{"ok":true,…}` برگرداند. اگر نسخهٔ جدید migration داشت، در پنل `/_/` بررسی کنید که اعمال شده باشد. مثلاً migration `1759800000_outbox_lease` فیلد `lockedUntil` را به collection `outbox` اضافه می‌کند. اگر فیلد هنوز نبود، برنامه را از پنل لیارا یک بار «راه‌اندازی مجدد» کنید.
+- اگر این شاخه بعداً در `main` ادغام شد، `B=main` بگذارید.
+- `cp` فایل‌ها را اضافه یا جایگزین می‌کند ولی پاک نمی‌کند. اگر روزی فایلی از `pb_hooks` حذف شد، آن را روی سرور هم با `rm` پاک کنید.
+- **`liara deploy` را روی این برنامه اجرا نکنید.** این کار ایمیج آماده را با `Dockerfile` ما جایگزین می‌کند. آن Dockerfile داده را در `/pb/pb_data` می‌خواند، نه دیسک `/pb_data`، پس برنامه با دیتابیس خالی بالا می‌آید. به همین دلیل نام برنامه در `liara.json` عمداً `change-me-new-docker-app` است.
+- **طرح دیتابیس را از پنل `/_/` تغییر ندهید.** این ایمیج احتمالاً automigrate روشن دارد و هر تغییر collection در پنل، یک فایل migration تازه در `/pb_migrations` می‌سازد که با migrationهای مخزن تداخل پیدا می‌کند. تغییر طرح فقط با migration در همین مخزن انجام شود.
+- **حساب مدیر سرور (superuser):** رمز را از پنل `/_/` ← Superusers عوض کنید. اگر رمز فراموش شد، در «خط فرمان» این دستور را اجرا کنید (رمز را هنگام تایپ نمایش نمی‌دهد):
+  ```sh
+  printf 'Email: '; read E; stty -echo; printf 'New password: '; read P; stty echo; echo
+  /usr/local/bin/pocketbase superuser upsert "$E" "$P" --dir=/pb_data; unset P
+  ```
+
+#### روش جایگزین: برنامهٔ Docker با `liara deploy`
+
+برای برنامهٔ **تازه‌ای** از نوع Docker، که ایمیج را از `Dockerfile` همین پوشه می‌سازد. تنظیمات در `pocketbase/liara.json` است: پورت ۸۰۹۰ و دیسک `pb-data` روی `/pb/pb_data`.
+
+1. یک برنامهٔ Docker بسازید و نام آن را در فیلد `app` فایل `liara.json` بگذارید.
+2. ابزار، ورود و دیسک دائمی (یک بار):
    ```bash
    npm i -g @liara/cli && liara login
+   liara disk create --app <نام برنامه> --name pb-data --size 1
    ```
-3. **دیسک دائمی** (یک بار؛ داده و فایل‌ها روی آن می‌مانند):
-   ```bash
-   liara disk create --app zarin-hoshmand-nieplltrhr --name pb-data --size 1
-   ```
-4. **متغیرهای محیطی** (از پنل لیارا یا با دستور):
-   ```bash
-   liara env:set ZH_INTEGRATION_SECRET=<سکرت مشترک> --app zarin-hoshmand-nieplltrhr
-   ```
-   سکرت مشترک را یک بار بسازید (مرحلهٔ ۰ [راهنمای لیارا](../docs/09-liara-runbook.md)). همین مقدار در n8n هم با نام `ZARIN_INTEGRATION_SECRET` تنظیم می‌شود. بقیهٔ متغیرهای جدول پایین هم به همین شکل تنظیم می‌شوند.
-5. **استقرار:**
-   ```bash
-   cd pocketbase && liara deploy
-   ```
-   اگر سرور build لیارا به GitHub دسترسی نداشت، فایل `pocketbase_0.40.4_linux_amd64.zip` را با نام `pocketbase.zip` کنار `Dockerfile` بگذارید و دوباره deploy کنید.
-6. **حساب مدیر سرور:** دو راه دارید.
-   - با `liara app logs --app zarin-hoshmand-nieplltrhr` لینک `…/_/#/pbinstall/…` را از لاگ بردارید و در مرورگر باز کنید.
-   - یا با `liara app shell --app zarin-hoshmand-nieplltrhr` وارد شوید و این دستور را اجرا کنید:
-     ```bash
-     /pb/pocketbase superuser upsert admin@hotel.ir 'رمز-قوی' --dir=/pb/pb_data
-     ```
-7. **ساخت هتل و اتصال اپ:** بخش «پس از نصب» در پایین را با این آدرس انجام دهید:
-   ```
-   ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
-   ```
+3. متغیرهای محیطی جدول پایین را از پنل لیارا تنظیم کنید.
+4. استقرار با `cd pocketbase && liara deploy`. اگر سرور build لیارا به GitHub دسترسی نداشت، فایل `pocketbase_0.40.4_linux_amd64.zip` را با نام `pocketbase.zip` کنار `Dockerfile` بگذارید و دوباره deploy کنید.
+5. superuser را با لینک `…/_/#/pbinstall/…` از `liara app logs --app <نام برنامه>` بسازید، یا با `liara app shell` و دستور `/pb/pocketbase superuser upsert … --dir=/pb/pb_data`.
 
 ### بدون Docker (systemd)
 
@@ -113,14 +133,26 @@ docker compose exec pocketbase /pb/pocketbase superuser upsert admin@hotel.ir '�
 
 ### پس از نصب
 
-1. **ساخت هتل و مدیرکل:**
-   ```bash
-   cd pocketbase && npm install
-   ZH_PB_URL=https://api.hotel.ir ZH_PB_SUPERUSER_EMAIL=… ZH_PB_SUPERUSER_PASSWORD=… \
-   HOTEL_NAME="…" HOTEL_CITY="…" HOTEL_ROOMS=80 GM_NATIONAL_ID=… GM_NAME="…" GM_TEMP_PASSWORD='…' \
-   npm run create-hotel
+1. **ساخت هتل و مدیرکل** (macOS با zsh؛ رمزها پرسیده می‌شوند و در history نمی‌مانند):
+   ```zsh
+   cd pocketbase && npm ci --omit=dev
+   export ZH_PB_URL=https://api.hotel.ir
+   read "ZH_PB_SUPERUSER_EMAIL?Superuser email: "
+   read -s "ZH_PB_SUPERUSER_PASSWORD?Superuser password: "; echo
+   read "GM_NATIONAL_ID?GM national ID: "
+   read -s "GM_TEMP_PASSWORD?GM temporary password: "; echo
+   export ZH_PB_SUPERUSER_EMAIL ZH_PB_SUPERUSER_PASSWORD GM_NATIONAL_ID GM_TEMP_PASSWORD
+   HOTEL_NAME="…" HOTEL_CITY="…" HOTEL_ROOMS=80 GM_NAME="…" npm run create-hotel
+   unset ZH_PB_SUPERUSER_PASSWORD GM_TEMP_PASSWORD
    ```
-   مدیرکل در اولین ورود رمز را عوض می‌کند و بقیهٔ کاربران را از داخل اپ می‌سازد. برای دمو به‌جای این کار `npm run seed` را اجرا کنید که هتل ۶۰ اتاقه با ۱۶ نقش می‌سازد.
+   در bash به‌جای `read -s "VAR?prompt"` از `read -rsp "prompt" VAR` استفاده کنید. مدیرکل در اولین ورود رمز را عوض می‌کند و بقیهٔ کاربران را از داخل اپ می‌سازد.
+
+   برای دمو به‌جای این کار `npm run seed` را اجرا کنید که هتل ۶۰ اتاقه با ۱۶ نقش می‌سازد. رمز همهٔ حساب‌های دمو (`Zarin@2026`) در همین مخزن منتشر شده است، پس پیش از استفادهٔ واقعی دادهٔ دمو را پاک کنید:
+   ```zsh
+   npm run reset-demo            # فقط نشان می‌دهد چه چیزی پاک می‌شود
+   npm run reset-demo -- --yes   # هتل دمو، داده‌هایش و ۱۶ حساب دمو را پاک می‌کند
+   ```
+   هتل‌های دیگر و حساب superuser دست نمی‌خورند.
 2. **اپ:**
    ```bash
    flutter build apk --dart-define=ZH_BACKEND=pocketbase --dart-define=ZH_PB_URL=https://api.hotel.ir
