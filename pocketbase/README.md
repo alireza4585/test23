@@ -11,8 +11,8 @@ pocketbase/
 │   ├── zarin.pb.js       ثبت route‌ها، hook‌ها و cron‌ها
 │   └── lib/              منطق: users · ops · analytics · ai · integration · audit · zarin (helpers)
 │       └── core.js       تولیدشده از کد TypeScript مشترک (RBAC، کد ملی، KPI، موتور قواعد)
-├── scripts/              seed دمو · reset-demo · create-hotel · test-server · build-core · get-pocketbase
-├── test/                 ۴۴ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی، reset-demo)
+├── scripts/              seed دمو · reset-demo · create-hotel (تعاملی) · test-server · build-core · get-pocketbase
+├── test/                 ۴۷ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی، reset-demo، قوانین ورودی)
 ├── Dockerfile            ایمیج سرور
 └── deploy/               docker-compose + Caddy (HTTPS خودکار) + .env.example
 ```
@@ -34,7 +34,7 @@ pocketbase/
 cd pocketbase
 npm install
 ./scripts/get-pocketbase.sh          # دانلود PocketBase 0.40.4 در ./bin (یا PB_BIN=…)
-npm test                             # ۴۴ تست روی یک سرور موقت (Node 22.12 به بالا)
+npm test                             # ۴۷ تست روی یک سرور موقت (Node 22.12 به بالا)
 npm run test-server                  # سرور موقت seedشده، برای اجرای اپ یا تست‌های Flutter
 ```
 
@@ -133,26 +133,22 @@ cd /tmp && rm -rf test23-* s.tgz \
 
 ### پس از نصب
 
-1. **ساخت هتل و مدیرکل** (macOS با zsh؛ رمزها پرسیده می‌شوند و در history نمی‌مانند):
+1. **ساخت هتل و مدیرکل:**
    ```zsh
    cd pocketbase && npm ci --omit=dev
-   export ZH_PB_URL=https://api.hotel.ir
-   read "ZH_PB_SUPERUSER_EMAIL?Superuser email: "
-   read -s "ZH_PB_SUPERUSER_PASSWORD?Superuser password: "; echo
-   read "GM_NATIONAL_ID?GM national ID: "
-   read -s "GM_TEMP_PASSWORD?GM temporary password: "; echo
-   export ZH_PB_SUPERUSER_EMAIL ZH_PB_SUPERUSER_PASSWORD GM_NATIONAL_ID GM_TEMP_PASSWORD
-   HOTEL_NAME="…" HOTEL_CITY="…" HOTEL_ROOMS=80 GM_NAME="…" npm run create-hotel
-   unset ZH_PB_SUPERUSER_PASSWORD GM_TEMP_PASSWORD
+   ZH_PB_URL=https://api.hotel.ir npm run create-hotel
    ```
-   در bash به‌جای `read -s "VAR?prompt"` از `read -rsp "prompt" VAR` استفاده کنید. مدیرکل در اولین ورود رمز را عوض می‌کند و بقیهٔ کاربران را از داخل اپ می‌سازد.
+   اسکریپت هر مقداری را که در متغیرهای محیطی نباشد می‌پرسد (رمزها بدون نمایش روی صفحه) و همان لحظه بررسی می‌کند. پرسش‌ها به ترتیب: ایمیل و رمز superuser، نام هتل، شهر، تعداد اتاق، ستاره، نام مدیرکل، کد ملی و رمز موقت. سپس خلاصه را برای تأیید نشان می‌دهد.
+   - **کد ملی:** ۱۰ رقم که رقم آخر آن رقم کنترل است، پس عدد ساختگی رد می‌شود. کد ملی‌ای که روی سرور کاربر دارد هم رد می‌شود.
+   - **رمز موقت:** حداقل ۸ کاراکتر با دست‌کم یک حرف انگلیسی و یک عدد. دو بار پرسیده می‌شود.
+
+   مدیرکل در اولین ورود رمز را عوض می‌کند و بقیهٔ کاربران را از داخل اپ می‌سازد. برای اجرای خودکار همهٔ مقادیر را با متغیرها بدهید (فهرست در بالای `scripts/create-hotel.mjs`). در این حالت چیزی پرسیده نمی‌شود.
 
    برای دمو به‌جای این کار `npm run seed` را اجرا کنید که هتل ۶۰ اتاقه با ۱۶ نقش می‌سازد. رمز همهٔ حساب‌های دمو (`Zarin@2026`) در همین مخزن منتشر شده است، پس پیش از استفادهٔ واقعی دادهٔ دمو را پاک کنید:
    ```zsh
-   npm run reset-demo            # فقط نشان می‌دهد چه چیزی پاک می‌شود
-   npm run reset-demo -- --yes   # هتل دمو، داده‌هایش و ۱۶ حساب دمو را پاک می‌کند
+   ZH_PB_URL=https://api.hotel.ir npm run reset-demo
    ```
-   هتل‌های دیگر و حساب superuser دست نمی‌خورند.
+   فهرست چیزهایی که پاک می‌شوند نمایش داده می‌شود و برای پاک کردن، تایپ `yes` لازم است (در اجرای خودکار: `-- --yes`). هتل‌های دیگر و حساب superuser دست نمی‌خورند.
 2. **اپ:**
    ```bash
    flutter build apk --dart-define=ZH_BACKEND=pocketbase --dart-define=ZH_PB_URL=https://api.hotel.ir

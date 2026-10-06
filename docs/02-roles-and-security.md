@@ -112,7 +112,7 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 - **API rules:** ایزوله‌سازی با `@request.auth.hotels.id ?= hotel` و مجوز با `@request.auth.permissions.code ?= '…'`. مجوزها را سرور از قالب نقش محاسبه می‌کند.
 - **hookها و routeهای تراکنشی:** انتقال وضعیت بر اساس نقش، whitelist فیلدها، پر کردن actor توسط سرور، و ممنوعیت ارجاع به رکورد هتل دیگر.
 
-۴۴ تست روی سرور واقعی همهٔ موارد این بخش را بررسی می‌کنند ([`pocketbase/test`](../pocketbase/test)). جزئیات در [`pocketbase/README.md`](../pocketbase/README.md#امنیت-در-pocketbase) است.
+۴۷ تست روی سرور واقعی همهٔ موارد این بخش را بررسی می‌کنند ([`pocketbase/test`](../pocketbase/test)). جزئیات در [`pocketbase/README.md`](../pocketbase/README.md#امنیت-در-pocketbase) است.
 
 ## نکات کلیدی Security Rules
 

@@ -14,6 +14,7 @@ flutter run
 
 # PocketBase backend (self-hosted, see ../pocketbase)
 flutter run --dart-define=ZH_BACKEND=pocketbase --dart-define=ZH_PB_URL=https://api.example.ir
+# Liara server, APK build and a manual test checklist: ../docs/10-flutter-app.md
 
 # Firebase backend
 dart pub global activate flutterfire_cli

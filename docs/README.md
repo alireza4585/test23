@@ -18,7 +18,7 @@
 | ۱۲ | MVP Roadmap | [08-roadmap.md](08-roadmap.md#mvp-roadmap-۱۲-هفته-تا-پایلوت-پولی) |
 | ۱۳ | Future Roadmap | [08-roadmap.md](08-roadmap.md#future-roadmap) |
 | ۱۴ | کد اولیه | [`app/`](../app) (Flutter) · [`pocketbase/`](../pocketbase) (بک‌اند پیشنهادی) · [`firebase/`](../firebase) (جایگزین) · [`n8n/`](../n8n) |
-| ۱۵ | صفحات قابل اجرا | `cd app && flutter run` (بک‌اند دمو). راهنما در [README اصلی](../README.md) |
+| ۱۵ | صفحات قابل اجرا | `cd app && flutter run` (بک‌اند دمو). راهنما در [README اصلی](../README.md). اتصال به سرور لیارا و ساخت APK ← [10](10-flutter-app.md) |
 
 موضوعات تکمیلی درخواستی:
 

@@ -155,6 +155,8 @@ node n8n/scripts/import-workflows.mjs; Remove-Item Env:N8N_API_KEY
 
 اگر کلید را فقط برای همین کار ساخته‌اید، پس از اجرا آن را در n8n حذف کنید.
 
+**بدون API key:** روش Console مرورگر ([`scripts/console-update.js`](scripts/console-update.js)) در [مرحلهٔ ۴ راهنمای لیارا](../docs/09-liara-runbook.md#روش-جایگزین-بدون-api-key) آمده است.
+
 **روش دستی:** workflow را در Editor باز کنید، از منوی ⋯ گزینهٔ *Import from File* را بزنید، فایل JSON را انتخاب کنید و Save کنید. این روش کل بوم را جایگزین می‌کند، پس Credentialها را دوباره انتخاب کنید و نودهای ایمیلی را که روشن کرده بودید دوباره روشن کنید.
 
 > فایل‌های workflow عمداً tag ندارند. n8n CLI (`import:workflow --separate`) وقتی چند فایل یک tag تازهٔ مشترک داشته باشند، با خطای `UNIQUE constraint failed: tag_entity.name` متوقف می‌شود. در صورت نیاز، tagها را پس از import در Editor اضافه کنید.
@@ -190,6 +192,17 @@ cd n8n/test && npm install      # Node 22.22+، نصب n8n حدود ۱ گیگا�
 npm run e2e                     # همهٔ کانال‌ها تنظیم شده (۲۱ بررسی)
 npm run e2e:no-channels         # هیچ کانالی تنظیم نشده: همهٔ اجراها باید موفق باشند (۱۶ بررسی)
 ```
+
+**روی نسخهٔ لیارا (Docker).** با `N8N_IMAGE`، n8n از ایمیج Docker همان نسخه اجرا می‌شود، نه از بستهٔ نصب‌شده. هر دو حالت روی 2.26.2 (همان نسخهٔ لیارا) سبز است:
+```bash
+N8N_IMAGE=n8nio/n8n:2.26.2 npm run e2e
+N8N_IMAGE=n8nio/n8n:2.26.2 npm run e2e:no-channels
+```
+
+**بررسی Editor در مرورگر** (`npm run browser-check`، به Docker و Chromium مربوط به Playwright نیاز دارد؛ ۹ بررسی):
+- کدام حالت‌ها در Editor قابل Publish هستند: فایل‌های فعلی بله، ولی نود ایمیلِ روشن بدون SMTP و ۰۴ بدون Header Auth نه.
+- روش جایگزین Console ([`scripts/console-update.js`](scripts/console-update.js)) اولین نسخهٔ import‌شده روی لیارا را به‌روز می‌کند و Credential SMTP آن را نگه می‌دارد.
+- درخواست بدون هدر `browser-id` با 401 رد می‌شود و کاربر از n8n خارج می‌شود.
 
 پس از هر تغییر در workflowها یا API نسخهٔ v1 آن را اجرا کنید. پورت‌های ۵۶۸۸، ۵۶۸۹ و ۲۵۲۶ باید آزاد باشند.
 
