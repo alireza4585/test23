@@ -29,9 +29,9 @@ function exported(record) {
   return out;
 }
 
-function write(e, action, before, after) {
+function write(e, action, before, after, hotelId) {
   const name = e.record.collection().name;
-  z.audit(e.app, hotelOf(e.record), {
+  z.audit(e.app, hotelId ?? hotelOf(e.record), {
     action: `${name}.${action}`, collection: name, id: e.record.id, actor: actor(e),
     changes: z.diff(before, after), source: "client",
   });
@@ -54,7 +54,9 @@ function remove(e) {
   if (!AUDITED[e.record.collection().name]) return e.next();
   const before = exported(e.record);
   e.next();
-  write(e, "delete", before, null);
+  // A deleted hotel takes its audit trail with it (cascade), and the log row
+  // cannot point at it any more: record the deletion at platform level.
+  write(e, "delete", before, null, e.record.collection().name === "hotels" ? "" : undefined);
 }
 
 module.exports = { create, update, remove };
