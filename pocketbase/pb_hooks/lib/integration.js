@@ -150,13 +150,34 @@ function runInsights(e) {
   return e.json(200, { created: analytics.runInsights(e.app, hotelOf(e), new Date()) });
 }
 
+const LEASE_SECONDS = 60;
+const MAX_ATTEMPTS = 8;
+
+/**
+ * Takes a short lease on one queued event so that concurrent flushes (the
+ * cron and /v1/outbox/flush, or a slow cron run overlapping the next one)
+ * never send it twice. Returns the fresh record, or null if another flush
+ * holds it or already delivered it. An expired lease (crash mid-send) is
+ * taken over, so delivery stays at-least-once.
+ */
+function claim(app, id) {
+  const now = new Date();
+  const res = app.db().newQuery(
+    "UPDATE outbox SET lockedUntil = {:until} WHERE id = {:id} AND deliveredAt = '' AND attempts < {:max}" +
+      " AND (lockedUntil = '' OR lockedUntil < {:now})",
+  ).bind({ id, max: MAX_ATTEMPTS, now: z.pbDate(now), until: z.pbDate(new Date(now.getTime() + LEASE_SECONDS * 1000)) }).execute();
+  return res.rowsAffected() === 1 ? app.findRecordById("outbox", id) : null;
+}
+
 /** Cron: delivers queued events to n8n with retries (max 8 attempts). */
 function flushOutbox(app) {
   const url = $os.getenv("ZH_N8N_WEBHOOK_URL");
   const secret = $os.getenv("ZH_INTEGRATION_SECRET");
   let delivered = 0;
   if (!url || !secret) return delivered;
-  for (const rec of z.findMany(app, "outbox", "deliveredAt = '' && attempts < 8", {}, "created", 50)) {
+  for (const pending of z.findMany(app, "outbox", "deliveredAt = '' && attempts < {:max}", { max: MAX_ATTEMPTS }, "created", 50)) {
+    const rec = claim(app, pending.id);
+    if (!rec) continue;
     const body = JSON.stringify(z.jsonOf(rec, "payload") || {});
     const ts = Math.floor(Date.now() / 1000);
     try {
@@ -175,6 +196,7 @@ function flushOutbox(app) {
       rec.set("lastError", String(err).slice(0, 500));
     }
     rec.set("attempts", rec.getInt("attempts") + 1);
+    rec.set("lockedUntil", "");
     app.save(rec);
   }
   return delivered;

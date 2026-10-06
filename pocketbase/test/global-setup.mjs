@@ -23,9 +23,12 @@ function startMockN8n() {
       const sig = req.headers["x-zarin-signature"];
       const hmac = (body) => createHmac("sha256", SECRET).update(`${ts}.${body}`).digest("hex");
       const body = JSON.parse(raw);
-      received.push({ type: body.type, hotelId: body.hotelId, data: body.data, signatureOk: sig === hmac(JSON.stringify(body)) });
-      res.writeHead(200);
-      res.end("ok");
+      received.push({ raw, type: body.type, hotelId: body.hotelId, data: body.data, signatureOk: sig === hmac(JSON.stringify(body)) });
+      // Answer slowly, like a real n8n run, so overlapping flushes race.
+      setTimeout(() => {
+        res.writeHead(200);
+        res.end("ok");
+      }, 100);
     });
   });
   return new Promise((ok) => server.listen(0, "127.0.0.1", () => ok({ server, url: `http://127.0.0.1:${server.address().port}` })));

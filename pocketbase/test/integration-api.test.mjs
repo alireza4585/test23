@@ -110,4 +110,24 @@ describe("integration API v1 (n8n / IoT)", () => {
     expect(events.some((ev) => ev.type === "alert.raised")).toBe(true);
     expect(events.every((ev) => ev.signatureOk)).toBe(true);
   });
+
+  it("delivers each event once when flushes overlap", async () => {
+    const hk = await login(NID.housekeeper);
+    const titles = ["نشت آب اتاق ۲۰۱", "نشت آب اتاق ۲۰۲", "نشت آب اتاق ۲۰۳"];
+    for (const title of titles) {
+      await hk.collection("maintenanceTickets").create({ hotel: hotelId(), title, category: "plumbing", priority: "high", area: "طبقه ۲" });
+    }
+    const flush = () => signed("/v1/outbox/flush", { method: "POST", body: {} });
+    const runs = await Promise.all([flush(), flush(), flush(), flush()]);
+    expect(runs.every((r) => r.status === 200)).toBe(true);
+    let delivered = 1;
+    while (delivered > 0) delivered = (await flush()).json.delivered;
+
+    const events = await (await fetch(`${inject("n8nUrl")}/received`)).json();
+    for (const title of titles) {
+      expect(events.filter((ev) => ev.type === "maintenance.ticket.created" && ev.data.title === title)).toHaveLength(1);
+    }
+    const bodies = events.map((ev) => ev.raw);
+    expect(new Set(bodies).size).toBe(bodies.length);
+  });
 });
