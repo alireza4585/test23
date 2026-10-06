@@ -8,10 +8,12 @@
   },
   "scripts": {
     "e2e": "node e2e.mjs",
-    "e2e:no-channels": "E2E_CHANNELS=none node e2e.mjs"
+    "e2e:no-channels": "E2E_CHANNELS=none node e2e.mjs",
+    "browser-check": "node browser-check.mjs"
   },
   "devDependencies": {
     "n8n": "2.35.7",
-    "smtp-server": "^3.19.17"
+    "smtp-server": "^3.19.17",
+    "playwright": "^1.56.1"
   }
 }

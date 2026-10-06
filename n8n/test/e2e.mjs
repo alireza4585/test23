@@ -8,6 +8,9 @@
 //   npm run e2e               # every channel configured
 //   npm run e2e:no-channels   # no Bale / SMS / e-mail set up yet: runs must still succeed
 //
+// N8N_IMAGE=n8nio/n8n:2.26.2 runs n8n from that Docker image (host network)
+// instead of the local n8n package, e.g. to match the version in production.
+//
 // Uses ports 5688 (n8n), 5689 (HTTP mocks) and 2526 (SMTP).
 import { execFileSync, spawn } from "node:child_process";
 import { createHmac } from "node:crypto";
@@ -90,8 +93,7 @@ const channelEnv = {
   KAVENEGAR_API_KEY: "kave-key", ONCALL_MANAGER_MOBILE: "09120000001", MAINTENANCE_MANAGER_MOBILE: "09120000002",
   PROCUREMENT_EMAIL: "procurement@example.ir",
 };
-const env = {
-  ...process.env,
+const n8nEnv = {
   N8N_USER_FOLDER: work, N8N_PORT: String(N8N_PORT), N8N_LISTEN_ADDRESS: "127.0.0.1",
   N8N_ENCRYPTION_KEY: "e2e-encryption-key", N8N_DIAGNOSTICS_ENABLED: "false",
   N8N_VERSION_NOTIFICATIONS_ENABLED: "false", N8N_TEMPLATES_ENABLED: "false",
@@ -103,9 +105,21 @@ const env = {
   ZARIN_MAIL_FROM: "no-reply@example.ir", ZARIN_REPORT_RECIPIENTS: "gm@example.ir,owner@example.ir",
   ...(CHANNELS ? channelEnv : {}),
 };
+const env = { ...process.env, ...n8nEnv };
 for (const k of Object.keys(channelEnv)) if (!CHANNELS) delete env[k];
+const IMAGE = process.env.N8N_IMAGE;
+const CONTAINER = "zarin-n8n-e2e";
 const n8nBin = join(HERE, "node_modules/.bin/n8n");
-const n8n = (...args) => execFileSync(n8nBin, args, { env, stdio: "pipe", timeout: 300000 }).toString();
+// [command, args] for one n8n CLI call, local or in a throwaway container.
+const n8nCommand = (args, name) => IMAGE
+  ? ["docker", ["run", "--rm", "--network", "host", "--user", "root", "-v", `${work}:${work}`,
+      ...(name ? ["--name", name] : []), ...Object.entries(n8nEnv).flatMap(([k, v]) => ["-e", `${k}=${v}`]), IMAGE, ...args]]
+  : [n8nBin, args];
+const n8n = (...args) => {
+  const [cmd, argv] = n8nCommand(args);
+  return execFileSync(cmd, argv, { env, stdio: "pipe", timeout: 300000 }).toString();
+};
+if (IMAGE) console.log(`n8n from image ${IMAGE}: ${n8n("--version").trim().split("\n").pop()}`);
 
 writeFileSync(join(work, "creds.json"), JSON.stringify([
   { id: "smtpE2E00000001", name: "SMTP e2e", type: "smtp", data: { user: "", password: "", host: "127.0.0.1", port: SMTP_PORT, secure: false, disableStartTls: true } },
@@ -146,7 +160,7 @@ n8n("import:workflow", "--separate", `--input=${wfDir}`);
 for (const id of Object.values(ids)) n8n("publish:workflow", `--id=${id}`);
 
 const log = createWriteStream(join(work, "n8n.log"));
-const proc = spawn(n8nBin, ["start"], { env, stdio: ["ignore", "pipe", "pipe"] });
+const proc = spawn(...n8nCommand(["start"], CONTAINER), { env, stdio: ["ignore", "pipe", "pipe"] });
 proc.stdout.pipe(log);
 proc.stderr.pipe(log);
 check("n8n starts", !!(await until(async () => {
@@ -289,6 +303,7 @@ try {
   const exited = new Promise((r) => proc.once("exit", r));
   proc.kill();
   if (!(await Promise.race([exited.then(() => true), wait(20000).then(() => false)]))) proc.kill("SIGKILL");
+  if (IMAGE) try { execFileSync("docker", ["rm", "-f", CONTAINER], { stdio: "ignore" }); } catch {}
   await pbServer.stop();
   mock.close();
   smtp.close();
