@@ -216,6 +216,7 @@ function onTicketUpdate(e) {
 
 /** Model hook (any create path): timeline, alert/notify, critical → room out of order. */
 function afterTicketCreated(e) {
+  if (z.isImported(e.record)) return; // history from the importer: no alerts, no room changes
   const app = e.app;
   const t = e.record;
   const hotelId = t.getString("hotel");
@@ -439,6 +440,7 @@ function onEnergyWrite(e) {
 
 /** Model hook: reading above baseline + threshold → energy anomaly alert. */
 function afterEnergyWritten(e) {
+  if (z.isImported(e.record)) return; // history from the importer
   const app = e.app;
   const r = e.record;
   const hotelId = r.getString("hotel");

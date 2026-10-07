@@ -22,6 +22,7 @@
 | کانال‌ها (بله، پیامک، ایمیل) و Header Auth | ⬜ اختیاری و یکی‌یکی (مرحلهٔ ۵) |
 | فعال‌سازی workflowها و `ZH_N8N_WEBHOOK_URL` | ⬜ مرحله‌های ۶ و ۷ |
 | اتصال اپ Flutter به سرور | ⬜ [راهنمای ۱۰](10-flutter-app.md) |
+| ورود دادهٔ آزمایشی پارسیان آزادی در هتل trial جدا | ⬜ [راهنمای ۱۱](11-test-dataset-import.md). پیش از آن مرحلهٔ ۲ (hookها) و مرحلهٔ ۴ (workflow 01) |
 
 workflowها روی n8n 2.26.2 (همان نسخهٔ لیارا، ایمیج رسمی Docker) و 2.35.7 تست شده‌اند: اجرای کامل با همهٔ کانال‌ها و بدون هیچ کانال، رفتار دکمهٔ Publish در Editor، و روش به‌روزرسانی بدون API key (مرحلهٔ ۴).
 
@@ -144,7 +145,7 @@ ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run create-hotel
 | `GENERIC_TIMEZONE` | ✅ | `Asia/Tehran` |
 | `ZARIN_API_BASE` | ✅ | `https://zarin-hoshmand-nieplltrhr.liara.run`، بدون `/` در انتها |
 | `ZARIN_INTEGRATION_SECRET` | ✅ | برابر `ZH_INTEGRATION_SECRET` در PocketBase |
-| `ZARIN_HOTEL_IDS` | ✅ پس از مرحلهٔ ۳ عوض شود | شناسهٔ هتل واقعی. چند هتل را با `,` جدا کنید |
+| `ZARIN_HOTEL_IDS` | ✅ پس از مرحلهٔ ۳ عوض شود | شناسهٔ هتل واقعی. چند هتل را با `,` جدا کنید. workflow 01 رویدادهای هتل‌های دیگر (مثل هتل آزمایشی) را دور می‌ریزد |
 | `ZARIN_MAIL_FROM`، `ZARIN_REPORT_RECIPIENTS` | ✅ | فرستنده، و ایمیل GM و مالک |
 | `BALE_BOT_TOKEN`، `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID`، `BALE_ENERGY_CHAT_ID` | ⬜ | توکن ربات و **شناسهٔ عددی** هر گروه |
 | `KAVENEGAR_API_KEY`، `ONCALL_MANAGER_MOBILE`، `MAINTENANCE_MANAGER_MOBILE` | ⬜ | کلید کاوه‌نگار و شماره‌ها (`0912…`) |
@@ -251,3 +252,4 @@ unset METER_KEY
 - **PocketBase:** پس از هر تغییر در `pocketbase/pb_hooks` یا `pocketbase/pb_migrations`، دستور مرحلهٔ ۲ را دوباره اجرا کنید.
 - **workflowها:** پس از هر تغییر در `n8n/workflows`، مرحلهٔ ۴ را تکرار کنید. Credentialها و روشن بودن نودهای ایمیل حفظ می‌شوند.
 - **اپ:** راهنمای اجرا و build اپ اندروید و چک‌لیست آزمون دستی در [۱۰](10-flutter-app.md) آمده است.
+- **دادهٔ آزمایشی:** ورود، مقایسه با سناریوها و حذف هتل آزمایشی در [۱۱](11-test-dataset-import.md) آمده است.

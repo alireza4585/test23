@@ -17,6 +17,8 @@
  *   POST /api/zarin/tickets/{id}/status|assign
  *   POST /api/zarin/inventory/{id}/movements  item + ledger, one transaction
  *   POST /api/zarin/ai/ask                    assistant
+ * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
+ *                     POST /api/zarin/admin/hotels/{id}/analytics
  * Routes (n8n / IoT, HMAC-signed): /v1/...
  * Cron (UTC): rollup 20:50 (00:20 Tehran), insights 03:10 (06:40 Tehran),
  *             SLA every 15 min, outbox every minute.
@@ -36,6 +38,10 @@ routerAdd("POST", "/api/zarin/tickets/{id}/status", (e) => require(`${__hooks}/l
 routerAdd("POST", "/api/zarin/tickets/{id}/assign", (e) => require(`${__hooks}/lib/ops.js`).ticketAssign(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/inventory/{id}/movements", (e) => require(`${__hooks}/lib/ops.js`).recordMovement(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).ask(e), $apis.requireAuth("users"));
+
+// ------------------------------------------------ superuser tools (admin.js)
+routerAdd("POST", "/api/zarin/admin/import", (e) => require(`${__hooks}/lib/admin.js`).importRecords(e), $apis.requireSuperuserAuth());
+routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__hooks}/lib/admin.js`).runAnalytics(e), $apis.requireSuperuserAuth());
 
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));

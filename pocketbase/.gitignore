@@ -4,3 +4,4 @@ pb_data/
 deploy/.env
 *.log
 pocketbase.zip
+import-backups/

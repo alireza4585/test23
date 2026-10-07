@@ -30,4 +30,5 @@
 - Audit Log و Session Management ← [02](02-roles-and-security.md#audit-log)
 - استقرار روی سرور (PocketBase) ← [`pocketbase/README.md`](../pocketbase/README.md)
 - راه‌اندازی روی لیارا (PocketBase و n8n): به‌روزرسانی hookها، پاک کردن دادهٔ دمو، متغیرها، کانال‌ها، فعال‌سازی، آزمون و چک‌لیست امنیتی ← [09](09-liara-runbook.md)
+- ورود دادهٔ آزمایشی (هتل ۴۷۵ اتاقی پارسیان آزادی) در یک هتل trial جدا، بکاپ، مقایسه با Test_Scenarios و برگرداندن ← [11](11-test-dataset-import.md)
 - ریسک‌ها (تحریم، Push، داده) ← [01](01-architecture.md#ریسکها-و-ملاحظات-مهم-برای-بازار-ایران) و [08](08-roadmap.md#ریسکها-و-راهکارها)

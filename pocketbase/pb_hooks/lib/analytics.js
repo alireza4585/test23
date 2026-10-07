@@ -3,11 +3,15 @@
 const z = require(`${__hooks}/lib/zarin.js`);
 const core = z.core;
 
-/** Everything the metrics/rule engine needs for one hotel (bounded windows). */
-function loadHotelData(app, hotelId, fromDay, now) {
+/**
+ * Everything the metrics/rule engine needs for one hotel (bounded windows).
+ * Tasks are the largest collection (hundreds a day in a big hotel), so they
+ * have their own window, `taskFromDay` (default `fromDay`), newest first.
+ */
+function loadHotelData(app, hotelId, fromDay, now, taskFromDay) {
   const hotel = z.find(app, "hotels", hotelId);
   const since = z.pbDate(new Date(now.getTime() - 45 * 864e5));
-  const p = { h: hotelId, d: fromDay, s: since };
+  const p = { h: hotelId, d: fromDay, s: since, t: taskFromDay || fromDay };
   const date = (r, f) => z.parseDate(r.getString(f));
   return {
     hotelId,
@@ -37,7 +41,7 @@ function loadHotelData(app, hotelId, fromDay, now) {
       slaDueAt: date(r, "slaDueAt"),
       resolvedAt: date(r, "resolvedAt"),
     })),
-    tasks: z.findMany(app, "tasks", "hotel = {:h} && day >= {:d}", p).map((r) => ({
+    tasks: z.findMany(app, "tasks", "hotel = {:h} && day >= {:t}", p, "-day").map((r) => ({
       type: r.getString("type"), status: r.getString("status"), day: r.getString("day"),
       startedAt: date(r, "startedAt"), completedAt: date(r, "completedAt"),
     })),
@@ -45,7 +49,7 @@ function loadHotelData(app, hotelId, fromDay, now) {
       id: r.id, name: r.getString("name"), unit: r.getString("unit"), quantity: r.getFloat("quantity"),
       reorderLevel: r.getFloat("reorderLevel"), reorderQuantity: r.getFloat("reorderQuantity"), unitCost: r.getFloat("unitCost"),
     })),
-    movements: z.findMany(app, "inventoryMovements", "hotel = {:h} && created >= {:s}", p).map((r) => ({
+    movements: z.findMany(app, "inventoryMovements", "hotel = {:h} && created >= {:s}", p, "-created").map((r) => ({
       itemId: r.getString("item"), type: r.getString("type"), delta: r.getFloat("delta"), createdAt: date(r, "created"),
     })),
     rooms: z.findMany(app, "rooms", "hotel = {:h}", p).map((r) => ({
@@ -125,7 +129,8 @@ function slaAlerts(app, hotelId, tickets, now) {
 
 function runInsights(app, hotelId, now) {
   const today = z.dayKey(now);
-  const data = loadHotelData(app, hotelId, z.addDays(today, -35), now);
+  // The rules look at up to 35 days of operations/energy but only 7 days of tasks.
+  const data = loadHotelData(app, hotelId, z.addDays(today, -35), now, z.addDays(today, -7));
   const drafts = core.generateInsights(Object.assign({}, data, { today, now, addDays: z.addDays }));
   let created = 0;
   for (const d of drafts) if (upsertInsight(app, hotelId, d, now)) created++;

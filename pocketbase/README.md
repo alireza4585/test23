@@ -9,10 +9,10 @@ pocketbase/
 ├── pb_migrations/        طرح دیتابیس: ۲۷ collection، قوانین دسترسی (API rules)، ایندکس‌ها، کاتالوگ نقش‌ها
 ├── pb_hooks/
 │   ├── zarin.pb.js       ثبت route‌ها، hook‌ها و cron‌ها
-│   └── lib/              منطق: users · ops · analytics · ai · integration · audit · zarin (helpers)
+│   └── lib/              منطق: users · ops · analytics · ai · integration · audit · admin (import) · zarin (helpers)
 │       └── core.js       تولیدشده از کد TypeScript مشترک (RBAC، کد ملی، KPI، موتور قواعد)
-├── scripts/              seed دمو · reset-demo · create-hotel (تعاملی) · test-server · build-core · get-pocketbase
-├── test/                 ۴۷ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی، reset-demo، قوانین ورودی)
+├── scripts/              seed دمو · reset-demo · create-hotel (تعاملی) · import-dataset · test-server · build-core · get-pocketbase
+├── test/                 ۵۱ تست روی سرور واقعی (امنیت، workflowها، API یکپارچه‌سازی، reset-demo، import آزمایشی، قوانین ورودی)
 ├── Dockerfile            ایمیج سرور
 └── deploy/               docker-compose + Caddy (HTTPS خودکار) + .env.example
 ```
@@ -34,11 +34,11 @@ pocketbase/
 cd pocketbase
 npm install
 ./scripts/get-pocketbase.sh          # دانلود PocketBase 0.40.4 در ./bin (یا PB_BIN=…)
-npm test                             # ۴۷ تست روی یک سرور موقت (Node 22.12 به بالا)
+npm test                             # ۵۱ تست روی یک سرور موقت (Node 22.12 به بالا)
 npm run test-server                  # سرور موقت seedشده، برای اجرای اپ یا تست‌های Flutter
 ```
 
-اسکریپت‌های مدیریتی (`seed`، `create-hotel`، `reset-demo`) با **Node 18** هم اجرا می‌شوند و فقط به SDK نیاز دارند: `npm ci --omit=dev`. اجرای تست‌ها Node 22.12 یا جدیدتر لازم دارد (روی macOS: `brew install node@22`).
+اسکریپت‌های مدیریتی (`seed`، `create-hotel`، `reset-demo`، `import-dataset`) با **Node 18** هم اجرا می‌شوند و فقط به SDK نیاز دارند: `npm ci --omit=dev`. اجرای تست‌ها Node 22.12 یا جدیدتر لازم دارد (روی macOS: `brew install node@22`).
 
 اپ را با این دستور به سرور وصل کنید:
 

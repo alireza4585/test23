@@ -262,6 +262,17 @@ try {
   const reading = await until(async () => (await energy.collection("energyReadings").getList(1, 1, { filter: 'day = "2026-03-01" && type = "electricity"' })).items[0]);
   check("04 meter reading stored in PocketBase", reading?.consumption === 2777.5 && reading?.source === "smartMeter");
 
+  // ------------- 01 signed event of a hotel not in ZARIN_HOTEL_IDS: dropped
+  const runs01 = (await executions(WORKFLOWS[0], "success")).length;
+  const other = JSON.stringify({ type: "alert.raised", hotelId: "otherhotel00001", data: { severity: "critical", title: "OTHER-HOTEL" } });
+  const ots = Math.floor(Date.now() / 1000);
+  await fetch(`${N8N}/webhook/zarin-events`, {
+    method: "POST", body: other,
+    headers: { "content-type": "application/json", "x-zarin-timestamp": String(ots), "x-zarin-signature": createHmac("sha256", SECRET).update(`${ots}.${other}`).digest("hex") },
+  });
+  check("01 events of other hotels are dropped", !!(await until(async () => (await executions(WORKFLOWS[0], "success")).length > runs01)) &&
+    !http.some((r) => JSON.stringify(r.body).includes("OTHER-HOTEL")));
+
   // --------------------------------------------- channels and run log
   await settled();
   await wait(1000);

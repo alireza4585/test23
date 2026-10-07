@@ -35,7 +35,7 @@ You advise; managers decide. Never invent figures that are not in the data.`;
 // ---------------------------------------------------------------- context
 function buildContext(app, hotelId, now) {
   const today = z.dayKey(now);
-  const data = analytics.loadHotelData(app, hotelId, z.addDays(today, -35), now);
+  const data = analytics.loadHotelData(app, hotelId, z.addDays(today, -35), now, today); // tasks unused here
   const last14Days = [];
   for (let i = 14; i >= 1; i--) {
     const day = z.addDays(today, -i);

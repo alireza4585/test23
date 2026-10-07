@@ -13,7 +13,8 @@
     "test": "npm run check:core && vitest run",
     "create-hotel": "node scripts/create-hotel.mjs",
     "test-server": "node scripts/test-server.mjs",
-    "reset-demo": "node scripts/reset-demo.mjs"
+    "reset-demo": "node scripts/reset-demo.mjs",
+    "import-dataset": "node scripts/import-dataset.mjs"
   },
   "dependencies": {
     "pocketbase": "^0.28.1"

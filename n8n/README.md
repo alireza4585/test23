@@ -18,7 +18,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 
 | فایل | Trigger | کار |
 |---|---|---|
-| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله |
+| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`. رویدادِ هتلی که در `ZARIN_HOTEL_IDS` نیست (مثلاً هتل آزمایشی روی همان بک‌اند) دور ریخته می‌شود: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله |
 | `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. |
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. |
 | `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
@@ -179,7 +179,7 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 
 `test/e2e.mjs` هر چهار workflow را روی یک n8n واقعی (نسخهٔ 2.35.7) و یک PocketBase محلیِ seedشده اجرا می‌کند. بله، کاوه‌نگار و SMTP با سرویس‌های ساختگی محلی جایگزین می‌شوند، پس هیچ پیامی واقعاً ارسال نمی‌شود. این موارد بررسی می‌شوند:
 
-- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، و رد شدن رویداد جعلی.
+- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، رد شدن رویداد جعلی، و دور ریختن رویداد هتلی که در `ZARIN_HOTEL_IDS` نیست.
 - گزارش صبحگاهی RTL در ۰۲، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
 - نبودِ ارسال تکراری.
 - اجرای دوبارهٔ `import-workflows.mjs` بدون از دست رفتن Credentialها.

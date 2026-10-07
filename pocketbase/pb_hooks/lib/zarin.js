@@ -343,6 +343,19 @@ function raiseAlert(app, a) {
   return true;
 }
 
+/**
+ * Records saved by the dataset importer (admin.js) carry an in-memory marker:
+ * model hooks skip alerts, notifications and room changes for them.
+ */
+function markImported(record) {
+  record.withCustomData(true);
+  record.set("_zhImport", true);
+}
+
+function isImported(record) {
+  return record.get("_zhImport") === true;
+}
+
 function resolveAlert(app, hotelId, dedupeKey) {
   const rec = findFirst(app, "alerts", "hotel = {:h} && dedupeKey = {:k}", { h: hotelId, k: dedupeKey });
   if (!rec || rec.getString("status") === "resolved") return;
@@ -356,5 +369,5 @@ module.exports = {
   details, bad, forbidden, notFound, find, findFirst, findMany, col,
   caller, has, requirePerm, requireHotel, sameHotel, memberOf, onlyFields,
   permissionIdsFor, departmentOf, validPassword, hotelSettings, activeHotelIds,
-  emit, audit, actorOf, diff, notify, raiseAlert, resolveAlert,
+  emit, audit, actorOf, diff, notify, raiseAlert, resolveAlert, markImported, isImported,
 };
