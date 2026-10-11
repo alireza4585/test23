@@ -14,3 +14,7 @@ n8n/.env
 .DS_Store
 .idea/
 .vscode/
+
+# Research working notes (the curated report lives in docs/)
+research_notes/
+reports/
