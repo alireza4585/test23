@@ -105,6 +105,7 @@ var PERMISSIONS = [
   "staff.manage",
   "operations.recordDaily",
   "finance.view",
+  "finance.record",
   "reports.view",
   "reports.generate",
   "notifications.view",
@@ -161,6 +162,7 @@ var ROLE_PERMISSIONS = {
     "staff.manage",
     "operations.recordDaily",
     "finance.view",
+    "finance.record",
     "reports.view",
     "reports.generate",
     "notifications.view",
@@ -185,6 +187,7 @@ var ROLE_PERMISSIONS = {
     "staff.view",
     "staff.manage",
     "operations.recordDaily",
+    "finance.record",
     "reports.view",
     "reports.generate",
     "notifications.view",
@@ -270,7 +273,7 @@ var ROLE_PERMISSIONS = {
     "reports.view",
     "notifications.view"
   ],
-  receptionStaff: [...STAFF_COMMON, "rooms.view", "rooms.updateStatus", "operations.recordDaily"],
+  receptionStaff: [...STAFF_COMMON, "rooms.view", "rooms.updateStatus", "operations.recordDaily", "finance.record"],
   housekeepingStaff: [
     ...STAFF_COMMON,
     "rooms.view",

@@ -47,6 +47,9 @@ enum AppPermission {
   operationsRecordDaily('operations.recordDaily'),
   financeView('finance.view'),
 
+  /// Enter daily revenue without being able to read it back (write-only).
+  financeRecord('finance.record'),
+
   // Reports
   reportsView('reports.view'),
   reportsGenerate('reports.generate'),

@@ -58,6 +58,7 @@ service cloud.firestore {
         'staff.manage': ['generalManager', 'operationsManager', 'hrManager'],
         'operations.recordDaily': ['generalManager', 'operationsManager', 'receptionStaff'],
         'finance.view': ['hotelOwner', 'generalManager', 'analyst'],
+        'finance.record': ['generalManager', 'operationsManager', 'receptionStaff'],
         'reports.view': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager', 'hrManager', 'analyst'],
         'reports.generate': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'inventoryManager', 'analyst'],
         'notifications.view': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager', 'hrManager', 'receptionStaff', 'housekeepingStaff', 'maintenanceStaff', 'restaurantStaff', 'analyst'],

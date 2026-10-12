@@ -392,7 +392,7 @@ function resolveAlert(app, hotelId, dedupeKey) {
 module.exports = {
   core, dayKey, addDays, pbDate, parseDate, arr, jsonOf, unique,
   details, bad, forbidden, notFound, find, findFirst, findMany, col,
-  caller, has, requirePerm, requireHotel, sameHotel, memberOf, onlyFields,
+  permissionCodes, caller, has, requirePerm, requireHotel, sameHotel, memberOf, onlyFields,
   permissionIdsFor, departmentOf, validPassword, hotelSettings, activeHotelIds, FEATURES, features, feature, requireFeature,
   emit, audit, actorOf, diff, notify, raiseAlert, resolveAlert, markImported, isImported,
 };

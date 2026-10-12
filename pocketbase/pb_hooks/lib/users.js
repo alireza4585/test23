@@ -8,7 +8,12 @@ function syncPermissions(app, user) {
   const role = user.getString("role");
   if (!role) return;
   const hotelId = user.getString("primaryHotel") || z.arr(user.getStringSlice("hotels"))[0] || "";
-  user.set("permissions", z.permissionIdsFor(app, role, hotelId));
+  const ids = z.permissionIdsFor(app, role, hotelId);
+  user.set("permissions", ids);
+  // Mirrors finance.view for API rules that also test another permission.
+  if (user.collection().fields.getByName("financeView")) {
+    user.set("financeView", z.permissionCodes(app, ids)["finance.view"] === true);
+  }
   const nid = user.getString("nationalId");
   if (nid && !user.getString("nationalIdMasked")) user.set("nationalIdMasked", core.maskNationalId(nid));
   if (!user.getString("status")) user.set("status", "active");

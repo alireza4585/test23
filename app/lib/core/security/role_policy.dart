@@ -57,6 +57,7 @@ abstract final class RolePolicy {
       AppPermission.staffView,
       AppPermission.staffManage,
       AppPermission.operationsRecordDaily,
+      AppPermission.financeRecord,
       AppPermission.financeView,
       AppPermission.reportsView,
       AppPermission.reportsGenerate,
@@ -82,6 +83,7 @@ abstract final class RolePolicy {
       AppPermission.staffView,
       AppPermission.staffManage,
       AppPermission.operationsRecordDaily,
+      AppPermission.financeRecord,
       AppPermission.reportsView,
       AppPermission.reportsGenerate,
       AppPermission.notificationsView,
@@ -172,6 +174,7 @@ abstract final class RolePolicy {
       AppPermission.roomsView,
       AppPermission.roomsUpdateStatus,
       AppPermission.operationsRecordDaily,
+      AppPermission.financeRecord,
     },
     AppRole.housekeepingStaff: {
       ..._staffCommon,
