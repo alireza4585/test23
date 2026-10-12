@@ -53,7 +53,7 @@ erDiagram
 
 | مسیر | فیلدها | توضیح |
 |---|---|---|
-| `permissions/{code}` 🔒 | `code, module` | کاتالوگ ۳۲ مجوز (Permissions) |
+| `permissions/{code}` 🔒 | `code, module` | کاتالوگ ۳۳ مجوز (Permissions) |
 | `roleTemplates/{role}` 🔒 | `role, tier, permissions[], assignableRoles[], version` | قالب ۱۵ نقش (Role Templates). از `rbac.ts` تولید می‌شود |
 | `users/{uid}` 🔒* | `nationalId, nationalIdMasked, fullName, role, hotelIds[], primaryHotelId, staffId, status (active/suspended/disabled), mustChangePassword, passwordChangedAt, locale, createdAt` | *کاربر فقط می‌تواند `mustChangePassword` (فقط به false)، `passwordChangedAt` و `locale` را تغییر دهد |
 | `users/{uid}/sessions/{deviceId}` | `platform, model, osVersion, appVersion, pushToken, createdAt, lastSeenAt, revokedAt` | دستگاه‌های فعال. ثبت از طریق `authRegisterSession` |
@@ -91,7 +91,8 @@ erDiagram
 | `maintenanceTickets/{id}` | `title, description, category, priority, status, reportedById, reportedByName, reportedByRole, roomId, roomNumber, area, photoPaths[], assigneeId, assigneeName, slaDueAt, resolvedAt, resolutionNote, createdAt, updatedAt, updatedBy` | `category` ∈ `hvac, electrical, plumbing, furniture, appliance, itNetwork, structural, other`. `status` ∈ `open, assigned, inProgress, onHold, resolved, closed, cancelled` |
 | `maintenanceTickets/{id}/events/{id}` 🧾 | `type (created/statusChanged/assigned/comment), fromStatus, toStatus, note, actor, actorName, at` | Timeline کامل تیکت |
 | `energyReadings/{day}_{type}` | `type (electricity/water/gas), unit, day, date, consumption, meterValue, meterId, cost, note, source, recordedBy: actor, recordedByName, createdAt` | یک سند برای هر روز و هر نوع. شکل سند در ورود دستی، کنتور هوشمند و IoT یکسان است |
-| `dailyOperations/{day}` | `day, date, roomsAvailable, roomsOccupied, guests, roomRevenue, fnbRevenue, otherRevenue, source, updatedBy, updatedAt` | ورودی KPIهای اشغال، ADR و RevPAR. در فاز بعد از PMS پر می‌شود |
+| `dailyOperations/{day}` | `day, date, roomsAvailable, roomsOccupied, guests, roomRevenue, fnbRevenue, otherRevenue, source, updatedBy, updatedAt` | ورودی KPIهای اشغال، ADR و RevPAR. در فاز بعد از PMS پر می‌شود. **PocketBase (فاز ۰.۵):** فیلدهای درآمد صفر و پنهان‌اند و درآمد در `dailyFinance` است. `financeRecorded` (bool) فقط می‌گوید درآمد آن روز ثبت شده است. نوشتن فقط از route `operations/daily` |
+| `dailyFinance` (فقط PocketBase) | `hotel, day, roomRevenue, fnbRevenue, otherRevenue, adr, revpar, totalRevenue, source, updatedBy, updatedByName, migratedFrom🔒` | خواندن فقط با `finance.view`. درآمد را route `POST /api/zarin/operations/daily` و ADR، RevPAR و درآمد کل را rollup روزانه می‌نویسد. ستون‌های مالی `dailyMetrics` در PocketBase صفر و پنهان‌اند. جزئیات در [۱۷](17-ai-phase-0.5.md) |
 | `inventoryItems/{id}` | `name, sku, category, unit, quantity, reorderLevel, reorderQuantity, unitCost, location, supplier, lastMovementId, updatedAt, updatedBy` | `quantity` فقط همراه یک movement تغییر می‌کند |
 | `inventoryMovements/{id}` 🧾 | `itemId, itemName, type (receive/issue/adjust/waste), delta, quantityBefore, quantityAfter, reason, actor, actorName, createdAt` | Ledger |
 | `staff/{staffId}` | `fullName, department, position, role, userId, phone, active` | `department` ∈ ۹ دپارتمان |

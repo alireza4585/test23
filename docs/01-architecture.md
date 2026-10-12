@@ -58,7 +58,7 @@ flowchart LR
 | حلقه | پیاده‌سازی در MVP | محل کد |
 |---|---|---|
 | Frontend | Flutter (Material 3، RTL، ریسپانسیو) | `app/` |
-| Backend | **PocketBase** (پیشنهادی، روی سرور خودتان): Auth با کد ملی، دیتابیس، فایل، Realtime، قوانین دسترسی و hookها. **Firebase** هم به‌عنوان جایگزین مدیریت‌شده موجود است | `pocketbase/` · `firebase/` |
+| Backend | **PocketBase** (پیشنهادی، روی سرور خودتان): Auth با کد ملی، دیتابیس، فایل، Realtime، قوانین دسترسی و hookها. **Firebase** برای قابلیت‌های تازه فریز است: کد آن می‌ماند و `rbac.ts` و `rules-engine.ts` منبع `core.js` هستند ([۱۷](17-ai-phase-0.5.md#۴-firebase-فریز)) | `pocketbase/` · `firebase/` |
 | API Layer | Callable Functions برای اپ و REST v1 با امضای HMAC برای n8n و IoT | `firebase/functions/src/{admin,auth,ai,api}` |
 | n8n | ۴ workflow: مسیریابی رویداد، گزارش صبحگاهی، Escalation، ورود داده از کنتور | `n8n/workflows` |
 | AI Services | پورت `LlmProvider` با پیاده‌سازی Claude: دستیار گفتگو و خلاصهٔ مدیریتی | `firebase/functions/src/ai` |

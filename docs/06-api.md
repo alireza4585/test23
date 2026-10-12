@@ -134,6 +134,14 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 
 **امضای v2 (کلید scoped):** هدرهای `x-zarin-key-id` و `x-zarin-nonce` اضافه می‌شوند و رشتهٔ امضا `"<ts>.<nonce>." + rawBody` است. این امضا فقط برای `/v1/hotels/{id}/…` و هتل‌های داخل scope کلید معتبر است. هر nonce یک بار پذیرفته می‌شود. خطاها: `401 replayed_request` و `403 key_not_allowed_for_hotel`. امضای v1 تا وقتی `ZH_ALLOW_SHARED_SECRET` روشن است کار می‌کند.
 
+## فاز ۰.۵: درآمد فقط‌نوشتنی (PocketBase)
+
+| مسیر | دسترسی | کار |
+|---|---|---|
+| `POST /api/zarin/operations/daily` | `operations.recordDaily`، و برای `revenue` هم `finance.record` | بدنه: `{hotelId, day: yyyy-MM-dd, roomsAvailable, roomsOccupied, guests?, revenue?: {roomRevenue, fnbRevenue, otherRevenue}}`. خروجی: `{day, financeRecorded}`. مبلغ‌ها برنمی‌گردند. ثبت دوباره همان روز جایگزین می‌شود. خطاها: `invalid_day` (فرمت نادرست یا روز آینده)، `invalid_body`، `occupied_exceeds_available`، `invalid_revenue` و `403` بدون مجوز |
+| `GET /api/collections/dailyFinance/records` | `finance.view` | درآمد و ADR، RevPAR و درآمد کل روزانه |
+| `POST/PATCH /api/collections/dailyOperations/records` | فقط superuser | اپ از route بالا استفاده می‌کند. نسخه‌های قدیمی اپ اینجا خطا می‌گیرند. جزئیات و دلیل در [۱۷](17-ai-phase-0.5.md#۵-سازگاری-نسخههای-اپ) |
+
 **route در insights:** فقط مسیر داخلی اپ پذیرفته می‌شود (`400 invalid_route`).
 
 ## رویدادهای خروجی (Backend → n8n)

@@ -4,7 +4,7 @@
 
 ```
 User ──(custom claims)──► role + hotelIds
-role ──(Role Template)──► Permissions (۳۲ کد)
+role ──(Role Template)──► Permissions (۳۳ کد)
 Permission ──► UI (منو، مسیر، دکمه)   ← فقط برای نمایش
 Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 ```
@@ -67,6 +67,7 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 | `staff.view` | ● | ● | ● | ● |  | ● | ● | ● |  | ● |  |  |  |  | ● |
 | `staff.manage` | ● |  | ● | ● |  |  |  |  |  | ● |  |  |  |  |  |
 | `operations.recordDaily` | ● |  | ● | ● |  |  |  |  |  |  | ● |  |  |  |  |
+| `finance.record` | ● |  | ● | ● |  |  |  |  |  |  | ● |  |  |  |  |
 | `finance.view` | ● | ● | ● |  |  |  |  |  |  |  |  |  |  |  | ● |
 | `reports.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |  |  |  |  | ● |
 | `reports.generate` | ● | ● | ● | ● | ● | ● |  |  | ● |  |  |  |  |  | ● |
@@ -121,6 +122,7 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 - **تیکت‌ها.** گزارش‌دهنده باید خود کاربر باشد. اولویت، دسته و تعداد عکس (حداکثر ۶) اعتبارسنجی می‌شوند و گزارش‌دهنده نمی‌تواند خودش تیکت را assign کند. تکنسین فقط روی تیکت خودش و فقط با انتقال‌های مجاز کار می‌کند. Timeline (`events`) **تغییرناپذیر** است.
 - **انبار.** `quantity` فقط وقتی تغییر می‌کند که یک **سند حرکت** در همان تراکنش وجود داشته باشد و `quantityBefore` و `quantityAfter` را توضیح دهد. این با `getAfter` بررسی می‌شود. حرکات انبار تغییرناپذیرند.
 - **Actor stamp.** فیلدهای `createdBy`، `updatedBy`، `recordedBy` و `actor` باید `uid` خود کاربر باشند.
+- **درآمد فقط‌نوشتنی (PocketBase، فاز ۰.۵).** `finance.record` اجازهٔ ثبت درآمد روزانه را می‌دهد و `finance.view` اجازهٔ خواندن آن را. این دو مستقل‌اند: پذیرش ثبت می‌کند ولی نمی‌خواند. درآمد در `dailyFinance` است و فقط با `finance.view` خوانده می‌شود. نوشتن فقط از `POST /api/zarin/operations/daily` انجام می‌شود. insightهای revenue، گزارش‌های دارای ارقام مالی و سری‌های درآمدی پیش‌بینی هم فقط با `finance.view` دیده می‌شوند. جزئیات در [۱۷](17-ai-phase-0.5.md).
 - **مجموعه‌های فقط-سرور.** `alerts`، `aiInsights`، `notifications`، `dailyMetrics`، `auditLogs`، `members`، `aiConversations` و `usage` را کلاینت نمی‌تواند ایجاد کند. فقط تغییر محدود مجاز است، مثلاً acknowledge کردن هشدار یا تغییر وضعیت یک insight.
 - **تست‌ها.** ۲۰ تست rules روی emulator اجرا می‌شوند، از جمله: دسترسی بین هتل‌ها، جعل actor، دسترسی مستخدم به تسک دیگران، انتقال غیرمجاز اتاق، دستکاری موجودی بدون ledger و نوشتن در auditLogs.
 

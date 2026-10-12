@@ -50,7 +50,7 @@
 | موجودی | `inventory.view` |
 | insightها | `ai.insights.view` و مجوز همان دسته. مثلاً insight دستهٔ revenue فقط با `finance.view` نمایش داده می‌شود |
 
-**یافتهٔ باز (رفع نشده، تصمیم با شما):** دادهٔ مالی هنوز از دو مسیر دیگر در دسترس است:
+**یافتهٔ زیر در فاز ۰.۵ بسته شد** (درآمد در `dailyFinance` و قوانین `financeView`؛ [۱۷](17-ai-phase-0.5.md)). متن اصلی برای سابقه:
 
 - **REST API:** قانون `listRule` در collection `dailyOperations` به این نقش‌ها اجازهٔ خواندن می‌دهد: `energy.view`، `dashboard.operations` و `operations.recordDaily`. این collection فیلدهای `roomRevenue`، `fnbRevenue` و `otherRevenue` را دارد. یعنی operationsManager و energyManager می‌توانند درآمد را مستقیم از API بخوانند. اپ این ارقام را فقط پنهان می‌کند.
 - **insightهای revenue:** این insightها در `aiInsights` برای هر نقشی که `ai.insights.view` دارد خواندنی‌اند.
@@ -79,7 +79,7 @@ PocketBase محدودیت در سطح فیلد ندارد. راه‌حل درس�
 - **routeها:** `POST /api/zarin/admin/integration-keys` و `…/{keyId}/revoke`.
 - هر ساخت و لغو در `auditLogs` ثبت می‌شود.
 
-workflowهای فعلی n8n بدون تغییر با v1 کار می‌کنند. انتقال n8n به v2 پشتیبانی nonce در نود Code لازم دارد و جزو فاز ۱ است.
+workflowهای n8n از فاز ۰.۵ با کلید scoped (v2) امضا می‌کنند، اگر `ZARIN_KEY_ID` و `ZARIN_KEY_SECRET` تنظیم شده باشند. در غیر این صورت با v1 کار می‌کنند ([۱۷](17-ai-phase-0.5.md#۳-n8n-با-کلید-scoped)).
 
 **route در insights:** `POST /v1/hotels/{id}/insights` فقط مسیر داخلی اپ را می‌پذیرد، مثل `/energy` یا `/inventory/abc?tab=moves`. هر چیز دیگری خطای `400 invalid_route` می‌گیرد. در notifications مسیر نامعتبر دور ریخته می‌شود.
 
@@ -200,6 +200,8 @@ cd ai-worker && python3 -m venv .venv && . .venv/bin/activate && pip install -r 
 
 ## ۹. runbook استقرار (اجرا با شما، به ترتیب)
 
+> **جایگزین شد:** فاز ۰ و ۰.۵ با هم مستقر می‌شوند. runbook کامل، با بکاپ، پخش هم‌زمان APK و بازگشت، در [۱۷، بخش ۶](17-ai-phase-0.5.md#۶-runbook-استقرار-فاز-۰-و-۰۵-اجرا-با-شما-به-ترتیب) است. فهرست زیر برای سابقه می‌ماند.
+
 > هیچ‌کدام از این مراحل را من روی سرور اجرا نکرده‌ام. `liara deploy` را روی برنامهٔ PocketBase اجرا نکنید. روش به‌روزرسانی PocketBase همان [runbook ۰۹](09-liara-runbook.md#۲-بهروزرسانی-hookها-و-migrationهای-pocketbase) است.
 
 1. **بکاپ:** از PocketBase روی لیارا بکاپ بگیرید (پنل PocketBase › Settings › Backups).
@@ -236,4 +238,4 @@ cd ai-worker && python3 -m venv .venv && . .venv/bin/activate && pip install -r 
 - integration API کلید scoped و nonce ندارد؛
 - پرچم‌های قابلیت و `aiBudgets` وجود ندارند.
 
-Firebase در استقرار ایران استفاده نمی‌شود. اگر روزی فعال شود، این موارد باید پیش از آن اصلاح شوند.
+Firebase برای قابلیت‌های تازه فریز است و backend پشتیبانی‌شده PocketBase است. فهرست کامل شکاف‌ها، از جمله درآمد، در [۱۷، بخش ۴](17-ai-phase-0.5.md#۴-firebase-فریز) آمده است.

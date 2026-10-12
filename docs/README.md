@@ -7,7 +7,7 @@
 | ۱ | معماری کامل پروژه | [01-architecture.md](01-architecture.md) |
 | ۲ | طراحی دیتابیس | [03-data-model.md](03-data-model.md) (اصول، ERD، نگاشت به PostgreSQL) |
 | ۳ | Firestore Schema | [03-data-model.md](03-data-model.md#firestore-schema) و [`firebase/firestore.rules`](../firebase/firestore.rules) |
-| ۴ | سیستم نقش‌ها | [02-roles-and-security.md](02-roles-and-security.md) (۱۵ نقش، ماتریس ۳۲ مجوز، امنیت) |
+| ۴ | سیستم نقش‌ها | [02-roles-and-security.md](02-roles-and-security.md) (۱۵ نقش، ماتریس ۳۳ مجوز، امنیت) |
 | ۵ | UI Flow | [05-ux.md](05-ux.md#ui-flow-نقشهٔ-صفحات) |
 | ۶ | User Journey | [05-ux.md](05-ux.md#user-journey-سفر-کاربر) |
 | ۷ | Wireframe | [05-ux.md](05-ux.md#wireframeها) و اسکرین‌شات‌های واقعی در [`app/tool/screenshots`](../app/tool/screenshots) |
@@ -17,7 +17,7 @@
 | ۱۱ | AI Integration Plan | [07-ai.md](07-ai.md) |
 | ۱۲ | MVP Roadmap | [08-roadmap.md](08-roadmap.md#mvp-roadmap-۱۲-هفته-تا-پایلوت-پولی) |
 | ۱۳ | Future Roadmap | [08-roadmap.md](08-roadmap.md#future-roadmap) |
-| ۱۴ | کد اولیه | [`app/`](../app) (Flutter) · [`pocketbase/`](../pocketbase) (بک‌اند پیشنهادی) · [`firebase/`](../firebase) (جایگزین) · [`n8n/`](../n8n) |
+| ۱۴ | کد اولیه | [`app/`](../app) (Flutter) · [`pocketbase/`](../pocketbase) (بک‌اند پیشنهادی) · [`firebase/`](../firebase) (فریز، فقط منبع کد مشترک) · [`n8n/`](../n8n) |
 | ۱۵ | صفحات قابل اجرا | `cd app && flutter run` (بک‌اند دمو). راهنما در [README اصلی](../README.md). اتصال به سرور لیارا و ساخت APK ← [10](10-flutter-app.md) |
 
 موضوعات تکمیلی درخواستی:
@@ -35,4 +35,5 @@
 - Zarin AI، مرحلهٔ ۱: پیش‌بینی ۲۸روزه، خط مبنای انرژی و صرفه‌جویی، مرکز پیشنهادها با پیگیری نتیجه، تقویم تعطیلات ← [14](14-ai-batch1.md)
 - برنامهٔ AI (F1 تا F17، فازهای ۰ تا ۵، مشخصات و معیار پذیرش، منبع حقیقت) ← [15](15-ai-plan.md)
 - AI فاز ۰: دستیار امن، کلیدهای scoped، پرچم‌های قابلیت، `ai-worker`، ارزیابی فارسی و runbook استقرار ← [16](16-ai-architecture.md)
+- AI فاز ۰.۵: درآمد فقط‌نوشتنی (`finance.record` و `dailyFinance`)، کلید scoped برای n8n، فریز Firebase، و runbook استقرار با بکاپ، پخش APK و بازگشت ← [17](17-ai-phase-0.5.md)
 - ریسک‌ها (تحریم، Push، داده) ← [01](01-architecture.md#ریسکها-و-ملاحظات-مهم-برای-بازار-ایران) و [08](08-roadmap.md#ریسکها-و-راهکارها)
