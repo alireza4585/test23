@@ -77,6 +77,8 @@ abstract final class RouteAccess {
     return const {};
   }
 
-  static bool canAccess(AppUser user, String location) =>
-      user.canAny(requiredFor(location));
+  /// [disabled] holds route prefixes switched off by configuration or by the
+  /// hotel's feature flags (see `disabledRoutesProvider`).
+  static bool canAccess(AppUser user, String location, {Set<String> disabled = const {}}) =>
+      !disabled.any((p) => location == p || location.startsWith('$p/')) && user.canAny(requiredFor(location));
 }

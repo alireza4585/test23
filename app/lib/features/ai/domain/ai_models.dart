@@ -209,22 +209,29 @@ class ChatMessage {
 }
 
 class AssistantReply {
-  const AssistantReply({required this.text, this.dataPoints = const []});
+  const AssistantReply({required this.text, this.dataPoints = const [], this.threadId});
 
   final String text;
 
   /// Figures the answer relied on (shown under the answer for transparency).
   final List<String> dataPoints;
+
+  /// Server-side conversation thread (PocketBase); send it with the next
+  /// question to continue the conversation.
+  final String? threadId;
 }
 
 /// Natural-language assistant. The Firebase implementation calls the
 /// `aiAssistant` Cloud Function (the LLM API key never reaches the device);
 /// the demo implementation answers from local analytics.
 abstract interface class AiAssistantRepository {
+  /// [history] is used by backends without server-side threads (Firebase,
+  /// demo); PocketBase keeps the conversation itself and uses [threadId].
   Future<AssistantReply> ask({
     required String hotelId,
     required String question,
     required List<ChatMessage> history,
     required String localeCode,
+    String? threadId,
   });
 }

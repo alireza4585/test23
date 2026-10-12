@@ -63,19 +63,24 @@ class InsightActions {
 final insightActionsProvider = Provider<InsightActions>(InsightActions.new);
 
 class ChatState {
-  const ChatState({this.messages = const [], this.sending = false});
+  const ChatState({this.messages = const [], this.sending = false, this.threadId});
 
   final List<ChatMessage> messages;
   final bool sending;
 
-  ChatState copyWith({List<ChatMessage>? messages, bool? sending}) => ChatState(
+  /// Server-side thread of this conversation (PocketBase).
+  final String? threadId;
+
+  ChatState copyWith({List<ChatMessage>? messages, bool? sending, String? threadId}) => ChatState(
     messages: messages ?? this.messages,
     sending: sending ?? this.sending,
+    threadId: threadId ?? this.threadId,
   );
 }
 
-/// Conversation state for the AI assistant screen. History stays on the
-/// device for the session; the backend logs each Q/A for audit.
+/// Conversation state for the AI assistant screen. Messages are shown from
+/// the device; on PocketBase the server keeps the conversation (thread) and
+/// logs each Q/A for audit.
 class AssistantController extends Notifier<ChatState> {
   @override
   ChatState build() {
@@ -104,12 +109,14 @@ class AssistantController extends Notifier<ChatState> {
         question: text,
         history: history,
         localeCode: localeCode,
+        threadId: state.threadId,
       );
       final answer = reply.dataPoints.isEmpty
           ? reply.text
           : '${reply.text}\n\n— ${reply.dataPoints.join(' · ')}';
       state = state.copyWith(
         sending: false,
+        threadId: reply.threadId,
         messages: [
           ...state.messages,
           ChatMessage(

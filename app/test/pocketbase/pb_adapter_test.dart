@@ -182,9 +182,30 @@ void main() {
     expect(reply.dataPoints, hasLength(3));
   }, skip: skip);
 
+  test('assistant: the server keeps the thread', () async {
+    final s = await _Session.signIn('0012345679');
+    final assistant = PocketBaseAiAssistantRepository(s.pb);
+    final first = await assistant.ask(hotelId: s.user.hotelId, question: 'مصرف برق چطور است؟', history: const [], localeCode: 'fa');
+    expect(first.text, isNotEmpty);
+    expect(first.threadId, matches(RegExp(r'^[a-z0-9]{20}$')));
+    final second = await assistant.ask(
+      hotelId: s.user.hotelId, question: 'و خرابی‌ها؟', history: const [], localeCode: 'fa', threadId: first.threadId,
+    );
+    expect(second.threadId, first.threadId);
+  });
+
   test('AI core: forecasts, energy baseline, recommendation decision and calendar', () async {
     final s = await _Session.signIn('0012345679');
     final hotelId = s.user.hotelId;
+
+    // The AI features are off until the hotel turns them on (the GM may).
+    final hotel = await s.pb.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    await expectLater(PocketBaseForecastRepository(s.pb).refresh(hotelId), throwsA(anything));
+    await s.pb.collection('hotels').update(hotelId, body: {
+      'settings': {...settings, 'features': {'forecasts': true, 'energyBaseline': true, 'recommendationLoop': true}},
+    });
+    addTearDown(() => s.pb.collection('hotels').update(hotelId, body: {'settings': settings}));
 
     final forecasts = PocketBaseForecastRepository(s.pb);
     await forecasts.refresh(hotelId);

@@ -97,9 +97,14 @@ abstract final class RoleExperience {
   };
 
   /// All destinations the user may open, in role priority order.
-  static List<NavDestinationSpec> destinationsFor(AppUser user) {
+  static List<NavDestinationSpec> destinationsFor(AppUser user, {Set<String> disabled = const {}}) {
     final allowed = all
-        .where((d) => d.item == NavItem.home || d.item == NavItem.profile || RouteAccess.canAccess(user, d.path))
+        .where(
+          (d) =>
+              d.item == NavItem.home ||
+              d.item == NavItem.profile ||
+              RouteAccess.canAccess(user, d.path, disabled: disabled),
+        )
         .toList();
     final order = _priority[user.role] ?? const <NavItem>[];
     int rank(NavDestinationSpec d) {

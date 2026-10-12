@@ -23,6 +23,7 @@ class DemoAiAssistantRepository implements AiAssistantRepository {
     required String question,
     required List<ChatMessage> history,
     required String localeCode,
+    String? threadId,
   }) async {
     await _store.latency();
     await _store.latency();

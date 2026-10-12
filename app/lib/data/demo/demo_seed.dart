@@ -43,6 +43,8 @@ class DemoSeed {
         city: 'تهران',
         stars: 5,
         roomCount: 60,
+        // The demo shows every AI feature; real hotels start with all off.
+        settings: HotelSettings(features: {...HotelFeature.values}),
       ),
     );
     _accounts();

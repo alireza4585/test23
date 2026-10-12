@@ -7,6 +7,7 @@ import '../../features/notifications/application/notifications_providers.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/l10n.dart';
 import '../routing/navigation.dart';
+import '../routing/route_features.dart';
 import '../routing/routes.dart';
 import '../theme/app_theme.dart';
 import 'components.dart';
@@ -27,7 +28,7 @@ class AppShell extends ConsumerWidget {
     final user = ref.watch(sessionUserProvider);
     if (user == null) return const Scaffold(body: SizedBox.shrink());
     final l10n = context.l10n;
-    final destinations = RoleExperience.destinationsFor(user);
+    final destinations = RoleExperience.destinationsFor(user, disabled: ref.watch(disabledRoutesProvider));
     final selected = destinations.indexWhere(
       (d) => location == d.path || location.startsWith('${d.path}/'),
     );

@@ -196,6 +196,7 @@ class FunctionsAiAssistantRepository implements AiAssistantRepository {
     required String question,
     required List<ChatMessage> history,
     required String localeCode,
+    String? threadId,
   }) => guard(() async {
     final callable = _functions.httpsCallable(
       'aiAssistant',

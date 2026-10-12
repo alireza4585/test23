@@ -13,6 +13,8 @@ import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../energy/application/energy_providers.dart';
 import '../../energy/domain/energy_reading.dart';
+import '../../hotel/application/hotel_providers.dart';
+import '../../hotel/domain/hotel.dart';
 import '../../operations/application/operations_providers.dart';
 import '../application/forecast_providers.dart';
 import '../domain/forecast.dart';
@@ -180,6 +182,7 @@ class ForecastSummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final fmt = context.fmt;
+    if (!ref.watch(hotelSettingsProvider).has(HotelFeature.forecasts)) return const SizedBox.shrink();
     final map = ref.watch(forecastsProvider).value ?? const {};
     final occ = map[ForecastSeries.occupancy];
     final rev = map[ForecastSeries.roomRevenue];

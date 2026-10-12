@@ -70,6 +70,11 @@ class PocketBaseHotelRepository extends _PbRepository implements HotelRepository
         maintenanceSlaHours: ints('maintenanceSlaHours', defaults.maintenanceSlaHours),
         targetCleanMinutes: ints('targetCleanMinutes', defaults.targetCleanMinutes),
         sessionTimeoutMinutes: number('sessionTimeoutMinutes', 30).toInt(),
+        features: {
+          if (settings['features'] case final Map<String, dynamic> f)
+            for (final feature in HotelFeature.values)
+              if (f[feature.name] == true) feature,
+        },
       ),
     );
   });

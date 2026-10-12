@@ -161,19 +161,19 @@ class PocketBaseAiAssistantRepository implements AiAssistantRepository {
     required String question,
     required List<ChatMessage> history,
     required String localeCode,
+    String? threadId,
   }) => pbGuard(() async {
-    final recent = history.where((m) => !m.isError).toList();
+    // The server keeps the conversation (and ignores any client history).
     final result = await _pb.send<Map<String, dynamic>>('/api/zarin/ai/ask', method: 'POST', body: {
       'hotelId': hotelId,
       'question': question,
       'locale': localeCode,
-      'history': [
-        for (final m in recent.skip(recent.length > 12 ? recent.length - 12 : 0)) {'role': m.role.name, 'text': m.text},
-      ],
+      'threadId': ?threadId,
     });
     return AssistantReply(
       text: result['answer'] as String? ?? '',
       dataPoints: (result['dataPoints'] as List? ?? const []).whereType<String>().toList(),
+      threadId: result['threadId'] as String?,
     );
   });
 }

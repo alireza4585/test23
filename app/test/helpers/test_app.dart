@@ -22,7 +22,7 @@ DemoStore seededStore() => DemoStore.seeded(
 
 /// Pumps the full app (router, guards, shell) on the demo backend at phone
 /// size, returning the store so tests can assert on persisted state.
-Future<DemoStore> pumpZarinApp(WidgetTester tester, {DemoStore? store}) async {
+Future<DemoStore> pumpZarinApp(WidgetTester tester, {DemoStore? store, AppConfig? config}) async {
   final s = store ?? seededStore();
   tester.view.physicalSize = const Size(1170, 2532);
   tester.view.devicePixelRatio = 3;
@@ -32,7 +32,7 @@ Future<DemoStore> pumpZarinApp(WidgetTester tester, {DemoStore? store}) async {
     ProviderScope(
       overrides: [
         appConfigProvider.overrideWithValue(
-          const AppConfig(backend: BackendKind.demo, environment: 'test'),
+          config ?? const AppConfig(backend: BackendKind.demo, environment: 'test'),
         ),
         backendProvider.overrideWithValue(DemoBackend(s)),
         clockProvider.overrideWithValue(FixedClock(testNow)),

@@ -22,6 +22,19 @@ class Hotel {
   final HotelSettings settings;
 }
 
+/// Per-hotel AI feature flags (`hotels.settings.features`), all off unless
+/// the hotel turned them on. The server enforces the same flags.
+enum HotelFeature {
+  /// Occupancy/season energy baseline: model alerts and the analysis view.
+  energyBaseline,
+
+  /// Nightly forecasts, the forecasts page and the calendar of events.
+  forecasts,
+
+  /// Automatic close and impact evaluation of recommendations.
+  recommendationLoop,
+}
+
 /// Per-hotel operating parameters used by analytics and automations.
 class HotelSettings {
   const HotelSettings({
@@ -50,6 +63,7 @@ class HotelSettings {
       'turndown': 10,
     },
     this.sessionTimeoutMinutes = 30,
+    this.features = const {},
   });
 
   /// Expected daily consumption per energy type (kWh / m³).
@@ -68,6 +82,11 @@ class HotelSettings {
   final Map<String, int> targetCleanMinutes;
 
   final int sessionTimeoutMinutes;
+
+  /// AI features this hotel has turned on.
+  final Set<HotelFeature> features;
+
+  bool has(HotelFeature feature) => features.contains(feature);
 }
 
 abstract interface class HotelRepository {

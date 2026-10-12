@@ -21,6 +21,7 @@ import '../../features/reports/presentation/reports_page.dart';
 import '../../features/rooms/presentation/rooms_pages.dart';
 import '../../features/staff/presentation/staff_page.dart';
 import '../widgets/app_shell.dart';
+import 'route_features.dart';
 import 'routes.dart';
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -78,7 +79,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       final user = auth.value;
       return authRedirect(
         auth,
-        user == null ? null : _UserView(user.mustChangePassword, (loc) => RouteAccess.canAccess(user, loc)),
+        user == null
+            ? null
+            : _UserView(
+                user.mustChangePassword,
+                (loc) => RouteAccess.canAccess(user, loc, disabled: ref.read(disabledRoutesProvider)),
+              ),
         state.matchedLocation,
       );
     },

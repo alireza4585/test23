@@ -302,14 +302,16 @@ class SeeAllButton extends StatelessWidget {
       TextButton(onPressed: () => context.go(route), child: Text(context.l10n.seeAll));
 }
 
-/// Gold "ask the assistant" call-to-action used on dashboards.
-class AssistantCta extends StatelessWidget {
+/// Gold "ask the assistant" call-to-action used on dashboards (hidden when
+/// the build sets ZH_ENABLE_AI_ASSISTANT=false).
+class AssistantCta extends ConsumerWidget {
   const AssistantCta({super.key, required this.label});
 
   final String label;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(appConfigProvider).enableAiAssistant) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return ZCard(
       onTap: () => context.push(Routes.assistant),

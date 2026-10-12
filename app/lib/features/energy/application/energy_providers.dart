@@ -7,6 +7,7 @@ import '../../../core/utils/day_key.dart';
 import '../../../data/repository_providers.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../hotel/application/hotel_providers.dart';
+import '../../hotel/domain/hotel.dart';
 import '../../operations/application/operations_providers.dart';
 import '../domain/energy_analysis.dart';
 import '../domain/energy_analytics.dart';
@@ -75,6 +76,7 @@ final energyActionsProvider = Provider<EnergyActions>(EnergyActions.new);
 final energyAnalysisProvider = FutureProvider.family<EnergyAnalysis?, EnergyType>((ref, type) async {
   final user = ref.watch(sessionUserProvider);
   if (user == null || !user.hasHotel || !user.can(AppPermission.energyView)) return null;
+  if (!ref.watch(hotelSettingsProvider).has(HotelFeature.energyBaseline)) return null;
   ref.watch(energyReadingsProvider.select((r) => r.value?.length));
   final today = DayKey.hotelToday(ref.watch(clockProvider).now());
   return ref.watch(energyAnalysisRepositoryProvider).analyze(
