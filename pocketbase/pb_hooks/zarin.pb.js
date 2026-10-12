@@ -16,16 +16,19 @@
  *   POST /api/zarin/tasks/{id}/transition     task + room, one transaction
  *   POST /api/zarin/tickets/{id}/status|assign
  *   POST /api/zarin/inventory/{id}/movements  item + ledger, one transaction
- *   POST /api/zarin/ai/ask                    assistant
+ *   POST /api/zarin/ai/ask                    assistant (permission-filtered, server-side threads)
  *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket)
- *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon
- *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now
+ *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon [energyBaseline]
+ *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now [forecasts]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
- *                     POST /api/zarin/admin/hotels/{id}/analytics
- * Routes (n8n / IoT, HMAC-signed): /v1/...
- * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran),
- *             insights + recommendation close/evaluation 03:10 (06:40 Tehran),
- *             SLA every 15 min, outbox every minute.
+ *                     POST /api/zarin/admin/hotels/{id}/analytics,
+ *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke]
+ * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js)
+ * [flag]: needs the hotel's feature flag (hotels.settings.features).
+ * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
+ *             insights 03:10 (06:40 Tehran) + recommendation close/evaluation [recommendationLoop],
+ *             SLA every 15 min, outbox every minute, nonce purge every 10 min,
+ *             assistant conversation retention 00:25.
  */
 
 // ------------------------------------------------------------- app routes
@@ -65,6 +68,8 @@ routerAdd("POST", "/v1/hotels/{hotelId}/insights", (e) => require(`${__hooks}/li
 routerAdd("POST", "/v1/hotels/{hotelId}/energy/readings", (e) => require(`${__hooks}/lib/integration.js`).postReading(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/metrics/rollup", (e) => require(`${__hooks}/lib/integration.js`).rollup(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/insights/run", (e) => require(`${__hooks}/lib/integration.js`).runInsights(e));
+routerAdd("GET", "/v1/hotels/{hotelId}/ai/budget", (e) => require(`${__hooks}/lib/integration.js`).aiBudget(e));
+routerAdd("POST", "/v1/hotels/{hotelId}/ai/usage", (e) => require(`${__hooks}/lib/integration.js`).aiUsage(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/forecasts/run", (e) => require(`${__hooks}/lib/integration.js`).runForecasts(e));
 
 // ------------------------------------------------------------- users

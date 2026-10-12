@@ -85,6 +85,18 @@ describe("Scoped integration keys", () => {
     expect((await signed(`/v1/hotels/${hotelId()}/summary`)).status).toBe(200);
   });
 
+  it("let the AI worker read and add to the hotel's LLM budget", async () => {
+    const before = await signedV2(`/v1/hotels/${hotelId()}/ai/budget`, key);
+    expect(before.status).toBe(200);
+    expect(before.json.month).toMatch(/^\d{4}-\d{2}$/);
+    const after = await signedV2(`/v1/hotels/${hotelId()}/ai/usage`, { ...key, method: "POST", body: { tokensIn: 300, tokensOut: 40 } });
+    expect(after.status).toBe(200);
+    expect(after.json.used).toBe(before.json.used + 340);
+    expect(after.json.calls).toBe(before.json.calls + 1);
+    const bad = await signedV2(`/v1/hotels/${hotelId()}/ai/usage`, { ...key, method: "POST", body: { tokensIn: -5, tokensOut: 1 } });
+    expect(bad.status).toBe(400);
+  });
+
   it("purge reports conversations and nonces", async () => {
     const res = await signed("/v1/maintenance/purge", { method: "POST" });
     expect(res.status).toBe(200);

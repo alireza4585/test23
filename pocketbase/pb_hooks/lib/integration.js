@@ -291,6 +291,23 @@ function flushNow(e) {
   return e.json(200, { delivered: flushOutbox(e.app) });
 }
 
+/** GET /v1/hotels/{id}/ai/budget — the hotel's LLM token budget this month (AI worker gateway). */
+function aiBudget(e) {
+  verified(e);
+  return e.json(200, ai.budget(e.app, hotelOf(e), new Date()));
+}
+
+/** POST /v1/hotels/{id}/ai/usage {tokensIn, tokensOut} — adds one LLM call made by the worker. */
+function aiUsage(e) {
+  const b = verified(e);
+  const hotelId = hotelOf(e);
+  const count = (v) => Number.isInteger(v) && v >= 0 && v <= 10000000;
+  if (!count(b.tokensIn) || !count(b.tokensOut)) throw z.bad("invalid_body");
+  const now = new Date();
+  ai.recordUsage(e.app, hotelId, now, { tokensIn: b.tokensIn, tokensOut: b.tokensOut });
+  return e.json(200, ai.budget(e.app, hotelId, now));
+}
+
 /** Cron: forgets nonces once their timestamps can no longer be accepted. */
 function purgeNonces(app, now) {
   const cutoff = z.pbDate(new Date(now.getTime() - 2 * MAX_SKEW_SECONDS * 1000));
@@ -347,4 +364,4 @@ function revokeKey(e) {
   return e.json(200, { keyId: key.getString("keyId"), active: false });
 }
 
-module.exports = { purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };
+module.exports = { aiBudget, aiUsage, purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };
