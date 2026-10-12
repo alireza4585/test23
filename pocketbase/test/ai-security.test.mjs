@@ -204,6 +204,12 @@ describe("AI assistant: numbers, cost and budget", () => {
     }
   });
 
+  it("says when the data to answer does not exist (rule-based answer)", async () => {
+    const reply = await ask(await login(NID.gm), { question: "امروز چند مهمان VIP ورود دارند؟" });
+    expect(reply.model).toBe("rules");
+    expect(reply.answer).toContain("دادهٔ کافی");
+  });
+
   it("is still limited to roles with ai.assistant.use", async () => {
     expect((await errorOf(ask(await login(NID.housekeeper), { question: "سلام" }))).code).toBe("missing_permission");
   });
@@ -224,6 +230,19 @@ describe("Morning narrative", () => {
     await script({ content: "خلاصه: وضعیت عادی است." });
     const res = await signed(`/v1/hotels/${hotelId()}/summary?narrative=fa`);
     expect(res.json.narrative).toBe("خلاصه: وضعیت عادی است.");
+  });
+});
+
+describe("Assistant context audit (superuser)", () => {
+  it("shows exactly what a user's assistant sees, and nothing to non-superusers", async () => {
+    const su = await superuser();
+    const energyUser = await su.collection("users").getFirstListItem(`nationalId = "${NID.energy}"`);
+    const res = await su.send("/api/zarin/admin/ai/context", { method: "POST", body: { hotelId: hotelId(), userId: energyUser.id } });
+    expect(res.role).toBe("energyManager");
+    expect(res.context.restricted).toContain("finance");
+    expect(JSON.stringify(res.context)).not.toMatch(FINANCE_KEYS);
+    const gm = await login(NID.gm);
+    expect((await errorOf(gm.send("/api/zarin/admin/ai/context", { method: "POST", body: { hotelId: hotelId(), userId: energyUser.id } }))).status).toBeGreaterThanOrEqual(401);
   });
 });
 

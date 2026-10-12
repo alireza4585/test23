@@ -1,0 +1,8 @@
+{
+  "_comment": "One account per role, for a TEST hotel only. Keep the real file outside the repository.",
+  "generalManager": {"nationalId": "<10 digits>", "password": "<password>"},
+  "energyManager": {"nationalId": "<10 digits>", "password": "<password>"},
+  "operationsManager": {"nationalId": "<10 digits>", "password": "<password>"},
+  "analyst": {"nationalId": "<10 digits>", "password": "<password>"},
+  "hotelOwner": {"nationalId": "<10 digits>", "password": "<password>"}
+}

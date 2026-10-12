@@ -496,7 +496,8 @@ function topicOf(q) {
   if (/خرابی|تعمیر|تیکت|sla|maintenance|ticket|repair/.test(s)) return "maintenance";
   if (/انبار|موجودی|کالا|سفارش|stock|inventory|order/.test(s)) return "inventory";
   if (/اشغال|درآمد|فروش|occupancy|revenue|adr|revpar/.test(s)) return "revenue";
-  return "overview";
+  if (/وضعیت|کلی|خلاصه|عملکرد|گزارش|پیشنهاد|امروز چطور|overview|status|summary|insight/.test(s)) return "overview";
+  return "unknown";
 }
 
 /** Fact-based answer from the same (permission-filtered) context, no LLM. */
@@ -505,7 +506,14 @@ function ruleAnswer(ctx, question, locale) {
   const n = (v, d) => num(v, locale, d);
   const d = ctx.derived || {};
   const lines = [];
-  const topic = topicOf(question);
+  let topic = topicOf(question);
+  if (topic === "unknown") {
+    // Nothing in the data answers this; say so before the general picture.
+    lines.push(fa
+      ? "دادهٔ کافی برای پاسخ به این پرسش در سامانه وجود ندارد (داده‌های موجود: اشغال، درآمد، انرژی، خرابی‌ها، انبار و پیشنهادها). خلاصهٔ وضعیت:"
+      : "There is not enough data in the system to answer this (available: occupancy, revenue, energy, maintenance, inventory, insights). Current picture:");
+    topic = "overview";
+  }
   const denied = (fa_, en) => lines.push(fa ? `شما به ${fa_} دسترسی ندارید.` : `You do not have access to ${en}.`);
 
   if (topic === "energy" || topic === "overview") {
@@ -664,7 +672,7 @@ function ask(e) {
         }
         const bad = unsupportedNumbers(res.text, facts);
         if (!bad.length && res.text) {
-          status = res.status;
+          status = attempt === 0 ? res.status : `${res.status}_retried`;
           answer = r.restore(res.text);
         } else if (attempt === 0) {
           messages.push({ role: "assistant", content: res.text });
@@ -724,6 +732,28 @@ function narrate(summary, locale, app) {
   }
 }
 
+/**
+ * POST /api/zarin/admin/ai/context {hotelId, userId}  (superuser, read-only)
+ * The exact context the assistant would build for that user now (after
+ * permission filtering and redaction) — for audits and the eval harness.
+ */
+function contextFor(e) {
+  const b = e.requestInfo().body || {};
+  const hotelId = String(b.hotelId || "");
+  const user = z.find(e.app, "users", String(b.userId || ""));
+  z.find(e.app, "hotels", hotelId);
+  if (z.arr(user.getStringSlice("hotels")).indexOf(hotelId) < 0 && user.getString("role") !== "superAdmin") {
+    throw z.bad("not_hotel_member");
+  }
+  const perms = {};
+  for (const p of z.arr(e.app.findRecordsByIds("permissions", z.arr(user.getStringSlice("permissions"))))) {
+    if (p) perms[p.getString("code")] = true;
+  }
+  const c = { perms };
+  const ctx = buildContext(e.app, hotelId, new Date(), accessOf(c), redactor(e.app, hotelId));
+  return e.json(200, { role: user.getString("role"), context: ctx });
+}
+
 /** Cron: deletes conversations older than ZH_AI_RETENTION_DAYS (default 90). */
 function purgeConversations(app, now) {
   const days = envInt("ZH_AI_RETENTION_DAYS", DEFAULT_RETENTION_DAYS, 1, 3650);
@@ -732,6 +762,6 @@ function purgeConversations(app, now) {
 }
 
 module.exports = {
-  ask, narrate, buildContext, ruleAnswer, num, accessOf, redactor, clean, redactIds,
+  ask, narrate, contextFor, buildContext, ruleAnswer, num, accessOf, redactor, clean, redactIds,
   numbersIn, factsOf, unsupportedNumbers, budget, recordUsage, purgeConversations, chatUrl,
 };

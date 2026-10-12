@@ -79,7 +79,10 @@ export async function startTestServer({ keepData = false, webhookUrl = "", env =
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const server = await startTestServer({ keepData: process.env.KEEP_PB_DATA === "1" });
+  // ZH_AI_PROVIDER / ZH_AI_BASE_URL / ZH_AI_MODEL pass through (e.g. the eval's mock LLM).
+  const env = {};
+  for (const k of ["ZH_AI_PROVIDER", "ZH_AI_BASE_URL", "ZH_AI_MODEL"]) if (process.env[k]) env[k] = process.env[k];
+  const server = await startTestServer({ keepData: process.env.KEEP_PB_DATA === "1", env });
   console.log(`ZH_PB_TEST_URL=${server.url}`);
   console.log(`ZH_PB_TEST_HOTEL=${server.hotelId}`);
   const shutdown = async () => {

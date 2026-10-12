@@ -22,7 +22,8 @@
  *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now [forecasts]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
  *                     POST /api/zarin/admin/hotels/{id}/analytics,
- *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke]
+ *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke],
+ *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user)
  * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js)
  * [flag]: needs the hotel's feature flag (hotels.settings.features).
  * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
@@ -57,6 +58,7 @@ routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__
 
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));
+routerAdd("POST", "/api/zarin/admin/ai/context", (e) => require(`${__hooks}/lib/ai.js`).contextFor(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/integration-keys", (e) => require(`${__hooks}/lib/integration.js`).createKey(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/integration-keys/{keyId}/revoke", (e) => require(`${__hooks}/lib/integration.js`).revokeKey(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/v1/maintenance/purge", (e) => require(`${__hooks}/lib/integration.js`).purge(e));
