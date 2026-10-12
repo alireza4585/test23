@@ -6,13 +6,28 @@ import { client, errorOf, hotelId, login, NID, post, superuser } from "./helpers
 
 const importRecords = (pb, body) => pb.send("/api/zarin/admin/import", { method: "POST", body });
 const analytics = (pb, id, body) => pb.send(`/api/zarin/admin/hotels/${id}/analytics`, { method: "POST", body });
+/** Runs [fn] with feature flags on for the shared test hotel, then restores its settings. */
+async function withFeatures(features, fn) {
+  const su = await superuser();
+  const before = (await su.collection("hotels").getOne(hotelId())).settings;
+  await su.collection("hotels").update(hotelId(), { settings: { ...before, features } });
+  try {
+    await fn();
+  } finally {
+    await su.collection("hotels").update(hotelId(), { settings: before });
+  }
+}
+
 const addDays = (day, n) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 /** Trial hotel with [days] days of operations and electricity (1500 + 18·occupied ± noise), imported quietly. */
 async function trialHotel(su, { days = 70, start = "2026-01-01", factor = () => 1 } = {}) {
   const hotel = await su.collection("hotels").create({
     name: `AI core ${Math.random().toString(36).slice(2, 8)}`, status: "trial",
-    settings: { energyDailyBaseline: { electricity: 2000 }, energyTariff: { electricity: 3000 }, energyAlertThresholdPct: 15 },
+    settings: {
+      energyDailyBaseline: { electricity: 2000 }, energyTariff: { electricity: 3000 }, energyAlertThresholdPct: 15,
+      features: { energyBaseline: true, forecasts: true, recommendationLoop: true },
+    },
   });
   const ops = [];
   const energy = [];
@@ -66,7 +81,13 @@ describe("forecasts", () => {
     expect(occ.reason).toBe("stale_data");
   });
 
-  it("can be refreshed by executives, not by staff or other hotels", async () => {
+  it("are off until the hotel's forecasts flag is on", async () => {
+    const gm = await login(NID.gm);
+    const err = await errorOf(post(gm, `/api/zarin/hotels/${hotelId()}/forecasts/run`, {}));
+    expect(err.code).toBe("feature_disabled");
+  });
+
+  it("can be refreshed by executives, not by staff or other hotels", () => withFeatures({ forecasts: true }, async () => {
     const gm = await login(NID.gm);
     const res = await post(gm, `/api/zarin/hotels/${hotelId()}/forecasts/run`, {});
     expect(Object.keys(res.series).sort()).toEqual(["electricity", "gas", "occupancy", "roomRevenue", "totalRevenue", "water"]);
@@ -77,7 +98,7 @@ describe("forecasts", () => {
     const su = await superuser();
     const other = await trialHotel(su, { days: 10 });
     expect((await errorOf(post(gm, `/api/zarin/hotels/${other.id}/forecasts/run`, {}))).code).toBe("not_hotel_member");
-  });
+  }));
 });
 
 describe("energy", () => {
@@ -104,7 +125,26 @@ describe("energy", () => {
     expect(list.find((a) => a.dedupeKey === `energy_${d3}_electricity`).data.method).toBe("static");
   });
 
-  it("analyses expected vs actual with Guideline 14 statistics, cost and carbon", async () => {
+  it("use only the static baseline while the energyBaseline flag is off", async () => {
+    const su = await superuser();
+    const h = await trialHotel(su, { days: 60 });
+    const hotel = await su.collection("hotels").getOne(h.id);
+    await su.collection("hotels").update(h.id, { settings: { ...hotel.settings, features: {} } });
+    const d1 = addDays(h.last, 1);
+    await importRecords(su, { hotel: h.id, collection: "dailyOperations", records: [{ fields: { day: d1, roomsAvailable: 60, roomsOccupied: 55, roomRevenue: 1, source: "import" } }] });
+    // Normal for 55 occupied rooms, but 25 % above the static baseline of 2000: the original rule alerts.
+    await su.collection("energyReadings").create({ hotel: h.id, type: "electricity", day: d1, consumption: 2500 });
+    const list = await su.collection("alerts").getFullList({ filter: `hotel = "${h.id}" && type = "energySpike"` });
+    expect(list).toHaveLength(1);
+    expect(list[0].data.method).toBe("static");
+  });
+
+  it("analysis is off until the hotel's energyBaseline flag is on", async () => {
+    const gm = await login(NID.gm);
+    expect((await errorOf(gm.send(`/api/zarin/energy/analysis?hotelId=${hotelId()}`, {}))).code).toBe("feature_disabled");
+  });
+
+  it("analyses expected vs actual with Guideline 14 statistics, cost and carbon", () => withFeatures({ energyBaseline: true }, async () => {
     const gm = await login(NID.gm);
     const to = addDays(new Date(Date.now() + 210 * 60e3).toISOString().slice(0, 10), -1);
     const from = addDays(to, -6);
@@ -121,7 +161,7 @@ describe("energy", () => {
     const housekeeper = await login(NID.housekeeper);
     expect((await errorOf(housekeeper.send(`/api/zarin/energy/analysis?hotelId=${hotelId()}`, {}))).code).toBe("missing_permission");
     expect((await errorOf(gm.send(`/api/zarin/energy/analysis?hotelId=${hotelId()}&from=2024-01-01&to=2026-01-01`, {}))).code).toBe("range_too_long");
-  });
+  }));
 });
 
 describe("recommendations", () => {

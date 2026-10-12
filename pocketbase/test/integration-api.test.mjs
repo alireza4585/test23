@@ -86,7 +86,8 @@ describe("integration API v1 (n8n / IoT)", () => {
   });
 
   it("runs the rule engine on demand and stores explainable insights", async () => {
-    const { json } = await signed(v1("/insights/run"), { method: "POST", body: {} });
+    const { status, json } = await signed(v1("/insights/run"), { method: "POST", body: {} });
+    expect(status, JSON.stringify(json)).toBe(200);
     expect(json.created).toBeGreaterThan(0);
     const gm = await login(NID.gm);
     const insights = await gm.collection("aiInsights").getFullList();

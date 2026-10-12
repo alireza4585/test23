@@ -125,6 +125,7 @@ cronAdd("zarin_forecasts", "40 21 * * *", () => {
   const z = require(`${__hooks}/lib/zarin.js`);
   const forecasting = require(`${__hooks}/lib/forecasting.js`);
   for (const id of z.activeHotelIds($app)) {
+    if (!z.feature($app, id, "forecasts")) continue;
     try { forecasting.runForecasts($app, id, new Date()); } catch (err) { console.log("forecasts failed", id, String(err)); }
   }
 });

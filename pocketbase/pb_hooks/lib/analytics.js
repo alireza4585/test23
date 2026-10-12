@@ -143,9 +143,11 @@ function runInsights(app, hotelId, now) {
   let created = 0;
   for (const d of drafts) if (upsertInsight(app, hotelId, d, now)) created++;
   slaAlerts(app, hotelId, data.tickets, now);
-  const recommendations = require(`${__hooks}/lib/recommendations.js`);
-  recommendations.closeCleared(app, hotelId, drafts, now);
-  recommendations.evaluateDue(app, hotelId, now);
+  if (z.feature(app, hotelId, "recommendationLoop")) {
+    const recommendations = require(`${__hooks}/lib/recommendations.js`);
+    recommendations.closeCleared(app, hotelId, drafts, now);
+    recommendations.evaluateDue(app, hotelId, now);
+  }
   return created;
 }
 

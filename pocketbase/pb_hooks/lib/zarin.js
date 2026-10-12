@@ -214,6 +214,30 @@ function hotelSettings(app, hotelId) {
   };
 }
 
+/**
+ * Per-hotel feature flags (hotels.settings.features), all off by default:
+ *   energyBaseline      occupancy/season baseline for energy alerts + analysis
+ *   forecasts           nightly forecasts and the forecast routes
+ *   recommendationLoop  auto-close and impact evaluation of recommendations
+ */
+const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop"];
+
+function features(app, hotelId) {
+  const s = jsonOf(find(app, "hotels", hotelId), "settings") || {};
+  const f = s.features || {};
+  const out = {};
+  for (const k of FEATURES) out[k] = f[k] === true;
+  return out;
+}
+
+function feature(app, hotelId, name) {
+  return features(app, hotelId)[name] === true;
+}
+
+function requireFeature(app, hotelId, name) {
+  if (!feature(app, hotelId, name)) throw bad("feature_disabled", { feature: name });
+}
+
 function activeHotelIds(app) {
   return findMany(app, "hotels", "status = 'active' || status = 'trial' || status = ''").map((h) => h.id);
 }
@@ -369,6 +393,6 @@ module.exports = {
   core, dayKey, addDays, pbDate, parseDate, arr, jsonOf, unique,
   details, bad, forbidden, notFound, find, findFirst, findMany, col,
   caller, has, requirePerm, requireHotel, sameHotel, memberOf, onlyFields,
-  permissionIdsFor, departmentOf, validPassword, hotelSettings, activeHotelIds,
+  permissionIdsFor, departmentOf, validPassword, hotelSettings, activeHotelIds, FEATURES, features, feature, requireFeature,
   emit, audit, actorOf, diff, notify, raiseAlert, resolveAlert, markImported, isImported,
 };

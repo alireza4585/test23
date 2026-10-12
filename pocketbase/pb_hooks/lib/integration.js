@@ -228,7 +228,9 @@ function runInsights(e) {
 
 function runForecasts(e) {
   verified(e);
-  return e.json(200, { series: require(`${__hooks}/lib/forecasting.js`).runForecasts(e.app, hotelOf(e), new Date()) });
+  const hotelId = hotelOf(e);
+  z.requireFeature(e.app, hotelId, "forecasts");
+  return e.json(200, { series: require(`${__hooks}/lib/forecasting.js`).runForecasts(e.app, hotelId, new Date()) });
 }
 
 const LEASE_SECONDS = 60;
