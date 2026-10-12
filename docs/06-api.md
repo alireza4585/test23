@@ -104,6 +104,18 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 
 این endpoint idempotent است (کلید روز و نوع). سند ذخیره‌شده همان شکل ورود دستی را دارد و trigger تشخیص ناهنجاری روی آن هم اجرا می‌شود.
 
+## Zarin AI (مرحلهٔ ۱)
+
+جزئیات کامل بدنه و پاسخ‌ها در [۱۴](14-ai-batch1.md#3-api) آمده است.
+
+| مسیر | دسترسی | کار |
+|---|---|---|
+| `POST /api/zarin/insights/{id}/decide` | `ai.insights.view` و داشبورد اجرایی/عملیات | ثبت تصمیم (پذیرفتن، اجرا، رد) با توضیح و در صورت نیاز یک تیکت تعمیرات مرتبط؛ ارزیابی نتیجه زمان‌بندی می‌شود |
+| `GET /api/zarin/energy/analysis` | `energy.view` | خط مبنای وابسته به اشغال، مقدار مورد انتظار در برابر واقعی، CUSUM، صرفه‌جویی با عدم‌قطعیت، هزینه و کربن |
+| `POST /api/zarin/hotels/{id}/forecasts/run` | `dashboard.executive` یا `hotel.settings` | محاسبهٔ دوبارهٔ پیش‌بینی‌ها |
+| `POST /v1/hotels/{id}/forecasts/run` | HMAC | همان، برای n8n |
+| `POST /v1/hotels/{id}/notifications` | HMAC | فیلدهای اختیاری `dedupeKey` و `dedupeHours` برای جلوگیری از اعلان تکراری |
+
 ## رویدادهای خروجی (Backend → n8n)
 
 `POST N8N_WEBHOOK_URL` با همان امضا. بدنه: `{id, type, hotelId, occurredAt, data}`.

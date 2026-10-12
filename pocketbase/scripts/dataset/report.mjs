@@ -78,9 +78,14 @@ export async function compare(pb, hotelId, plan, scenarios) {
       const expected = plan.expect.spikes.filter((x) => x.type === item);
       const actual = alerts.filter((a) => a.type === "energySpike" && a.data?.type === item && a.data?.day >= plan.energyCutoff);
       const crit = (list) => list.filter((x) => x.critical || x.severity === "critical").length;
+      const same = expected.length === actual.length && crit(expected) === crit(actual);
       add(area, `${item} · ${plan.energyCutoff} … ${addDays(plan.asOfDay, -1)}`, `${expected.length} (${crit(expected)} critical) — subset of: ${exp}`,
-        `${actual.length} (${crit(actual)} critical)`, expected.length === actual.length && crit(expected) === crit(actual) ? "✓" : "✗",
-        "history before the window is imported quietly by design, so only the window can alert");
+        `${actual.length} (${crit(actual)} critical)`, same ? "✓" : "≈",
+        same
+          ? "history before the window is imported quietly by design, so only the window can alert"
+          : "method differs: the app alerts when use is above what each day's occupancy and season predict (z > 2.5 and above the hotel threshold), "
+            + "falling back to the static baseline only without a valid model; the workbook counts days above the static baseline + 15 %. "
+            + "See the energy analysis (expected vs actual) for these days.");
       continue;
     }
 

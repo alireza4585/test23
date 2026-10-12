@@ -1,6 +1,6 @@
 # 13. Zarin AI: project audit, target architecture and phased plan
 
-Status: **proposal for review**. Nothing in this document has been implemented yet except the repository hygiene fix in §2.4. Research evidence behind the choices is in [12-ai-research-report.md](12-ai-research-report.md); claims about other companies or products are cited there, not here.
+Status: **Batch 1 implemented** (A1 recommendation ledger, A2 forecasting, A3 energy baselines, A7 fixes); see [14-ai-batch1.md](14-ai-batch1.md). Batches 2+ remain proposals. Research evidence behind the choices is in [12-ai-research-report.md](12-ai-research-report.md); claims about other companies or products are cited there, not here.
 
 ---
 
