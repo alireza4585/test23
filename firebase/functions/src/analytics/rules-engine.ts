@@ -33,6 +33,22 @@ export interface InsightDraft {
   route?: string;
   /** Roles the insight is primarily for (notification targeting). */
   audienceRoles: string[];
+  /** What acting on it should change, and how the result will be measured. */
+  expectedImpact?: ExpectedImpact;
+}
+
+/**
+ * Expected effect of a recommendation. [method] names the evaluation used
+ * after a decision (see evaluation.ts); [subject] identifies what to measure.
+ */
+export interface ExpectedImpact {
+  metric: string;
+  unit: string;
+  baseline: number;
+  expected: number;
+  monthlyIrr?: number;
+  method: "energyBaseline" | "durationAvg" | "ticketCount" | "stockout" | "oooRooms" | "occupancyGap";
+  subject?: Record<string, string | string[]>;
 }
 
 export interface EngineInput {
@@ -76,6 +92,8 @@ export function generateInsights(input: EngineInput): InsightDraft[] {
     ...weekdayOccupancyRule(input),
   ];
 }
+
+const round1 = (v: number) => Math.round(v * 10) / 10;
 
 function sumBy<T>(rows: T[], f: (r: T) => number): number {
   return rows.reduce((s, r) => s + f(r), 0);
@@ -134,6 +152,10 @@ export function energyIntensityRule(input: EngineInput): InsightDraft[] {
       ],
       route: "/energy",
       audienceRoles: ["generalManager", "energyManager", "maintenanceManager"],
+      expectedImpact: {
+        metric: "electricityPerOccupiedRoom", unit: "kWh", baseline: round1(recent.perRoom), expected: round1(prior.perRoom),
+        monthlyIrr: Math.round(saving), method: "energyBaseline", subject: { type: "electricity" },
+      },
     },
   ];
 }
@@ -167,6 +189,10 @@ export function stockoutForecastRule(input: EngineInput): InsightDraft[] {
       ],
       route: `/inventory/${item.id}`,
       audienceRoles: ["inventoryManager", "generalManager"],
+      expectedImpact: {
+        metric: "daysOfCover", unit: "days", baseline: round1(Math.max(daysLeft, 0)), expected: 14,
+        method: "stockout", subject: { itemId: item.id },
+      },
     });
   }
   return out;
@@ -198,6 +224,10 @@ export function housekeepingEfficiencyRule(input: EngineInput): InsightDraft[] {
       evidence: [`ساعات اضافه هفتگی: ${fmt(lostHoursPerWeek, 1)}`, `نمونه‌ها: ${durations.length}`],
       route: "/housekeeping",
       audienceRoles: ["housekeepingManager", "operationsManager"],
+      expectedImpact: {
+        metric: "checkoutCleanMinutes", unit: "min", baseline: round1(avg), expected: target,
+        method: "durationAvg", subject: { taskType: "checkoutClean" },
+      },
     },
   ];
 }
@@ -228,6 +258,10 @@ export function repeatFailureRule(input: EngineInput): InsightDraft[] {
       evidence: list.slice(0, 5).map((t) => t.title),
       route: "/maintenance",
       audienceRoles: ["maintenanceManager", "generalManager"],
+      expectedImpact: {
+        metric: "tickets30Days", unit: "tickets", baseline: list.length, expected: 0,
+        method: "ticketCount", subject: { category, where },
+      },
     });
   }
   return out;
@@ -261,6 +295,10 @@ export function outOfOrderRevenueRule(input: EngineInput): InsightDraft[] {
       evidence: [`ADR ۱۴ روز: ${fmt(adr)}`, `اشغال ۱۴ روز: ${fmt(occ * 100)}٪`],
       route: "/rooms",
       audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+      expectedImpact: {
+        metric: "roomsOutOfOrder", unit: "rooms", baseline: ooo.length, expected: 0,
+        monthlyIrr: Math.round(lostPerMonth), method: "oooRooms", subject: { rooms: ooo.map((r) => r.number) },
+      },
     },
   ];
 }
@@ -293,6 +331,9 @@ export function weekdayOccupancyRule(input: EngineInput): InsightDraft[] {
       evidence: [`آخر هفته: ${fmt(weekend * 100)}٪`, `روزهای میانی: ${fmt(weekday * 100)}٪`],
       route: "/reports",
       audienceRoles: ["generalManager", "hotelOwner"],
+      expectedImpact: {
+        metric: "weekendWeekdayGap", unit: "pts", baseline: round1(gap), expected: 12, method: "occupancyGap",
+      },
     },
   ];
 }

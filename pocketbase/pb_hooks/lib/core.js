@@ -15,7 +15,7 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __toCommonJS = (mod2) => __copyProps(__defProp({}, "__esModule", { value: true }), mod2);
 
 // core/index.ts
 var index_exports = {};
@@ -23,6 +23,10 @@ __export(index_exports, {
   ACTIVE_TICKET_STATUSES: () => ACTIVE_TICKET_STATUSES,
   ASSIGNABLE_ROLES: () => ASSIGNABLE_ROLES,
   DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
+  EVALUATION_WINDOW_DAYS: () => EVALUATION_WINDOW_DAYS,
+  MAX_CVRMSE: () => MAX_CVRMSE,
+  MIN_BASELINE_DAYS: () => MIN_BASELINE_DAYS,
+  MIN_HISTORY_DAYS: () => MIN_HISTORY_DAYS,
   PERMISSIONS: () => PERMISSIONS,
   ROLES: () => ROLES,
   ROLE_PERMISSIONS: () => ROLE_PERMISSIONS,
@@ -30,14 +34,31 @@ __export(index_exports, {
   ROOM_TRANSITIONS: () => ROOM_TRANSITIONS,
   can: () => can,
   canAssign: () => canAssign,
+  checkReading: () => checkReading,
   computeDailyMetrics: () => computeDailyMetrics,
+  daySet: () => daySet,
+  dayToJalali: () => dayToJalali,
+  dayToUtcMs: () => dayToUtcMs,
+  daysBetween: () => daysBetween,
+  evaluateCount: () => evaluateCount,
+  evaluateEnergy: () => evaluateEnergy,
+  evaluateMean: () => evaluateMean,
+  evaluateOutcome: () => evaluateOutcome,
+  expectedEnergy: () => expected,
+  fitBaseline: () => fitBaseline,
+  forecastSeries: () => forecastSeries,
   generateInsights: () => generateInsights,
+  iranFixedHolidays: () => iranFixedHolidays,
   isActiveTicket: () => isActiveTicket,
   isRole: () => isRole,
   isValidNationalId: () => isValidNationalId,
+  jalaliToDay: () => jalaliToDay,
   maskNationalId: () => maskNationalId,
+  measureEnergy: () => measure,
   normalizeNationalId: () => normalizeNationalId,
-  rolesWith: () => rolesWith
+  rolesWith: () => rolesWith,
+  shiftDay: () => shiftDay,
+  weekdayOf: () => weekdayOf
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -454,6 +475,7 @@ function generateInsights(input) {
     ...weekdayOccupancyRule(input)
   ];
 }
+var round1 = (v) => Math.round(v * 10) / 10;
 function sumBy(rows, f) {
   return rows.reduce((s, r) => s + f(r), 0);
 }
@@ -503,7 +525,16 @@ function energyIntensityRule(input) {
         ...hvac.length > 0 ? [`\u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u0628\u0627\u0632 HVAC: ${hvac.length}`] : []
       ],
       route: "/energy",
-      audienceRoles: ["generalManager", "energyManager", "maintenanceManager"]
+      audienceRoles: ["generalManager", "energyManager", "maintenanceManager"],
+      expectedImpact: {
+        metric: "electricityPerOccupiedRoom",
+        unit: "kWh",
+        baseline: round1(recent.perRoom),
+        expected: round1(prior.perRoom),
+        monthlyIrr: Math.round(saving),
+        method: "energyBaseline",
+        subject: { type: "electricity" }
+      }
     }
   ];
 }
@@ -533,7 +564,15 @@ function stockoutForecastRule(input) {
         `\u0645\u0635\u0631\u0641 \u06F1\u06F4 \u0631\u0648\u0632: ${fmt(issued)} ${item.unit}`
       ],
       route: `/inventory/${item.id}`,
-      audienceRoles: ["inventoryManager", "generalManager"]
+      audienceRoles: ["inventoryManager", "generalManager"],
+      expectedImpact: {
+        metric: "daysOfCover",
+        unit: "days",
+        baseline: round1(Math.max(daysLeft, 0)),
+        expected: 14,
+        method: "stockout",
+        subject: { itemId: item.id }
+      }
     });
   }
   return out;
@@ -560,7 +599,15 @@ function housekeepingEfficiencyRule(input) {
       priority: over > 0.3 ? "high" : "medium",
       evidence: [`\u0633\u0627\u0639\u0627\u062A \u0627\u0636\u0627\u0641\u0647 \u0647\u0641\u062A\u06AF\u06CC: ${fmt(lostHoursPerWeek, 1)}`, `\u0646\u0645\u0648\u0646\u0647\u200C\u0647\u0627: ${durations.length}`],
       route: "/housekeeping",
-      audienceRoles: ["housekeepingManager", "operationsManager"]
+      audienceRoles: ["housekeepingManager", "operationsManager"],
+      expectedImpact: {
+        metric: "checkoutCleanMinutes",
+        unit: "min",
+        baseline: round1(avg),
+        expected: target,
+        method: "durationAvg",
+        subject: { taskType: "checkoutClean" }
+      }
     }
   ];
 }
@@ -589,7 +636,15 @@ function repeatFailureRule(input) {
       priority: list.length >= 5 ? "high" : "medium",
       evidence: list.slice(0, 5).map((t) => t.title),
       route: "/maintenance",
-      audienceRoles: ["maintenanceManager", "generalManager"]
+      audienceRoles: ["maintenanceManager", "generalManager"],
+      expectedImpact: {
+        metric: "tickets30Days",
+        unit: "tickets",
+        baseline: list.length,
+        expected: 0,
+        method: "ticketCount",
+        subject: { category, where }
+      }
     });
   }
   return out;
@@ -620,7 +675,16 @@ function outOfOrderRevenueRule(input) {
       estimatedMonthlySaving: Math.round(lostPerMonth),
       evidence: [`ADR \u06F1\u06F4 \u0631\u0648\u0632: ${fmt(adr)}`, `\u0627\u0634\u063A\u0627\u0644 \u06F1\u06F4 \u0631\u0648\u0632: ${fmt(occ * 100)}\u066A`],
       route: "/rooms",
-      audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"]
+      audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+      expectedImpact: {
+        metric: "roomsOutOfOrder",
+        unit: "rooms",
+        baseline: ooo.length,
+        expected: 0,
+        monthlyIrr: Math.round(lostPerMonth),
+        method: "oooRooms",
+        subject: { rooms: ooo.map((r) => r.number) }
+      }
     }
   ];
 }
@@ -649,7 +713,586 @@ function weekdayOccupancyRule(input) {
       priority: "medium",
       evidence: [`\u0622\u062E\u0631 \u0647\u0641\u062A\u0647: ${fmt(weekend * 100)}\u066A`, `\u0631\u0648\u0632\u0647\u0627\u06CC \u0645\u06CC\u0627\u0646\u06CC: ${fmt(weekday * 100)}\u066A`],
       route: "/reports",
-      audienceRoles: ["generalManager", "hotelOwner"]
+      audienceRoles: ["generalManager", "hotelOwner"],
+      expectedImpact: {
+        metric: "weekendWeekdayGap",
+        unit: "pts",
+        baseline: round1(gap),
+        expected: 12,
+        method: "occupancyGap"
+      }
     }
   ];
+}
+
+// ../firebase/functions/src/analytics/calendar.ts
+var BREAKS = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+var div = (a, b) => ~~(a / b);
+var mod = (a, b) => a - ~~(a / b) * b;
+function nowruz(jy) {
+  if (jy < BREAKS[0] || jy >= BREAKS[BREAKS.length - 1]) throw new Error(`Jalali year out of range: ${jy}`);
+  const gy = jy + 621;
+  let leapJ = -14;
+  let jp = BREAKS[0];
+  let jump = 0;
+  for (let i = 1; i < BREAKS.length; i++) {
+    const jm = BREAKS[i];
+    jump = jm - jp;
+    if (jy < jm) break;
+    leapJ += div(jump, 33) * 8 + div(mod(jump, 33), 4);
+    jp = jm;
+  }
+  const n = jy - jp;
+  leapJ += div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+  if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+  const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+  return { gy, march: 20 + leapJ - leapG };
+}
+var pad = (n) => n < 10 ? `0${n}` : String(n);
+function dayKeyOfUtc(ms) {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+function dayToUtcMs(day) {
+  const [y, m, d] = day.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+function shiftDay(day, delta) {
+  return dayKeyOfUtc(dayToUtcMs(day) + delta * 864e5);
+}
+function daysBetween(a, b) {
+  return Math.round((dayToUtcMs(b) - dayToUtcMs(a)) / 864e5);
+}
+function weekdayOf(day) {
+  return new Date(dayToUtcMs(day)).getUTCDay();
+}
+function jalaliToDay(jy, jm, jd) {
+  const { gy, march } = nowruz(jy);
+  const offset = (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1;
+  return shiftDay(`${gy}-03-${pad(march)}`, offset);
+}
+function dayToJalali(day) {
+  const gy = Number(day.slice(0, 4));
+  let jy = gy - 621;
+  let start = jalaliToDay(jy, 1, 1);
+  if (day < start) {
+    jy -= 1;
+    start = jalaliToDay(jy, 1, 1);
+  }
+  let k = daysBetween(start, day);
+  if (k < 186) return { jy, jm: 1 + div(k, 31), jd: 1 + mod(k, 31) };
+  k -= 186;
+  return { jy, jm: 7 + div(k, 30), jd: 1 + mod(k, 30) };
+}
+var FIXED_HOLIDAYS = [
+  [1, 1, "\u0646\u0648\u0631\u0648\u0632"],
+  [1, 2, "\u0646\u0648\u0631\u0648\u0632"],
+  [1, 3, "\u0646\u0648\u0631\u0648\u0632"],
+  [1, 4, "\u0646\u0648\u0631\u0648\u0632"],
+  [1, 12, "\u0631\u0648\u0632 \u062C\u0645\u0647\u0648\u0631\u06CC \u0627\u0633\u0644\u0627\u0645\u06CC"],
+  [1, 13, "\u0631\u0648\u0632 \u0637\u0628\u06CC\u0639\u062A"],
+  [3, 14, "\u0631\u062D\u0644\u062A \u0627\u0645\u0627\u0645 \u062E\u0645\u06CC\u0646\u06CC"],
+  [3, 15, "\u0642\u06CC\u0627\u0645 \u06F1\u06F5 \u062E\u0631\u062F\u0627\u062F"],
+  [11, 22, "\u067E\u06CC\u0631\u0648\u0632\u06CC \u0627\u0646\u0642\u0644\u0627\u0628 \u0627\u0633\u0644\u0627\u0645\u06CC"],
+  [12, 29, "\u0645\u0644\u06CC \u0634\u062F\u0646 \u0635\u0646\u0639\u062A \u0646\u0641\u062A"]
+];
+function iranFixedHolidays(from, to) {
+  const out = [];
+  const first = dayToJalali(from).jy;
+  const last = dayToJalali(to).jy;
+  for (let jy = first; jy <= last; jy++) {
+    for (const [jm, jd, title] of FIXED_HOLIDAYS) {
+      const day = jalaliToDay(jy, jm, jd);
+      if (day >= from && day <= to) out.push({ day, kind: "publicHoliday", title });
+    }
+  }
+  return out.sort((a, b) => a.day < b.day ? -1 : 1);
+}
+function daySet(events) {
+  const out = /* @__PURE__ */ new Set();
+  for (const e of events) {
+    const end = e.endDay && e.endDay >= e.day ? e.endDay : e.day;
+    for (let d = e.day, i = 0; d <= end && i < 400; d = shiftDay(d, 1), i++) out.add(d);
+  }
+  return out;
+}
+
+// ../firebase/functions/src/analytics/stats.ts
+function mean(xs) {
+  return xs.length === 0 ? NaN : xs.reduce((a, b) => a + b, 0) / xs.length;
+}
+function variance(xs) {
+  if (xs.length < 2) return NaN;
+  const m = mean(xs);
+  return xs.reduce((s, x2) => s + (x2 - m) * (x2 - m), 0) / (xs.length - 1);
+}
+function quantile(xs, q) {
+  if (xs.length === 0) return NaN;
+  const s = xs.slice().sort((a, b) => a - b);
+  const pos = (s.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return s[lo] + (s[hi] - s[lo]) * (pos - lo);
+}
+function leastSquares(X, y, weights, ridge = 1e-6) {
+  var _a, _b;
+  const p = (_b = (_a = X[0]) == null ? void 0 : _a.length) != null ? _b : 0;
+  if (p === 0 || X.length < p) return null;
+  const A = Array.from({ length: p }, () => new Array(p + 1).fill(0));
+  for (let i = 0; i < X.length; i++) {
+    const w = weights ? weights[i] : 1;
+    const row = X[i];
+    for (let a = 0; a < p; a++) {
+      const wa = w * row[a];
+      for (let b = a; b < p; b++) A[a][b] += wa * row[b];
+      A[a][p] += wa * y[i];
+    }
+  }
+  for (let a = 0; a < p; a++) {
+    for (let b = 0; b < a; b++) A[a][b] = A[b][a];
+    if (a > 0) A[a][a] += ridge;
+  }
+  for (let c = 0; c < p; c++) {
+    let piv = c;
+    for (let r = c + 1; r < p; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    if (Math.abs(A[piv][c]) < 1e-12) return null;
+    [A[c], A[piv]] = [A[piv], A[c]];
+    for (let r = 0; r < p; r++) {
+      if (r === c) continue;
+      const f = A[r][c] / A[c][c];
+      if (f === 0) continue;
+      for (let k = c; k <= p; k++) A[r][k] -= f * A[c][k];
+    }
+  }
+  return A.map((row, i) => row[p] / A[i][i]);
+}
+function dot(a, b) {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+  return s;
+}
+function round2(v, d = 2) {
+  if (v === null || v === void 0 || !isFinite(v)) return null;
+  const f = Math.pow(10, d);
+  return Math.round(v * f) / f;
+}
+function welchT(a, b) {
+  if (a.length < 2 || b.length < 2) return null;
+  const se = Math.sqrt(variance(a) / a.length + variance(b) / b.length);
+  return se === 0 ? null : (mean(b) - mean(a)) / se;
+}
+
+// ../firebase/functions/src/analytics/forecast.ts
+var MIN_HISTORY_DAYS = 35;
+var SEASON = 7;
+function prepare(series) {
+  const known = series.filter((p) => p.value !== null && isFinite(p.value)).sort((a, b) => a.day < b.day ? -1 : 1);
+  if (known.length === 0) return null;
+  const byDay = new Map(known.map((p) => [p.day, p.value]));
+  const first = known[0].day;
+  const last = known[known.length - 1].day;
+  const days = [];
+  const values = [];
+  const observed = [];
+  const overall = mean(known.map((p) => p.value));
+  for (let d = first; d <= last; d = shiftDay(d, 1)) {
+    days.push(d);
+    const v = byDay.get(d);
+    if (v !== void 0) {
+      values.push(v);
+      observed.push(true);
+    } else {
+      values.push(values.length >= SEASON ? values[values.length - SEASON] : overall);
+      observed.push(false);
+    }
+  }
+  return { days, values, observed, missing: days.length - known.length };
+}
+function seasonalNaive(y, h) {
+  const out = [];
+  for (let k = 1; k <= h; k++) out.push(y[y.length - SEASON + (k - 1) % SEASON]);
+  return out;
+}
+var PHI = 0.95;
+function hwRun(y, a, b, g) {
+  const m = SEASON;
+  let level = mean(y.slice(0, m));
+  let trend = (mean(y.slice(m, 2 * m)) - level) / m;
+  const season = y.slice(0, m).map((v) => v - level);
+  let sse = 0;
+  for (let t = m; t < y.length; t++) {
+    const s = season[t % m];
+    const fitted = level + PHI * trend + s;
+    const e = y[t] - fitted;
+    sse += e * e;
+    const prevLevel = level;
+    level = a * (y[t] - s) + (1 - a) * (prevLevel + PHI * trend);
+    trend = b * (level - prevLevel) + (1 - b) * PHI * trend;
+    season[t % m] = g * (y[t] - level) + (1 - g) * s;
+  }
+  return { sse, level, trend, season };
+}
+function holtWinters(y, h) {
+  let best = null;
+  for (const a of [0.1, 0.3, 0.5]) {
+    for (const b of [0, 0.05]) {
+      for (const g of [0.05, 0.15, 0.3]) {
+        const r2 = hwRun(y, a, b, g);
+        if (!best || r2.sse < best.sse) best = r2;
+      }
+    }
+  }
+  const r = best;
+  const out = [];
+  let damp = 0;
+  for (let k = 1; k <= h; k++) {
+    damp += Math.pow(PHI, k);
+    out.push(r.level + damp * r.trend + r.season[(y.length + k - 1) % SEASON]);
+  }
+  return out;
+}
+function features(day, special, annual) {
+  const wd = weekdayOf(day);
+  const f = [1];
+  for (let k = 0; k < 6; k++) f.push(wd === k ? 1 : 0);
+  f.push(special.has(day) ? 1 : 0);
+  f.push(special.has(shiftDay(day, 1)) && !special.has(day) ? 1 : 0);
+  if (annual) {
+    const { jm, jd } = dayToJalali(day);
+    const doy = (jm <= 6 ? (jm - 1) * 31 : 186 + (jm - 7) * 30) + jd - 1;
+    const w = 2 * Math.PI * doy / 365.2422;
+    f.push(Math.sin(w), Math.cos(w), Math.sin(2 * w), Math.cos(2 * w));
+  }
+  return f;
+}
+function calendarRegression(days, y, h, special) {
+  const annual = y.length >= 364;
+  const n = y.length;
+  const start = Math.max(0, n - 730);
+  const X = [];
+  const Y = [];
+  const W = [];
+  for (let i = start; i < n; i++) {
+    X.push(features(days[i], special, annual));
+    Y.push(y[i]);
+    W.push(annual ? 1 : Math.pow(0.5, (n - 1 - i) / 60));
+  }
+  const coef = leastSquares(X, Y, W, 1e-3);
+  if (!coef) return null;
+  let bias = 0;
+  if (annual) {
+    const recent = Math.min(28, n);
+    let s = 0;
+    for (let i = n - recent; i < n; i++) s += y[i] - dot(coef, features(days[i], special, annual));
+    bias = s / recent;
+  }
+  const out = [];
+  for (let k = 1; k <= h; k++) out.push(dot(coef, features(shiftDay(days[n - 1], k), special, annual)) + bias);
+  return out;
+}
+function predict(model, days, y, h, special) {
+  if (model === "seasonalNaive") return seasonalNaive(y, h);
+  if (model === "holtWinters") return y.length >= 2 * SEASON + 7 ? holtWinters(y, h) : null;
+  return y.length >= 28 ? calendarRegression(days, y, h, special) : null;
+}
+var MODELS = ["seasonalNaive", "holtWinters", "calendarRegression"];
+function forecastSeries(series, options) {
+  var _a, _b, _c;
+  const interval = (_a = options.interval) != null ? _a : 0.8;
+  const empty = (reason, history = 0, missing2 = 0) => ({
+    ok: false,
+    reason,
+    points: [],
+    scores: [],
+    history,
+    missing: missing2,
+    backtestHorizon: 0,
+    interval
+  });
+  const prep = prepare(series);
+  if (!prep) return empty("no_data");
+  const { days, values: y, observed, missing } = prep;
+  if (y.length < MIN_HISTORY_DAYS) return empty("insufficient_history", y.length, missing);
+  if (missing > y.length * 0.2) return empty("too_many_gaps", y.length, missing);
+  const special = (_b = options.special) != null ? _b : /* @__PURE__ */ new Set();
+  const H = Math.max(1, Math.min(options.horizon, 120));
+  const btH = Math.min(14, H);
+  const minTrain = 28;
+  const origins = [];
+  for (let o = y.length - btH; o >= minTrain && origins.length < 8; o -= SEASON) origins.push(o);
+  let naiveScale = 0;
+  for (let t = SEASON; t < y.length; t++) naiveScale += Math.abs(y[t] - y[t - SEASON]);
+  naiveScale /= y.length - SEASON;
+  const errors = {};
+  const scores = [];
+  for (const model of MODELS) {
+    const perStep = Array.from({ length: btH }, () => []);
+    const abs = [];
+    const pct = [];
+    let used = 0;
+    for (const o of origins) {
+      const f2 = predict(model, days.slice(0, o), y.slice(0, o), btH, special);
+      if (!f2) continue;
+      used++;
+      for (let k = 0; k < btH; k++) {
+        const t = o + k;
+        if (!observed[t]) continue;
+        const e = Math.abs(y[t] - clamp(f2[k], options));
+        perStep[k].push(e);
+        abs.push(e);
+        if (y[t] !== 0) pct.push(e / Math.abs(y[t]));
+      }
+    }
+    errors[model] = perStep;
+    const mae = abs.length ? mean(abs) : null;
+    scores.push({
+      model,
+      mae: round2(mae, 3),
+      mape: pct.length ? round2(mean(pct) * 100, 2) : null,
+      mase: mae !== null && naiveScale > 0 ? round2(mae / naiveScale, 3) : null,
+      origins: used
+    });
+  }
+  const naive = scores.find((s) => s.model === "seasonalNaive");
+  let chosen = naive;
+  for (const s of scores) {
+    if (s.mae === null || s.origins < Math.min(3, origins.length)) continue;
+    if (chosen.mae === null || s.mae < chosen.mae) chosen = s;
+  }
+  if (naive.mae !== null && chosen.mae !== null && chosen.mae > naive.mae) chosen = naive;
+  const f = (_c = predict(chosen.model, days, y, H, special)) != null ? _c : seasonalNaive(y, H);
+  const steps = errors[chosen.model];
+  const width = (k) => {
+    const lo = Math.floor(Math.min(k, btH - 1) / SEASON) * SEASON;
+    const pool = [];
+    for (let i = lo; i < Math.min(lo + SEASON, btH); i++) pool.push(...steps[i]);
+    const all = pool.length ? pool : [].concat(...steps);
+    const q = all.length ? quantile(all, interval) : 0;
+    return k < btH ? q : q * Math.sqrt((k + 1) / btH);
+  };
+  const last = days[days.length - 1];
+  const points = f.map((v, k) => {
+    const value = clamp(v, options);
+    const w = width(k);
+    return {
+      day: shiftDay(last, k + 1),
+      value: round2(value, 2),
+      lower: round2(clamp(value - w, options), 2),
+      upper: round2(clamp(value + w, options), 2)
+    };
+  });
+  return {
+    ok: true,
+    model: chosen.model,
+    points,
+    scores,
+    trainedFrom: days[0],
+    trainedTo: last,
+    history: y.length,
+    missing,
+    backtestHorizon: btH,
+    interval
+  };
+}
+function clamp(v, o) {
+  let x2 = v;
+  if (o.min !== void 0 && x2 < o.min) x2 = o.min;
+  if (o.max !== void 0 && x2 > o.max) x2 = o.max;
+  return x2;
+}
+
+// ../firebase/functions/src/analytics/energy-baseline.ts
+var MIN_BASELINE_DAYS = 28;
+var MAX_CVRMSE = 25;
+function x(day, occupied, annual) {
+  const f = [1, occupied, weekdayOf(day) === 5 ? 1 : 0];
+  if (annual) {
+    const { jm, jd } = dayToJalali(day);
+    const doy = (jm <= 6 ? (jm - 1) * 31 : 186 + (jm - 7) * 30) + jd - 1;
+    const w = 2 * Math.PI * doy / 365.2422;
+    f.push(Math.sin(w), Math.cos(w), Math.sin(2 * w), Math.cos(2 * w));
+  }
+  return f;
+}
+function fit(rows, annual) {
+  const X = rows.map((r) => x(r.day, r.occupied, annual));
+  const y = rows.map((r) => r.consumption);
+  const coef = leastSquares(X, y, void 0, 1e-6);
+  if (!coef) return null;
+  const resid = y.map((v, i) => v - dot(coef, X[i]));
+  return { coef, resid };
+}
+function fitBaseline(rows) {
+  const data = rows.filter((r) => isFinite(r.consumption) && r.consumption >= 0 && isFinite(r.occupied)).sort((a, b) => a.day < b.day ? -1 : 1);
+  if (data.length < MIN_BASELINE_DAYS) return null;
+  const annual = data.length >= 300;
+  let first = fit(data, annual);
+  if (!first) return null;
+  const p = first.coef.length;
+  const rmse0 = Math.sqrt(first.resid.reduce((s, e) => s + e * e, 0) / Math.max(1, data.length - p));
+  const kept = data.filter((_, i) => Math.abs(first.resid[i]) <= 3 * rmse0);
+  let used = data;
+  if (kept.length >= MIN_BASELINE_DAYS && kept.length < data.length) {
+    const second = fit(kept, annual);
+    if (second) {
+      first = second;
+      used = kept;
+    }
+  }
+  const n = used.length;
+  const y = used.map((r) => r.consumption);
+  const m = mean(y);
+  const sse = first.resid.reduce((s, e) => s + e * e, 0);
+  const sst = y.reduce((s, v) => s + (v - m) * (v - m), 0);
+  const dof = Math.max(1, n - p);
+  const rmse = Math.sqrt(sse / dof);
+  const cvrmse = m > 0 ? rmse / m * 100 : Infinity;
+  const nmbe = m > 0 ? first.resid.reduce((s, e) => s + e, 0) / (dof * m) * 100 : 0;
+  return {
+    coef: first.coef.map((c) => round2(c, 6)),
+    annual,
+    n,
+    p,
+    from: used[0].day,
+    to: used[n - 1].day,
+    mean: round2(m, 3),
+    rmse: round2(rmse, 3),
+    cvrmse: round2(cvrmse, 2),
+    nmbe: round2(nmbe, 3),
+    r2: sst > 0 ? round2(1 - sse / sst, 4) : 0,
+    dropped: data.length - n,
+    valid: cvrmse <= MAX_CVRMSE
+  };
+}
+function expected(model, day, occupied) {
+  return Math.max(0, dot(model.coef, x(day, occupied, model.annual)));
+}
+function checkReading(model, day, occupied, consumption, thresholdPct) {
+  const e = expected(model, day, occupied);
+  const deviationPct = e > 0 ? (consumption - e) / e * 100 : 0;
+  const z = model.rmse > 0 ? (consumption - e) / model.rmse : 0;
+  const anomaly = model.valid && z > 2.5 && deviationPct > thresholdPct;
+  return {
+    expected: round2(e, 2),
+    deviationPct: round2(deviationPct, 1),
+    z: round2(z, 2),
+    anomaly,
+    critical: anomaly && deviationPct > 2 * thresholdPct
+  };
+}
+function measure(model, period) {
+  const days = [];
+  let cusum = 0;
+  let totalActual = 0;
+  let totalExpected = 0;
+  for (const r of period.slice().sort((a, b) => a.day < b.day ? -1 : 1)) {
+    const e = expected(model, r.day, r.occupied);
+    const diff = r.consumption - e;
+    cusum += diff;
+    totalActual += r.consumption;
+    totalExpected += e;
+    days.push({
+      day: r.day,
+      actual: round2(r.consumption, 2),
+      expected: round2(e, 2),
+      diff: round2(diff, 2),
+      cusum: round2(cusum, 2),
+      occupied: r.occupied
+    });
+  }
+  const savings = totalExpected - totalActual;
+  const uncertainty = 1.96 * model.rmse * Math.sqrt(Math.max(1, days.length));
+  return {
+    days,
+    totalActual: round2(totalActual, 2),
+    totalExpected: round2(totalExpected, 2),
+    savings: round2(savings, 2),
+    uncertainty: round2(uncertainty, 2),
+    significant: model.valid && days.length > 0 && Math.abs(savings) > uncertainty
+  };
+}
+
+// ../firebase/functions/src/analytics/evaluation.ts
+var EVALUATION_WINDOW_DAYS = {
+  energyBaseline: 14,
+  durationAvg: 7,
+  ticketCount: 30,
+  stockout: 14,
+  oooRooms: 7,
+  occupancyGap: 28
+};
+function evaluateEnergy(model, after, tariff, window) {
+  const limitations = ["Baseline adjusts for occupancy and season only; weather and operational changes are not modelled."];
+  if (!model) return { status: "insufficientData", method: "energyBaseline", limitations: [...limitations, "No baseline: fewer than 28 days with energy and occupancy before the decision."], window };
+  if (!model.valid) return { status: "insufficientData", method: "energyBaseline", limitations: [...limitations, `Baseline CV(RMSE) ${model.cvrmse}% exceeds the 25% limit.`], window };
+  if (after.length < 10) return { status: "insufficientData", method: "energyBaseline", limitations: [...limitations, `Only ${after.length} days measured after the decision (need 10).`], window };
+  const m = measure(model, after);
+  const perDay = m.savings / after.length;
+  return {
+    status: m.significant ? "evaluated" : "inconclusive",
+    method: "energyBaseline",
+    unit: "kWh",
+    baseline: m.totalExpected,
+    actual: m.totalActual,
+    delta: m.savings,
+    improved: m.significant ? m.savings > 0 : null,
+    monthlyIrr: m.significant ? Math.round(perDay * 30 * tariff) : null,
+    confidence: m.significant ? Math.abs(m.savings) > 2 * m.uncertainty ? "high" : "medium" : "low",
+    detail: `savings ${round2(m.savings, 0)} kWh \xB1 ${round2(m.uncertainty, 0)} kWh (95%) over ${after.length} days; baseline CV(RMSE) ${model.cvrmse}%`,
+    limitations: [...limitations, "Uncertainty assumes independent daily errors, so it may be optimistic."],
+    window
+  };
+}
+function evaluateMean(method, unit, before, after, window, lowerIsBetter = true) {
+  const limitations = ["Simple before/after comparison: other changes in the same period are not controlled for."];
+  if (before.length < 5 || after.length < 5) {
+    return { status: "insufficientData", method, unit, limitations: [...limitations, `Samples: ${before.length} before, ${after.length} after (need 5 each).`], window };
+  }
+  const b = mean(before);
+  const a = mean(after);
+  const t = welchT(before, after);
+  const significant = t !== null && Math.abs(t) >= 2;
+  const delta = a - b;
+  return {
+    status: significant ? "evaluated" : "inconclusive",
+    method,
+    unit,
+    baseline: round2(b, 2),
+    actual: round2(a, 2),
+    delta: round2(delta, 2),
+    improved: significant ? lowerIsBetter ? delta < 0 : delta > 0 : null,
+    confidence: significant ? Math.abs(t) >= 3 ? "high" : "medium" : "low",
+    detail: `n=${before.length}/${after.length}, Welch t=${round2(t, 2)}`,
+    limitations,
+    window
+  };
+}
+function evaluateCount(method, unit, before, after, window) {
+  const se = Math.sqrt(before + after);
+  const significant = se > 0 && Math.abs(after - before) >= 2 * se;
+  return {
+    status: significant ? "evaluated" : "inconclusive",
+    method,
+    unit,
+    baseline: before,
+    actual: after,
+    delta: after - before,
+    improved: significant ? after < before : null,
+    confidence: significant ? "medium" : "low",
+    detail: `${before} before vs ${after} after`,
+    limitations: ["Counts are small; a change may be chance.", "Other changes in the same period are not controlled for."],
+    window
+  };
+}
+function evaluateOutcome(method, happened, detail, window) {
+  return {
+    status: "evaluated",
+    method,
+    actual: happened ? 1 : 0,
+    improved: !happened,
+    confidence: "medium",
+    detail,
+    limitations: ["Shows whether the problem occurred, not how much the action contributed."],
+    window
+  };
 }
