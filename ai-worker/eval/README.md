@@ -18,7 +18,8 @@ Each question runs `--k` times (default 3). Questions: `questions.fa.json`
 ```bash
 cd pocketbase && npm run test-server            # prints ZH_PB_TEST_URL / ZH_PB_TEST_HOTEL
 node ai-worker/eval/local-accounts.mjs > "$TMPDIR/zarin-eval-accounts.json"   # outside the repo
-cd ai-worker && ZH_PB_SUPERUSER_EMAIL=ci@zarin.local ZH_PB_SUPERUSER_PASSWORD=ci-Password-123 \
+# superuser of the throw-away test server: SUPERUSER in pocketbase/scripts/test-server.mjs
+cd ai-worker && ZH_PB_SUPERUSER_EMAIL=... ZH_PB_SUPERUSER_PASSWORD=... \
   python -m eval.run_eval --pb-url "$ZH_PB_TEST_URL" --hotel "$ZH_PB_TEST_HOTEL" \
   --accounts "$TMPDIR/zarin-eval-accounts.json" --k 3
 ```

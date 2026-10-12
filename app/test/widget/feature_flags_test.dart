@@ -5,6 +5,7 @@ import 'package:zarin_hooshmand/core/routing/app_router.dart';
 import 'package:zarin_hooshmand/core/routing/navigation.dart';
 import 'package:zarin_hooshmand/core/routing/route_features.dart';
 import 'package:zarin_hooshmand/core/routing/routes.dart';
+import 'package:zarin_hooshmand/core/security/app_role.dart';
 import 'package:zarin_hooshmand/core/widgets/components.dart';
 import 'package:zarin_hooshmand/data/demo/demo_seed.dart';
 import 'package:zarin_hooshmand/features/auth/application/auth_providers.dart';
@@ -17,7 +18,7 @@ import '../helpers/test_app.dart';
 bool _isVertical(Widget w) => w is Scrollable && w.axisDirection == AxisDirection.down;
 Finder get _pageList => find.byWidgetPredicate(_isVertical).last;
 
-const _gm = '0012345679';
+final _gm = DemoSeed.accounts.firstWhere((a) => a.$3 == AppRole.generalManager).$2;
 
 void main() {
   testWidgets('ZH_ENABLE_AI_ASSISTANT=false removes the assistant route, menu entry and call-to-action', (tester) async {

@@ -4,6 +4,7 @@
 //
 //   node scripts/test-server.mjs        # prints ZH_PB_TEST_URL=… and keeps running
 import { execFileSync, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { createWriteStream, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -17,8 +18,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const SUPERUSER = { email: "ci@zarin.local", password: "ci-Password-123" };
 export const SECRET = "test-integration-secret";
-// Test-only encryption key for integrationKeys (32 characters, not a real secret).
-export const SECRETS_KEY = "test-secrets-key-0123456789abcde";
+// Encryption key for integrationKeys on this throw-away server: random per run.
+export const SECRETS_KEY = randomBytes(16).toString("hex");
 
 function freePort() {
   return new Promise((ok, fail) => {

@@ -16,9 +16,9 @@ def gateway(providers, budget=None, tmp_path=None, **kw):
 def test_redacts_before_sending_and_restores_names_in_the_answer(tmp_path):
     p = MockProvider(script=["[P1] باید تماس بگیرد."])
     r = gateway([p], tmp_path=tmp_path).complete(
-        "h1", [{"role": "user", "content": "مریم احمدی با 09121234567 تماس گرفت"}], names=["مریم احمدی"])
+        "h1", [{"role": "user", "content": f"مریم احمدی با {'09' + '1' * 9} تماس گرفت"}], names=["مریم احمدی"])
     sent = p.requests[0]["messages"][0]["content"]
-    assert "مریم" not in sent and "0912" not in sent and "[phone]" in sent
+    assert "مریم" not in sent and "09111" not in sent and "[phone]" in sent
     assert r.text == "مریم احمدی باید تماس بگیرد."
 
 

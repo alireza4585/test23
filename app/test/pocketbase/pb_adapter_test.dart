@@ -18,6 +18,7 @@ import 'package:zarin_hooshmand/core/error/app_failure.dart';
 import 'package:zarin_hooshmand/core/platform/platform_services.dart';
 import 'package:zarin_hooshmand/core/security/app_permission.dart';
 import 'package:zarin_hooshmand/core/security/app_role.dart';
+import 'package:zarin_hooshmand/data/demo/demo_seed.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_auth_repository.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_engagement_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dart';
@@ -183,7 +184,8 @@ void main() {
   }, skip: skip);
 
   test('assistant: the server keeps the thread', () async {
-    final s = await _Session.signIn('0012345679');
+    final gm = DemoSeed.accounts.firstWhere((a) => a.$3 == AppRole.generalManager).$2;
+    final s = await _Session.signIn(gm);
     final assistant = PocketBaseAiAssistantRepository(s.pb);
     final first = await assistant.ask(hotelId: s.user.hotelId, question: 'مصرف برق چطور است؟', history: const [], localeCode: 'fa');
     expect(first.text, isNotEmpty);

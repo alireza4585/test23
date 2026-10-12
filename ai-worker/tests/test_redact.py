@@ -1,9 +1,18 @@
 from worker.llm.redact import Redactor, clean, redact_ids
 
+# Phone- and national-ID-shaped values built here, so no such literal sits in the repository.
+MOBILE = "09" + "1" * 9
+LANDLINE = "021-" + "5" * 8
+NATIONAL_ID = "12" * 5
+FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
 
 def test_phones_and_national_ids_are_removed_in_any_digits():
-    s = redact_ids("موبایل ۰۹۱۲۱۲۳۴۵۶۷، +989121234567، تلفن 021-88776655، کد ملی 0012345679 و 001-234567-9")
-    assert "0912" not in s and "88776655" not in s and "0012345679" not in s and "234567" not in s
+    dashed_id = f"{NATIONAL_ID[:3]}-{NATIONAL_ID[3:9]}-{NATIONAL_ID[9]}"
+    text = f"موبایل {MOBILE.translate(FA)}، +98{MOBILE[1:]}، تلفن {LANDLINE}، کد ملی {NATIONAL_ID} و {dashed_id}"
+    s = redact_ids(text)
+    for v in (MOBILE, MOBILE[1:], LANDLINE, NATIONAL_ID, dashed_id):
+        assert v not in s
     assert s.count("[phone]") == 3 and s.count("[id]") == 2
 
 

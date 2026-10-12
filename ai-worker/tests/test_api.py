@@ -13,7 +13,7 @@ from worker.llm import LLMGateway, MockProvider
 from worker.llm.gateway import MemoryBudget
 from worker.pb_client import sign
 
-SECRET = "trigger-secret-for-tests"
+SECRET = secrets.token_hex(16)  # random per run
 
 
 class FakePb:
