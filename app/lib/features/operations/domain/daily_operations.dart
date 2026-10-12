@@ -13,6 +13,8 @@ class DailyOperations {
     this.otherRevenue = 0,
     this.updatedByName,
     this.updatedAt,
+    this.financeKnown = true,
+    this.financeRecorded = false,
   });
 
   final DateTime day;
@@ -24,6 +26,13 @@ class DailyOperations {
   final double otherRevenue;
   final String? updatedByName;
   final DateTime? updatedAt;
+
+  /// Whether the revenue fields hold this user's view of the day's revenue
+  /// (PocketBase: only with finance.view, from dailyFinance). Otherwise they are 0.
+  final bool financeKnown;
+
+  /// Revenue has been recorded for the day (visible to recorders who cannot read it).
+  final bool financeRecorded;
 
   /// Occupancy % = occupied / available.
   double get occupancyRate =>
@@ -38,6 +47,18 @@ class DailyOperations {
   double get totalRevenue => roomRevenue + fnbRevenue + otherRevenue;
 }
 
+/// Revenue typed for one day. It is recorded write-only: the app never shows
+/// the stored value, and a correction is a new entry.
+class RevenueEntry {
+  const RevenueEntry({required this.roomRevenue, required this.fnbRevenue, required this.otherRevenue});
+
+  final double roomRevenue;
+  final double fnbRevenue;
+  final double otherRevenue;
+
+  double get total => roomRevenue + fnbRevenue + otherRevenue;
+}
+
 abstract interface class OperationsRepository {
   Stream<List<DailyOperations>> watchRange(
     String hotelId, {
@@ -45,5 +66,7 @@ abstract interface class OperationsRepository {
     required DateTime to,
   });
 
-  Future<void> save(String hotelId, DailyOperations operations, Actor actor);
+  /// Saves occupancy for the day and, with [revenue] (finance.record), the
+  /// day's revenue. The revenue fields of [operations] are ignored.
+  Future<void> save(String hotelId, DailyOperations operations, Actor actor, {RevenueEntry? revenue});
 }

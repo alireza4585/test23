@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/enum_labels.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/routing/routes.dart';
+import '../../../core/security/app_permission.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/day_key.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/charts.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../energy/application/energy_providers.dart';
 import '../../energy/domain/energy_reading.dart';
 import '../../hotel/application/hotel_providers.dart';
@@ -54,6 +56,7 @@ class ForecastsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canFinance = ref.watch(sessionUserProvider)?.can(AppPermission.financeView) ?? false;
     final l10n = context.l10n;
     final actions = ref.watch(forecastActionsProvider);
     final forecasts = ref.watch(forecastsProvider);
@@ -86,6 +89,7 @@ class ForecastsPage extends ConsumerWidget {
             Text(l10n.forecastIsEstimate, style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: Insets.md),
             for (final s in ForecastSeries.values)
+              if (!_isRevenue(s) || canFinance)
               Padding(
                 padding: const EdgeInsets.only(bottom: Insets.md),
                 child: _SeriesCard(series: s, forecast: map[s]),
@@ -185,7 +189,8 @@ class ForecastSummaryCard extends ConsumerWidget {
     if (!ref.watch(hotelSettingsProvider).has(HotelFeature.forecasts)) return const SizedBox.shrink();
     final map = ref.watch(forecastsProvider).value ?? const {};
     final occ = map[ForecastSeries.occupancy];
-    final rev = map[ForecastSeries.roomRevenue];
+    final canFinance = ref.watch(sessionUserProvider)?.can(AppPermission.financeView) ?? false;
+    final rev = canFinance ? map[ForecastSeries.roomRevenue] : null;
     if ((occ == null || !occ.run.ok) && (rev == null || !rev.run.ok)) return const SizedBox.shrink();
     final theme = Theme.of(context);
     double avg(List<ForecastPoint> p) => p.take(7).fold(0.0, (s, x) => s + x.value) / p.take(7).length;

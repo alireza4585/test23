@@ -1027,5 +1027,22 @@
         "type": "String"
       }
     }
-  }
+  },
+  "revenueSectionTitle": "درآمد روز (فقط ثبت)",
+  "revenueWriteOnlyHint": "مقدار ثبت‌شده هرگز نمایش داده نمی‌شود. برای اصلاح، مقادیر را کامل دوباره وارد کنید.",
+  "revenueRecorded": "درآمد این روز ثبت شده است.",
+  "revenueNotRecorded": "درآمد این روز هنوز ثبت نشده است.",
+  "revenueNeedsRoom": "برای ثبت درآمد، درآمد اتاق را وارد کنید.",
+  "confirmRevenueTitle": "تأیید ثبت درآمد",
+  "confirmRevenueBody": "این مقادیر برای {day} ثبت می‌شود و پس از ثبت قابل مشاهده نیست:",
+  "@confirmRevenueBody": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "revenueTotal": "جمع",
+  "confirmAndSave": "تأیید و ثبت",
+  "editValues": "ویرایش"
 }

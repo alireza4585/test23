@@ -108,6 +108,10 @@ class PocketBaseInsightsRepository implements InsightsRepository {
       .map((records) => [for (final r in records) insightFromRecord(r)]);
 
   @override
+  Future<void> updateStatus(String hotelId, String insightId, InsightStatus status, Actor actor) =>
+      pbGuard(() => _pb.collection('aiInsights').update(insightId, body: {'status': status.name}));
+
+  @override
   Future<void> decide(
     String hotelId,
     String insightId,

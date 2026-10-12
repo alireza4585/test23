@@ -590,7 +590,7 @@ class FirestoreOperationsRepository implements OperationsRepository {
       .mapFailures();
 
   @override
-  Future<void> save(String hotelId, DailyOperations o, Actor actor) =>
+  Future<void> save(String hotelId, DailyOperations o, Actor actor, {RevenueEntry? revenue}) =>
       guard(() async {
         if (o.roomsOccupied > o.roomsAvailable) {
           throw const ValidationFailure('occupied_exceeds_available');
@@ -602,14 +602,18 @@ class FirestoreOperationsRepository implements OperationsRepository {
           'roomsAvailable': o.roomsAvailable,
           'roomsOccupied': o.roomsOccupied,
           'guests': o.guests,
-          'roomRevenue': o.roomRevenue,
-          'fnbRevenue': o.fnbRevenue,
-          'otherRevenue': o.otherRevenue,
+          // Firebase is frozen (PocketBase is the supported backend): revenue
+          // stays in the operations document, written only with an entry.
+          if (revenue != null) ...{
+            'roomRevenue': revenue.roomRevenue,
+            'fnbRevenue': revenue.fnbRevenue,
+            'otherRevenue': revenue.otherRevenue,
+          },
           'source': 'manual',
           'updatedBy': actorJson(actor),
           'updatedByName': actor.name,
           'updatedAt': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
       });
 }
 

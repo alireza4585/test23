@@ -7,6 +7,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../hotel/application/hotel_providers.dart';
+import '../../hotel/domain/hotel.dart';
 import '../application/ai_providers.dart';
 import '../domain/ai_models.dart';
 import 'insight_card.dart';
@@ -20,6 +22,7 @@ class InsightsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(hotelSettingsProvider).has(HotelFeature.recommendationLoop)) return const _ClassicInsightsPage();
     final l10n = context.l10n;
     final fmt = context.fmt;
     final ledger = ref.watch(recommendationLedgerProvider);
@@ -89,6 +92,38 @@ class InsightsPage extends ConsumerWidget {
               children: [list(open, header: true), list(decided, header: false), list(closed, header: false)],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// The insights list as it was before the Recommendation Center (the hotel's
+/// recommendationLoop flag is off): open insights with accept / implemented / dismiss.
+class _ClassicInsightsPage extends ConsumerWidget {
+  const _ClassicInsightsPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final insights = ref.watch(insightsProvider);
+    return Scaffold(
+      key: const Key('insights.classic'),
+      appBar: AppBar(title: Text(l10n.insightsTitle), actions: const [ShellActions()]),
+      body: AsyncValueView<List<AiInsight>>(
+        value: insights,
+        data: (list) => PageBody(
+          maxWidth: 820,
+          children: [
+            Text(l10n.insightsSubtitle, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: Insets.md),
+            if (list.isEmpty) EmptyState(icon: Icons.auto_awesome_outlined, message: l10n.noInsights),
+            for (final i in list)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Insets.md),
+                child: InsightCard(insight: i, expanded: true),
+              ),
+          ],
         ),
       ),
     );

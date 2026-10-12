@@ -18,6 +18,7 @@ import 'package:zarin_hooshmand/core/error/app_failure.dart';
 import 'package:zarin_hooshmand/core/platform/platform_services.dart';
 import 'package:zarin_hooshmand/core/security/app_permission.dart';
 import 'package:zarin_hooshmand/core/security/app_role.dart';
+import 'package:zarin_hooshmand/core/utils/day_key.dart';
 import 'package:zarin_hooshmand/data/demo/demo_seed.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_auth_repository.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_engagement_repositories.dart';
@@ -32,6 +33,7 @@ import 'package:zarin_hooshmand/features/forecast/domain/forecast.dart';
 import 'package:zarin_hooshmand/features/housekeeping/domain/housekeeping_task.dart';
 import 'package:zarin_hooshmand/features/inventory/domain/inventory_item.dart';
 import 'package:zarin_hooshmand/features/maintenance/domain/maintenance_ticket.dart';
+import 'package:zarin_hooshmand/features/operations/domain/daily_operations.dart';
 import 'package:zarin_hooshmand/features/rooms/domain/room.dart';
 
 final _url = Platform.environment['ZH_PB_TEST_URL'];
@@ -181,6 +183,37 @@ void main() {
     );
     expect(reply.text, contains('برق'));
     expect(reply.dataPoints, hasLength(3));
+  }, skip: skip);
+
+  test('daily operations: revenue is write-only for reception and visible to the GM', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final reception = await _Session.signIn(nid(AppRole.receptionStaff));
+    final hotelId = reception.user.hotelId;
+    final day = DayKey.hotelToday(DateTime.now()).subtract(const Duration(days: 3));
+    final repo = PocketBaseOperationsRepository(reception.pb);
+    await repo.save(
+      hotelId,
+      DailyOperations(day: day, roomsAvailable: 58, roomsOccupied: 43, guests: 70, roomRevenue: 0),
+      reception.user.asActor,
+      revenue: const RevenueEntry(roomRevenue: 111000000, fnbRevenue: 22000000, otherRevenue: 3000000),
+    );
+    bool sameDay(DailyOperations o) => DayKey.of(o.day) == DayKey.of(day);
+    final mine = await firstWhere(
+      repo.watchRange(hotelId, from: day, to: day),
+      (l) => l.any((o) => sameDay(o) && o.roomsOccupied == 43),
+    );
+    final r = mine.firstWhere(sameDay);
+    expect(r.financeRecorded, isTrue);
+    expect(r.financeKnown, isFalse);
+    expect(r.totalRevenue, 0);
+
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final theirs = await firstWhere(
+      PocketBaseOperationsRepository(gm.pb).watchRange(hotelId, from: day, to: day),
+      (l) => l.any((o) => sameDay(o) && o.financeKnown),
+    );
+    final g = theirs.firstWhere(sameDay);
+    expect([g.roomRevenue, g.fnbRevenue, g.otherRevenue], [111000000, 22000000, 3000000]);
   }, skip: skip);
 
   test('assistant: the server keeps the thread', () async {

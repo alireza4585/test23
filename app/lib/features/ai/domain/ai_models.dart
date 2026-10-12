@@ -179,6 +179,10 @@ abstract interface class InsightsRepository {
   /// (decided, dismissed and resolved too), newest first.
   Stream<List<AiInsight>> watchInsights(String hotelId, {bool activeOnly = true});
 
+  /// Plain status change (accept / implemented / dismiss), used while the
+  /// hotel's recommendationLoop flag is off (the classic insights list).
+  Future<void> updateStatus(String hotelId, String insightId, InsightStatus status, Actor actor);
+
   /// Records a decision with an optional [note]. With [createTicket] the
   /// backend also opens one maintenance ticket linked to the recommendation
   /// (a repeated request reuses it).

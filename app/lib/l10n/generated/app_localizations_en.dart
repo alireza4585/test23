@@ -1786,4 +1786,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String forecastModelLine(String model) {
     return 'Model: $model';
   }
+
+  @override
+  String get revenueSectionTitle => 'Day\'s revenue (record only)';
+
+  @override
+  String get revenueWriteOnlyHint =>
+      'Recorded amounts are never shown. To correct them, enter the amounts again in full.';
+
+  @override
+  String get revenueRecorded => 'Revenue for this day has been recorded.';
+
+  @override
+  String get revenueNotRecorded =>
+      'No revenue has been recorded for this day yet.';
+
+  @override
+  String get revenueNeedsRoom => 'Enter room revenue to record revenue.';
+
+  @override
+  String get confirmRevenueTitle => 'Confirm revenue';
+
+  @override
+  String confirmRevenueBody(String day) {
+    return 'These amounts will be recorded for $day and cannot be viewed afterwards:';
+  }
+
+  @override
+  String get revenueTotal => 'Total';
+
+  @override
+  String get confirmAndSave => 'Confirm and save';
+
+  @override
+  String get editValues => 'Edit';
 }

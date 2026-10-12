@@ -3337,6 +3337,66 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'مدل: {model}'**
   String forecastModelLine(String model);
+
+  /// No description provided for @revenueSectionTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد روز (فقط ثبت)'**
+  String get revenueSectionTitle;
+
+  /// No description provided for @revenueWriteOnlyHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'مقدار ثبت‌شده هرگز نمایش داده نمی‌شود. برای اصلاح، مقادیر را کامل دوباره وارد کنید.'**
+  String get revenueWriteOnlyHint;
+
+  /// No description provided for @revenueRecorded.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد این روز ثبت شده است.'**
+  String get revenueRecorded;
+
+  /// No description provided for @revenueNotRecorded.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد این روز هنوز ثبت نشده است.'**
+  String get revenueNotRecorded;
+
+  /// No description provided for @revenueNeedsRoom.
+  ///
+  /// In fa, this message translates to:
+  /// **'برای ثبت درآمد، درآمد اتاق را وارد کنید.'**
+  String get revenueNeedsRoom;
+
+  /// No description provided for @confirmRevenueTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید ثبت درآمد'**
+  String get confirmRevenueTitle;
+
+  /// No description provided for @confirmRevenueBody.
+  ///
+  /// In fa, this message translates to:
+  /// **'این مقادیر برای {day} ثبت می‌شود و پس از ثبت قابل مشاهده نیست:'**
+  String confirmRevenueBody(String day);
+
+  /// No description provided for @revenueTotal.
+  ///
+  /// In fa, this message translates to:
+  /// **'جمع'**
+  String get revenueTotal;
+
+  /// No description provided for @confirmAndSave.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید و ثبت'**
+  String get confirmAndSave;
+
+  /// No description provided for @editValues.
+  ///
+  /// In fa, this message translates to:
+  /// **'ویرایش'**
+  String get editValues;
 }
 
 class _AppLocalizationsDelegate

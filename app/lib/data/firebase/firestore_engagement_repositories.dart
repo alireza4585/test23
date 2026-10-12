@@ -161,6 +161,14 @@ class FirestoreInsightsRepository implements InsightsRepository {
   /// The Firebase backend records the decision only; linked tickets and
   /// evaluations need the PocketBase backend.
   @override
+  Future<void> updateStatus(String hotelId, String insightId, InsightStatus status, Actor actor) =>
+      guard(() => _db.doc('${FsPaths.insights(hotelId)}/$insightId').update({
+        'status': status.name,
+        'updatedBy': actor.uid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }));
+
+  @override
   Future<void> decide(
     String hotelId,
     String insightId,

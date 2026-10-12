@@ -37,6 +37,14 @@ class InsightActions {
         user.canAny(const {AppPermission.dashboardExecutive, AppPermission.dashboardOperations});
   }
 
+  /// Classic accept / implemented / dismiss (recommendationLoop off).
+  Future<void> setStatus(AiInsight insight, InsightStatus status) async {
+    final user = ref.read(sessionUserProvider);
+    if (user == null) throw const SessionExpiredFailure();
+    if (!canDecide) throw const PermissionDeniedFailure('insight.status');
+    await ref.read(insightsRepositoryProvider).updateStatus(user.hotelId, insight.id, status, user.asActor);
+  }
+
   bool get canCreateTicket => ref.read(sessionUserProvider)?.can(AppPermission.maintenanceReport) ?? false;
 
   Future<void> decide(

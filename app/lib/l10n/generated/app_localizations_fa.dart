@@ -1784,4 +1784,37 @@ class AppLocalizationsFa extends AppLocalizations {
   String forecastModelLine(String model) {
     return 'مدل: $model';
   }
+
+  @override
+  String get revenueSectionTitle => 'درآمد روز (فقط ثبت)';
+
+  @override
+  String get revenueWriteOnlyHint =>
+      'مقدار ثبت‌شده هرگز نمایش داده نمی‌شود. برای اصلاح، مقادیر را کامل دوباره وارد کنید.';
+
+  @override
+  String get revenueRecorded => 'درآمد این روز ثبت شده است.';
+
+  @override
+  String get revenueNotRecorded => 'درآمد این روز هنوز ثبت نشده است.';
+
+  @override
+  String get revenueNeedsRoom => 'برای ثبت درآمد، درآمد اتاق را وارد کنید.';
+
+  @override
+  String get confirmRevenueTitle => 'تأیید ثبت درآمد';
+
+  @override
+  String confirmRevenueBody(String day) {
+    return 'این مقادیر برای $day ثبت می‌شود و پس از ثبت قابل مشاهده نیست:';
+  }
+
+  @override
+  String get revenueTotal => 'جمع';
+
+  @override
+  String get confirmAndSave => 'تأیید و ثبت';
+
+  @override
+  String get editValues => 'ویرایش';
 }

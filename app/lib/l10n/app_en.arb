@@ -701,5 +701,22 @@
         "type": "String"
       }
     }
-  }
+  },
+  "revenueSectionTitle": "Day's revenue (record only)",
+  "revenueWriteOnlyHint": "Recorded amounts are never shown. To correct them, enter the amounts again in full.",
+  "revenueRecorded": "Revenue for this day has been recorded.",
+  "revenueNotRecorded": "No revenue has been recorded for this day yet.",
+  "revenueNeedsRoom": "Enter room revenue to record revenue.",
+  "confirmRevenueTitle": "Confirm revenue",
+  "confirmRevenueBody": "These amounts will be recorded for {day} and cannot be viewed afterwards:",
+  "@confirmRevenueBody": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "revenueTotal": "Total",
+  "confirmAndSave": "Confirm and save",
+  "editValues": "Edit"
 }

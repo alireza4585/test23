@@ -6,6 +6,7 @@ import '../../core/domain/actor.dart';
 import '../../core/error/app_failure.dart';
 import '../../core/security/app_role.dart';
 import '../../core/utils/day_key.dart';
+import '../../core/utils/stream_utils.dart';
 import '../../features/energy/domain/energy_reading.dart';
 import '../../features/hotel/domain/hotel.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
@@ -386,54 +387,62 @@ class PocketBaseEnergyRepository extends _PbRepository implements EnergyReposito
 class PocketBaseOperationsRepository extends _PbRepository implements OperationsRepository {
   PocketBaseOperationsRepository(super.pb);
 
+  /// Occupancy from dailyOperations, revenue from dailyFinance — which the
+  /// server returns only to finance.view holders (an empty list otherwise).
   @override
-  Stream<List<DailyOperations>> watchRange(String hotelId, {required DateTime from, required DateTime to}) => live
-      .list(
-        'dailyOperations',
-        filter: byHotel(hotelId, 'day >= {:from} && day <= {:to}', {'from': DayKey.of(from), 'to': DayKey.of(to)}),
-        sort: 'day',
-        limit: 400,
-      )
-      .map(
-        (records) => [
-          for (final r in records)
-            DailyOperations(
-              day: DayKey.parse(r.str('day')),
-              roomsAvailable: r.integer('roomsAvailable'),
-              roomsOccupied: r.integer('roomsOccupied'),
-              guests: r.integer('guests'),
-              roomRevenue: r.dbl('roomRevenue'),
-              fnbRevenue: r.dbl('fnbRevenue'),
-              otherRevenue: r.dbl('otherRevenue'),
-              updatedByName: r.strOrNull('updatedByName'),
-              updatedAt: r.updatedAt,
-            ),
-        ],
-      );
+  Stream<List<DailyOperations>> watchRange(String hotelId, {required DateTime from, required DateTime to}) {
+    final range = {'from': DayKey.of(from), 'to': DayKey.of(to)};
+    Stream<List<RecordModel>> list(String collection) => live.list(
+      collection,
+      filter: byHotel(hotelId, 'day >= {:from} && day <= {:to}', range),
+      sort: 'day',
+      limit: 400,
+    );
+    return combineLatestLists<(String, RecordModel)>([
+      list('dailyOperations').map((rs) => [for (final r in rs) ('ops', r)]),
+      list('dailyFinance').map((rs) => [for (final r in rs) ('fin', r)]),
+    ]).map((tagged) {
+      final finance = {for (final (tag, r) in tagged) if (tag == 'fin') r.str('day'): r};
+      return [
+        for (final (tag, r) in tagged)
+          if (tag == 'ops')
+            () {
+              final f = finance[r.str('day')];
+              return DailyOperations(
+                day: DayKey.parse(r.str('day')),
+                roomsAvailable: r.integer('roomsAvailable'),
+                roomsOccupied: r.integer('roomsOccupied'),
+                guests: r.integer('guests'),
+                roomRevenue: f?.dbl('roomRevenue') ?? 0,
+                fnbRevenue: f?.dbl('fnbRevenue') ?? 0,
+                otherRevenue: f?.dbl('otherRevenue') ?? 0,
+                updatedByName: r.strOrNull('updatedByName'),
+                updatedAt: r.updatedAt,
+                financeKnown: f != null,
+                financeRecorded: r.boolean('financeRecorded'),
+              );
+            }(),
+      ];
+    });
+  }
 
+  /// `POST /api/zarin/operations/daily`: occupancy, and revenue write-only.
   @override
-  Future<void> save(String hotelId, DailyOperations o, Actor actor) => pbGuard(() async {
+  Future<void> save(String hotelId, DailyOperations o, Actor actor, {RevenueEntry? revenue}) => pbGuard(() async {
     if (o.roomsOccupied > o.roomsAvailable) throw const ValidationFailure('occupied_exceeds_available');
-    final day = DayKey.of(o.day);
-    final body = {
-      'hotel': hotelId,
-      'day': day,
+    await command('/api/zarin/operations/daily', {
+      'hotelId': hotelId,
+      'day': DayKey.of(o.day),
       'roomsAvailable': o.roomsAvailable,
       'roomsOccupied': o.roomsOccupied,
       'guests': o.guests,
-      'roomRevenue': o.roomRevenue,
-      'fnbRevenue': o.fnbRevenue,
-      'otherRevenue': o.otherRevenue,
-    };
-    final existing = await pb.collection('dailyOperations').getList(
-      perPage: 1,
-      filter: byHotel(hotelId, 'day = {:day}', {'day': day}),
-    );
-    if (existing.items.isEmpty) {
-      await pb.collection('dailyOperations').create(body: body);
-    } else {
-      await pb.collection('dailyOperations').update(existing.items.first.id, body: body);
-    }
+      if (revenue != null)
+        'revenue': {
+          'roomRevenue': revenue.roomRevenue,
+          'fnbRevenue': revenue.fnbRevenue,
+          'otherRevenue': revenue.otherRevenue,
+        },
+    });
   });
 }
 

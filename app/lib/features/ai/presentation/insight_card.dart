@@ -8,6 +8,8 @@ import '../../../core/routing/routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../hotel/application/hotel_providers.dart';
+import '../../hotel/domain/hotel.dart';
 import '../application/ai_providers.dart';
 import '../domain/ai_models.dart';
 
@@ -46,7 +48,20 @@ class InsightCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final actions = ref.watch(insightActionsProvider);
-    final canDecide = actions.canDecide && (insight.isOpen || insight.status == InsightStatus.accepted);
+    // Without the hotel's recommendationLoop flag the card keeps the classic
+    // accept / implemented / dismiss buttons (no decision sheet, ticket or evaluation).
+    final loop = ref.watch(hotelSettingsProvider).has(HotelFeature.recommendationLoop);
+    final canDecide = loop && actions.canDecide && (insight.isOpen || insight.status == InsightStatus.accepted);
+    final canSetStatus = !loop && actions.canDecide && insight.isOpen;
+
+    Future<void> setStatus(InsightStatus status) async {
+      try {
+        await actions.setStatus(insight, status);
+        if (context.mounted) showSuccess(context, l10n.insightUpdated);
+      } catch (e) {
+        if (context.mounted) showFailure(context, e);
+      }
+    }
     final impact = insight.expectedImpact;
 
     return ZCard(
@@ -163,6 +178,30 @@ class InsightCard extends ConsumerWidget {
               ),
             ],
             if (insight.evaluation != null) EvaluationView(evaluation: insight.evaluation!),
+            if (canSetStatus) ...[
+              const SizedBox(height: Insets.md),
+              Wrap(
+                spacing: Insets.sm,
+                runSpacing: Insets.sm,
+                children: [
+                  FilledButton.tonal(
+                    key: Key('insight.${insight.id}.accept'),
+                    onPressed: () => setStatus(InsightStatus.accepted),
+                    child: Text(l10n.acceptInsight),
+                  ),
+                  OutlinedButton(
+                    key: Key('insight.${insight.id}.implemented'),
+                    onPressed: () => setStatus(InsightStatus.implemented),
+                    child: Text(l10n.implementedInsight),
+                  ),
+                  TextButton(
+                    key: Key('insight.${insight.id}.dismiss'),
+                    onPressed: () => setStatus(InsightStatus.dismissed),
+                    child: Text(l10n.dismissInsight),
+                  ),
+                ],
+              ),
+            ],
             if (canDecide) ...[
               const SizedBox(height: Insets.md),
               FilledButton.tonalIcon(

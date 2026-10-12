@@ -3,18 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/core_providers.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../../core/security/app_permission.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/day_key.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../rooms/application/rooms_providers.dart';
 import '../../rooms/domain/room.dart';
 import '../application/operations_providers.dart';
 import '../domain/daily_operations.dart';
 
-/// Front-office daily figures (occupancy, guests, revenue). Prefilled from
-/// the room board and from an existing entry for the selected day.
+/// Front-office daily figures. Occupancy is prefilled from the room board or
+/// the day's entry. Revenue (finance.record) is write-only: the stored amounts
+/// are never shown, the form says whether the day has revenue, and a save
+/// with revenue first shows the typed amounts for confirmation.
 class DailyOpsPage extends ConsumerStatefulWidget {
   const DailyOpsPage({super.key});
 
@@ -61,26 +65,89 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
       if (DayKey.of(o.day) == key) entry = o;
     }
     String n(num v) => v.toStringAsFixed(0);
+    // Revenue is never prefilled, whoever is looking.
+    for (final c in [_roomRevenue, _fnbRevenue, _otherRevenue]) {
+      c.clear();
+    }
     if (entry != null) {
       _available.text = n(entry.roomsAvailable);
       _occupied.text = n(entry.roomsOccupied);
       _guests.text = n(entry.guests);
-      _roomRevenue.text = n(entry.roomRevenue);
-      _fnbRevenue.text = n(entry.fnbRevenue);
-      _otherRevenue.text = n(entry.otherRevenue);
     } else {
       final sellable = rooms.where((r) => r.status != RoomStatus.outOfOrder).length;
       final occupied = rooms.where((r) => r.status == RoomStatus.occupied).length;
       _available.text = n(sellable);
       _occupied.text = n(occupied);
-      for (final c in [_guests, _roomRevenue, _fnbRevenue, _otherRevenue]) {
-        c.clear();
-      }
+      _guests.clear();
     }
+  }
+
+  bool get _revenueTyped => [_roomRevenue, _fnbRevenue, _otherRevenue].any((c) => c.text.trim().isNotEmpty);
+
+  RevenueEntry? _revenue() => _revenueTyped
+      ? RevenueEntry(
+          roomRevenue: _parse(_roomRevenue.text)!.toDouble(),
+          fnbRevenue: (_parse(_fnbRevenue.text) ?? 0).toDouble(),
+          otherRevenue: (_parse(_otherRevenue.text) ?? 0).toDouble(),
+        )
+      : null;
+
+  /// Shows exactly the typed amounts; true when the user confirms.
+  Future<bool> _confirmRevenue(RevenueEntry r) async {
+    final l10n = context.l10n;
+    final fmt = context.fmt;
+    Widget line(String label, double v, {bool bold = false}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            '${fmt.money(v)} ${l10n.currencyRial}',
+            textDirection: TextDirection.ltr,
+            style: bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
+          ),
+        ],
+      ),
+    );
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('dailyOps.confirmRevenue'),
+        title: Text(l10n.confirmRevenueTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.confirmRevenueBody(fmt.date(_day))),
+            const SizedBox(height: Insets.md),
+            line(l10n.roomRevenue, r.roomRevenue),
+            line(l10n.fnbRevenue, r.fnbRevenue),
+            line(l10n.otherRevenue, r.otherRevenue),
+            const Divider(),
+            line(l10n.revenueTotal, r.total, bold: true),
+          ],
+        ),
+        actions: [
+          TextButton(
+            key: const Key('dailyOps.confirmRevenue.edit'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.editValues),
+          ),
+          FilledButton(
+            key: const Key('dailyOps.confirmRevenue.ok'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.confirmAndSave),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
   }
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final revenue = _revenue();
+    if (revenue != null && !await _confirmRevenue(revenue)) return;
     setState(() => _busy = true);
     try {
       await ref.read(operationsActionsProvider).save(
@@ -89,11 +156,13 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
           roomsAvailable: _parse(_available.text)!.toInt(),
           roomsOccupied: _parse(_occupied.text)!.toInt(),
           guests: _parse(_guests.text)!.toInt(),
-          roomRevenue: _parse(_roomRevenue.text)!.toDouble(),
-          fnbRevenue: (_parse(_fnbRevenue.text) ?? 0).toDouble(),
-          otherRevenue: (_parse(_otherRevenue.text) ?? 0).toDouble(),
+          roomRevenue: 0,
         ),
+        revenue: revenue,
       );
+      for (final c in [_roomRevenue, _fnbRevenue, _otherRevenue]) {
+        c.clear();
+      }
       if (mounted) showSuccess(context, context.l10n.savedSuccessfully);
     } catch (e) {
       if (mounted) showFailure(context, e);
@@ -110,14 +179,22 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
     final rooms = ref.watch(roomsProvider).value ?? const [];
     _prefill(existing, rooms);
     final today = DayKey.hotelToday(ref.read(clockProvider).now());
+    final canRecordRevenue = ref.watch(sessionUserProvider)?.can(AppPermission.financeRecord) ?? false;
+    final dayKey = DayKey.of(_day);
+    final recorded = existing.any((o) => DayKey.of(o.day) == dayKey && (o.financeRecorded || (o.financeKnown && o.totalRevenue > 0)));
 
     String? requiredNumber(String? v) => _parse(v ?? '') == null ? l10n.invalidNumber : null;
+    String? roomRevenueNumber(String? v) {
+      if ((v ?? '').trim().isEmpty) return _revenueTyped ? l10n.revenueNeedsRoom : null;
+      return _parse(v!) == null ? l10n.invalidNumber : null;
+    }
     String? optionalNumber(String? v) =>
         (v ?? '').trim().isEmpty || _parse(v!) != null ? null : l10n.invalidNumber;
 
-    Widget field(TextEditingController c, String label, String? Function(String?) validator) => Padding(
+    Widget field(TextEditingController c, String label, String? Function(String?) validator, {Key? key}) => Padding(
       padding: const EdgeInsets.only(bottom: Insets.md),
       child: TextFormField(
+        key: key,
         controller: c,
         keyboardType: TextInputType.number,
         textDirection: TextDirection.ltr,
@@ -151,14 +228,26 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
               },
             ),
             const SizedBox(height: Insets.sm),
-            field(_available, l10n.roomsAvailable, requiredNumber),
-            field(_occupied, l10n.roomsOccupied, requiredNumber),
-            field(_guests, l10n.guestsLabel, requiredNumber),
-            field(_roomRevenue, l10n.roomRevenue, requiredNumber),
-            field(_fnbRevenue, l10n.fnbRevenue, optionalNumber),
-            field(_otherRevenue, l10n.otherRevenue, optionalNumber),
+            field(_available, l10n.roomsAvailable, requiredNumber, key: const Key('dailyOps.available')),
+            field(_occupied, l10n.roomsOccupied, requiredNumber, key: const Key('dailyOps.occupied')),
+            field(_guests, l10n.guestsLabel, requiredNumber, key: const Key('dailyOps.guests')),
+            if (canRecordRevenue) ...[
+              const SizedBox(height: Insets.sm),
+              Text(l10n.revenueSectionTitle, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                recorded ? l10n.revenueRecorded : l10n.revenueNotRecorded,
+                key: Key(recorded ? 'dailyOps.revenueRecorded' : 'dailyOps.revenueNotRecorded'),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              Text(l10n.revenueWriteOnlyHint, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: Insets.md),
+              field(_roomRevenue, l10n.roomRevenue, roomRevenueNumber, key: const Key('dailyOps.roomRevenue')),
+              field(_fnbRevenue, l10n.fnbRevenue, optionalNumber, key: const Key('dailyOps.fnbRevenue')),
+              field(_otherRevenue, l10n.otherRevenue, optionalNumber, key: const Key('dailyOps.otherRevenue')),
+            ],
             const SizedBox(height: Insets.md),
-            FilledButton(onPressed: _busy ? null : _save, child: Text(l10n.save)),
+            FilledButton(key: const Key('dailyOps.save'), onPressed: _busy ? null : _save, child: Text(l10n.save)),
           ],
         ),
       ),

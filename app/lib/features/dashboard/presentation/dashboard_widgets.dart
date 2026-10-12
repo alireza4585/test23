@@ -82,8 +82,9 @@ class KpiGrid extends StatelessWidget {
           caption: m.yesterday == null ? null : '${l10n.yesterday}: ${fmt.percent(m.yesterday!.occupancyRate, decimals: 1)}',
           onTap: () => context.go(Routes.rooms),
         ),
-      if (user.can(AppPermission.financeView) && m.yesterday != null) ...[
+      if (user.can(AppPermission.financeView) && m.yesterday != null && m.yesterday!.financeKnown) ...[
         KpiCard(
+          key: const Key('kpi.revpar'),
           label: l10n.kpiRevpar,
           value: fmt.money(m.yesterday!.revpar),
           unit: l10n.currencyRial,

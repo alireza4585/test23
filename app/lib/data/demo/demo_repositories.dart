@@ -414,23 +414,28 @@ class DemoOperationsRepository implements OperationsRepository {
   Future<void> save(
     String hotelId,
     DailyOperations operations,
-    Actor actor,
-  ) async {
+    Actor actor, {
+    RevenueEntry? revenue,
+  }) async {
     await _store.latency();
     if (operations.roomsOccupied > operations.roomsAvailable) {
       throw const ValidationFailure('occupied_exceeds_available');
     }
+    final day = DayKey.startOfDay(operations.day);
+    final existing = _store.operations.all.where((o) => o.day == day).firstOrNull;
     _store.operations.put(
       DailyOperations(
-        day: DayKey.startOfDay(operations.day),
+        day: day,
         roomsAvailable: operations.roomsAvailable,
         roomsOccupied: operations.roomsOccupied,
         guests: operations.guests,
-        roomRevenue: operations.roomRevenue,
-        fnbRevenue: operations.fnbRevenue,
-        otherRevenue: operations.otherRevenue,
+        // Like the server: revenue changes only with an explicit entry.
+        roomRevenue: revenue?.roomRevenue ?? existing?.roomRevenue ?? 0,
+        fnbRevenue: revenue?.fnbRevenue ?? existing?.fnbRevenue ?? 0,
+        otherRevenue: revenue?.otherRevenue ?? existing?.otherRevenue ?? 0,
         updatedByName: actor.name,
         updatedAt: _store.clock.now(),
+        financeRecorded: revenue != null || (existing?.financeRecorded ?? false) || (existing?.totalRevenue ?? 0) > 0,
       ),
     );
     _store.audit(actor.name, 'operations.save', 'dailyOperations/${DayKey.of(operations.day)}');
@@ -709,6 +714,15 @@ class DemoInsightsRepository implements InsightsRepository {
     where: (i) => !activeOnly || i.status == InsightStatus.active,
     sort: (a, b) => b.createdAt.compareTo(a.createdAt),
   );
+
+  @override
+  Future<void> updateStatus(String hotelId, String insightId, InsightStatus status, Actor actor) async {
+    final i = _store.insights.get(insightId);
+    if (i == null) throw const NotFoundFailure('insight');
+    if (i.status == InsightStatus.resolved) throw const ValidationFailure('insight_resolved');
+    await _store.latency();
+    _store.insights.put(i.copyWith(status: status, decidedByName: actor.name, decidedAt: _store.clock.now()));
+  }
 
   /// Same rules as the server: a resolved recommendation cannot be decided,
   /// one linked ticket at most, and an evaluation is scheduled for accepted

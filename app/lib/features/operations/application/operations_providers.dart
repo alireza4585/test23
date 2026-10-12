@@ -32,18 +32,22 @@ class OperationsActions {
 
   final Ref ref;
 
-  Future<void> save(DailyOperations figures) async {
+  /// Occupancy for the day and, with [revenue] (finance.record), its revenue.
+  Future<void> save(DailyOperations figures, {RevenueEntry? revenue}) async {
     final user = ref.read(sessionUserProvider);
     if (user == null) throw const SessionExpiredFailure();
     if (!user.can(AppPermission.operationsRecordDaily)) {
       throw const PermissionDeniedFailure();
+    }
+    if (revenue != null && !user.can(AppPermission.financeRecord)) {
+      throw const PermissionDeniedFailure('finance.record');
     }
     if (figures.roomsOccupied > figures.roomsAvailable) {
       throw const ValidationFailure('occupied_exceeds_available');
     }
     await ref
         .read(operationsRepositoryProvider)
-        .save(user.hotelId, figures, user.asActor);
+        .save(user.hotelId, figures, user.asActor, revenue: revenue);
   }
 }
 

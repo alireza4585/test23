@@ -1,3 +1,5 @@
+import '../../core/security/app_permission.dart';
+import '../../core/security/role_policy.dart';
 import '../../core/utils/day_key.dart';
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/energy/domain/energy_analytics.dart';
@@ -220,10 +222,24 @@ class DemoAiAssistantRepository implements AiAssistantRepository {
     );
   }
 
+  /// Same rule as the server: revenue figures only for finance.view.
+  bool get _financeView {
+    final account = _store.signedInUid == null ? null : _store.accountByUid(_store.signedInUid!);
+    return account != null && RolePolicy.resolve(account.role).contains(AppPermission.financeView);
+  }
+
   AssistantReply _revenue(bool fa) {
     final ops = _store.operations.all.toList()..sort((a, b) => a.day.compareTo(b.day));
     final last7 = ops.length > 7 ? ops.sublist(ops.length - 7) : ops;
     final occ = last7.fold<double>(0, (s, o) => s + o.occupancyRate) / last7.length;
+    if (!_financeView) {
+      return AssistantReply(
+        text: fa
+            ? 'میانگین نرخ اشغال ۷ روز اخیر ${occ.toStringAsFixed(1)}٪ است. شما به داده‌های مالی (درآمد، ADR و RevPAR) دسترسی ندارید.'
+            : '7-day occupancy averaged ${occ.toStringAsFixed(1)}%. You do not have access to financial data (revenue, ADR, RevPAR).',
+        dataPoints: [fa ? 'اشغال ${occ.toStringAsFixed(1)}٪' : 'occupancy ${occ.toStringAsFixed(1)}%'],
+      );
+    }
     final adr = last7.fold<double>(0, (s, o) => s + o.adr) / last7.length;
     final revpar = last7.fold<double>(0, (s, o) => s + o.revpar) / last7.length;
     final text = fa

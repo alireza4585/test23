@@ -117,13 +117,13 @@ class ReportGenerator {
       final avgOcc = operations.isEmpty
           ? 0.0
           : operations.fold<double>(0, (s, o) => s + o.occupancyRate) / operations.length;
-      final roomRevenue = operations.fold<double>(0, (s, o) => s + o.roomRevenue);
-      final totalRevenue = operations.fold<double>(0, (s, o) => s + o.totalRevenue);
-      final sold = operations.fold<int>(0, (s, o) => s + o.roomsOccupied);
-      final available = operations.fold<int>(0, (s, o) => s + o.roomsAvailable);
       final tickets = data.tickets.where((t) => t.status.isActive).toList();
       final lowStock = data.inventory.where((i) => i.isLowStock).length;
-      final insights = data.insights;
+      // Revenue insights only for finance.view (PocketBase already withholds them).
+      final insights = [
+        for (final i in data.insights)
+          if (i.category != InsightCategory.revenue || user.can(AppPermission.financeView)) i,
+      ];
       final elec = summaries[EnergyType.electricity]!;
       sections
         ..add(heading(l10n.sectionToday))
@@ -131,9 +131,7 @@ class ReportGenerator {
           [l10n.reportPeriod, fmt.dateShort(from), fmt.dateShort(to)],
           [
             [l10n.kpiOccupancy, fmt.percent(avgOcc, decimals: 1), ''],
-            [l10n.kpiAdr, fmt.money(sold == 0 ? 0 : roomRevenue / sold), l10n.currencyRial],
-            [l10n.kpiRevpar, fmt.money(available == 0 ? 0 : roomRevenue / available), l10n.currencyRial],
-            [l10n.kpiRevenue, fmt.money(totalRevenue), l10n.currencyRial],
+            ...financeSummaryRows(operations, canFinance: user.can(AppPermission.financeView), l10n: l10n, fmt: fmt),
             [l10n.energyElectricity, fmt.number(elec.total), 'kWh'],
             [l10n.vsBaselineShort(''), fmt.percent(elec.vsBaselinePct ?? 0, signed: true), ''],
             [l10n.kpiEnergyIntensity, fmt.number(elec.perOccupiedRoom ?? 0, decimals: 1), l10n.kpiEnergyIntensityUnit],
@@ -415,3 +413,23 @@ class _ReportData {
 }
 
 final reportGeneratorProvider = Provider<ReportGenerator>(ReportGenerator.new);
+
+/// ADR, RevPAR and revenue rows of the executive summary: none without
+/// finance.view (the server also hides such reports from other roles).
+List<List<String>> financeSummaryRows(
+  List<DailyOperations> operations, {
+  required bool canFinance,
+  required AppLocalizations l10n,
+  required Formatters fmt,
+}) {
+  if (!canFinance) return const [];
+  final roomRevenue = operations.fold<double>(0, (s, o) => s + o.roomRevenue);
+  final totalRevenue = operations.fold<double>(0, (s, o) => s + o.totalRevenue);
+  final sold = operations.fold<int>(0, (s, o) => s + o.roomsOccupied);
+  final available = operations.fold<int>(0, (s, o) => s + o.roomsAvailable);
+  return [
+    [l10n.kpiAdr, fmt.money(sold == 0 ? 0 : roomRevenue / sold), l10n.currencyRial],
+    [l10n.kpiRevpar, fmt.money(available == 0 ? 0 : roomRevenue / available), l10n.currencyRial],
+    [l10n.kpiRevenue, fmt.money(totalRevenue), l10n.currencyRial],
+  ];
+}
