@@ -54,6 +54,7 @@ routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__
 
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));
+routerAdd("POST", "/v1/maintenance/purge", (e) => require(`${__hooks}/lib/integration.js`).purge(e));
 routerAdd("POST", "/v1/outbox/flush", (e) => require(`${__hooks}/lib/integration.js`).flushNow(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/summary", (e) => require(`${__hooks}/lib/integration.js`).summary(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/maintenance/overdue", (e) => require(`${__hooks}/lib/integration.js`).overdue(e));
@@ -141,6 +142,10 @@ cronAdd("zarin_sla", "*/15 * * * *", () => {
   for (const id of z.activeHotelIds($app)) {
     try { analytics.checkSla($app, id, new Date()); } catch (err) { console.log("sla check failed", id, String(err)); }
   }
+});
+
+cronAdd("zarin_ai_retention", "25 0 * * *", () => {
+  try { require(`${__hooks}/lib/ai.js`).purgeConversations($app, new Date()); } catch (err) { console.log("ai retention failed", String(err)); }
 });
 
 cronAdd("zarin_outbox", "* * * * *", () => {

@@ -55,7 +55,7 @@ function summary(e) {
   const hotelId = hotelOf(e);
   const result = analytics.summary(e.app, hotelId, e.request.url.query().get("day"), new Date());
   const locale = e.request.url.query().get("narrative");
-  if (locale === "fa" || locale === "en") result.narrative = ai.narrate(result, locale);
+  if (locale === "fa" || locale === "en") result.narrative = ai.narrate(result, locale, e.app);
   return e.json(200, result);
 }
 
@@ -223,4 +223,10 @@ function flushNow(e) {
   return e.json(200, { delivered: flushOutbox(e.app) });
 }
 
-module.exports = { sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };
+/** POST /v1/maintenance/purge — retention clean-up now (the cron runs it daily). */
+function purge(e) {
+  verified(e);
+  return e.json(200, { conversations: ai.purgeConversations(e.app, new Date()) });
+}
+
+module.exports = { purge, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };

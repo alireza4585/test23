@@ -17,6 +17,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const SUPERUSER = { email: "ci@zarin.local", password: "ci-Password-123" };
 export const SECRET = "test-integration-secret";
+// Test-only encryption key for integrationKeys (32 characters, not a real secret).
+export const SECRETS_KEY = "test-secrets-key-0123456789abcde";
 
 function freePort() {
   return new Promise((ok, fail) => {
@@ -30,7 +32,7 @@ function freePort() {
   });
 }
 
-export async function startTestServer({ keepData = false, webhookUrl = "" } = {}) {
+export async function startTestServer({ keepData = false, webhookUrl = "", env = {} } = {}) {
   const bin = resolve(root, process.env.PB_BIN ?? "bin/pocketbase");
   if (!existsSync(bin)) {
     throw new Error(`PocketBase binary not found at ${bin}. Run scripts/get-pocketbase.sh or set PB_BIN.`);
@@ -44,7 +46,7 @@ export async function startTestServer({ keepData = false, webhookUrl = "" } = {}
   const url = `http://127.0.0.1:${port}`;
   const log = createWriteStream(join(dir, "serve.log"));
   const proc = spawn(bin, ["serve", `--http=127.0.0.1:${port}`, "--automigrate=false", ...paths], {
-    env: { ...process.env, ZH_INTEGRATION_SECRET: SECRET, ZH_AI_PROVIDER: "none", ZH_N8N_WEBHOOK_URL: webhookUrl },
+    env: { ...process.env, ZH_INTEGRATION_SECRET: SECRET, ZH_SECRETS_KEY: SECRETS_KEY, ZH_AI_PROVIDER: "none", ZH_N8N_WEBHOOK_URL: webhookUrl, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   proc.stdout.pipe(log);
