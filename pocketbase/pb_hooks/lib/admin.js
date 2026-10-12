@@ -13,7 +13,7 @@
  *   imports, which keeps production hotels out of reach.
  *
  * POST /api/zarin/admin/hotels/{id}/analytics
- *   {rollup?: {from, to}, insights?: bool, sla?: bool, now?: ISO date}
+ *   {rollup?: {from, to}, insights?: bool, sla?: bool, forecasts?: bool, now?: ISO date}
  */
 const z = require(`${__hooks}/lib/zarin.js`);
 const analytics = require(`${__hooks}/lib/analytics.js`);
@@ -92,7 +92,7 @@ function runAnalytics(e) {
   const now = b.now ? new Date(b.now) : new Date();
   if (isNaN(now.getTime())) throw z.bad("invalid_now");
   const day = /^\d{4}-\d{2}-\d{2}$/;
-  const out = { now: now.toISOString(), rolledUp: [], insightsCreated: null, sla: false };
+  const out = { now: now.toISOString(), rolledUp: [], insightsCreated: null, sla: false, forecasts: null };
   if (b.rollup) {
     const { from, to } = b.rollup;
     if (!day.test(from || "") || !day.test(to || "") || from > to) throw z.bad("invalid_range");
@@ -102,6 +102,7 @@ function runAnalytics(e) {
       out.rolledUp.push(d);
     }
   }
+  if (b.forecasts) out.forecasts = require(`${__hooks}/lib/forecasting.js`).runForecasts(e.app, hotelId, now);
   if (b.insights) out.insightsCreated = analytics.runInsights(e.app, hotelId, now);
   if (b.sla) {
     analytics.checkSla(e.app, hotelId, now);

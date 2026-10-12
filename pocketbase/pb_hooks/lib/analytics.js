@@ -81,7 +81,10 @@ function rollup(app, hotelId, day, now) {
   return m;
 }
 
-/** Insight ids are stable per rule & subject; dismissed ones stay quiet 14 days. */
+/**
+ * Insight ids are stable per rule & subject. Dismissed / decided ones stay
+ * quiet for 14 days; a resolved one comes back as soon as its condition does.
+ */
 function upsertInsight(app, hotelId, draft, now) {
   let rec = z.findFirst(app, "aiInsights", "hotel = {:h} && key = {:k}", { h: hotelId, k: draft.id });
   const fields = {
@@ -89,11 +92,12 @@ function upsertInsight(app, hotelId, draft, now) {
     recommendation: draft.recommendation, evidence: draft.evidence, confidence: draft.confidence,
     priority: draft.priority, estimatedMonthlySaving: draft.estimatedMonthlySaving || 0,
     route: draft.route || "", audienceRoles: draft.audienceRoles,
+    expectedImpact: draft.expectedImpact || null,
   };
   if (rec) {
     const status = rec.getString("status");
     const updated = z.parseDate(rec.getString("updated"));
-    if (status !== "active" && updated && now.getTime() - updated.getTime() < 14 * 864e5) return false;
+    if (status !== "active" && status !== "resolved" && updated && now.getTime() - updated.getTime() < 14 * 864e5) return false;
     if (status === "active") {
       rec.load(fields);
       app.save(rec);
@@ -102,7 +106,11 @@ function upsertInsight(app, hotelId, draft, now) {
   } else {
     rec = new Record(z.col(app, "aiInsights"), { hotel: hotelId, key: draft.id });
   }
-  rec.load(Object.assign(fields, { status: "active", source: "rules", model: "" }));
+  // A new cycle: the previous decision and evaluation stay in the audit log.
+  rec.load(Object.assign(fields, {
+    status: "active", source: "rules", model: "", closedReason: "", decisionNote: "", decidedBy: "", decidedByName: "",
+    decidedAt: "", evaluation: null, linkedTicket: "", linkedTask: "",
+  }));
   app.save(rec);
   if (draft.priority === "high") {
     z.notify(app, {
@@ -135,6 +143,9 @@ function runInsights(app, hotelId, now) {
   let created = 0;
   for (const d of drafts) if (upsertInsight(app, hotelId, d, now)) created++;
   slaAlerts(app, hotelId, data.tickets, now);
+  const recommendations = require(`${__hooks}/lib/recommendations.js`);
+  recommendations.closeCleared(app, hotelId, drafts, now);
+  recommendations.evaluateDue(app, hotelId, now);
   return created;
 }
 

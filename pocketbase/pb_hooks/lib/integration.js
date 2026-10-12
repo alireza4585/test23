@@ -150,6 +150,11 @@ function runInsights(e) {
   return e.json(200, { created: analytics.runInsights(e.app, hotelOf(e), new Date()) });
 }
 
+function runForecasts(e) {
+  verified(e);
+  return e.json(200, { series: require(`${__hooks}/lib/forecasting.js`).runForecasts(e.app, hotelOf(e), new Date()) });
+}
+
 const LEASE_SECONDS = 60;
 const MAX_ATTEMPTS = 8;
 
@@ -208,4 +213,4 @@ function flushNow(e) {
   return e.json(200, { delivered: flushOutbox(e.app) });
 }
 
-module.exports = { sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, flushOutbox, flushNow };
+module.exports = { sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };

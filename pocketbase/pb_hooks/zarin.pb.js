@@ -17,10 +17,14 @@
  *   POST /api/zarin/tickets/{id}/status|assign
  *   POST /api/zarin/inventory/{id}/movements  item + ledger, one transaction
  *   POST /api/zarin/ai/ask                    assistant
+ *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket)
+ *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon
+ *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
  *                     POST /api/zarin/admin/hotels/{id}/analytics
  * Routes (n8n / IoT, HMAC-signed): /v1/...
- * Cron (UTC): rollup 20:50 (00:20 Tehran), insights 03:10 (06:40 Tehran),
+ * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran),
+ *             insights + recommendation close/evaluation 03:10 (06:40 Tehran),
  *             SLA every 15 min, outbox every minute.
  */
 
@@ -39,6 +43,11 @@ routerAdd("POST", "/api/zarin/tickets/{id}/assign", (e) => require(`${__hooks}/l
 routerAdd("POST", "/api/zarin/inventory/{id}/movements", (e) => require(`${__hooks}/lib/ops.js`).recordMovement(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).ask(e), $apis.requireAuth("users"));
 
+// ------------------------------------------- AI core: forecasts, energy, recommendations
+routerAdd("POST", "/api/zarin/insights/{id}/decide", (e) => require(`${__hooks}/lib/recommendations.js`).decide(e), $apis.requireAuth("users"));
+routerAdd("GET", "/api/zarin/energy/analysis", (e) => require(`${__hooks}/lib/intelligence.js`).energyAnalysis(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/hotels/{id}/forecasts/run", (e) => require(`${__hooks}/lib/intelligence.js`).runForecastsNow(e), $apis.requireAuth("users"));
+
 // ------------------------------------------------ superuser tools (admin.js)
 routerAdd("POST", "/api/zarin/admin/import", (e) => require(`${__hooks}/lib/admin.js`).importRecords(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__hooks}/lib/admin.js`).runAnalytics(e), $apis.requireSuperuserAuth());
@@ -53,6 +62,7 @@ routerAdd("POST", "/v1/hotels/{hotelId}/insights", (e) => require(`${__hooks}/li
 routerAdd("POST", "/v1/hotels/{hotelId}/energy/readings", (e) => require(`${__hooks}/lib/integration.js`).postReading(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/metrics/rollup", (e) => require(`${__hooks}/lib/integration.js`).rollup(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/insights/run", (e) => require(`${__hooks}/lib/integration.js`).runInsights(e));
+routerAdd("POST", "/v1/hotels/{hotelId}/forecasts/run", (e) => require(`${__hooks}/lib/integration.js`).runForecasts(e));
 
 // ------------------------------------------------------------- users
 // Permissions always follow the role template (+ hotel override).
@@ -105,6 +115,14 @@ cronAdd("zarin_daily_rollup", "50 20 * * *", () => {
   const yesterday = z.addDays(z.dayKey(now), -1);
   for (const id of z.activeHotelIds($app)) {
     try { analytics.rollup($app, id, yesterday, now); } catch (err) { console.log("rollup failed", id, String(err)); }
+  }
+});
+
+cronAdd("zarin_forecasts", "40 21 * * *", () => {
+  const z = require(`${__hooks}/lib/zarin.js`);
+  const forecasting = require(`${__hooks}/lib/forecasting.js`);
+  for (const id of z.activeHotelIds($app)) {
+    try { forecasting.runForecasts($app, id, new Date()); } catch (err) { console.log("forecasts failed", id, String(err)); }
   }
 });
 

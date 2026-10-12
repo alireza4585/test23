@@ -438,28 +438,58 @@ function onEnergyWrite(e) {
   e.next();
 }
 
-/** Model hook: reading above baseline + threshold → energy anomaly alert. */
+/**
+ * Model hook: reading well above what occupancy and season predict → energy
+ * anomaly alert. Falls back to the static per-hotel baseline when the hotel
+ * has no usable model yet (under 28 days with occupancy, or CV(RMSE) > 25 %).
+ */
 function afterEnergyWritten(e) {
   if (z.isImported(e.record)) return; // history from the importer
   const app = e.app;
   const r = e.record;
   const hotelId = r.getString("hotel");
   const type = r.getString("type");
-  const s = z.hotelSettings(app, hotelId);
-  const baseline = s.energyDailyBaseline[type] || 0;
-  if (baseline <= 0) return;
-  const consumption = r.getFloat("consumption");
-  const deviation = ((consumption - baseline) / baseline) * 100;
-  if (deviation <= s.energyAlertThresholdPct) return;
   const day = r.getString("day");
+  const unit = r.getString("unit");
+  const consumption = r.getFloat("consumption");
+  const s = z.hotelSettings(app, hotelId);
+  const label = ENERGY_LABEL[type] || type;
+  let alert = null;
+  let check = null;
+  try {
+    check = require(`${__hooks}/lib/forecasting.js`).modelCheck(app, hotelId, type, day, consumption, s.energyAlertThresholdPct);
+  } catch (err) {
+    console.log("energy model failed", hotelId, type, String(err));
+  }
+  if (check) {
+    if (!check.anomaly) return;
+    alert = {
+      severity: check.critical ? "critical" : "warning",
+      title: `مصرف ${label} بالاتر از مقدار مورد انتظار`,
+      message: `${Math.round(consumption)} ${unit} در ${day}؛ ${Math.round(check.deviationPct)}٪ بیش از ${Math.round(check.expected)} ${unit} مورد انتظار با ${check.occupied} اتاق اشغال`,
+      data: {
+        day, type, consumption, expected: check.expected, deviation: check.deviationPct, z: check.z, occupied: check.occupied,
+        method: "baseline", cvrmse: check.model.cvrmse, baselineFrom: check.model.from, baselineTo: check.model.to,
+      },
+    };
+  } else {
+    const baseline = s.energyDailyBaseline[type] || 0;
+    if (baseline <= 0) return;
+    const deviation = ((consumption - baseline) / baseline) * 100;
+    if (deviation <= s.energyAlertThresholdPct) return;
+    alert = {
+      severity: deviation > s.energyAlertThresholdPct * 2 ? "critical" : "warning",
+      title: `مصرف ${label} بالاتر از خط مبنا`,
+      message: `${Math.round(consumption)} ${unit} در ${day} (${Math.round(deviation)}٪ بیش از خط مبنا)`,
+      data: { day, type, consumption, baseline, deviation, method: "static" },
+    };
+  }
   const raised = z.raiseAlert(app, {
-    hotelId, type: "energySpike", severity: deviation > s.energyAlertThresholdPct * 2 ? "critical" : "warning",
-    title: `مصرف ${ENERGY_LABEL[type] || type} بالاتر از خط مبنا`,
-    message: `${Math.round(consumption)} ${r.getString("unit")} در ${day} (${Math.round(deviation)}٪ بیش از خط مبنا)`,
+    hotelId, type: "energySpike", severity: alert.severity, title: alert.title, message: alert.message,
     route: "/energy", audienceRoles: ["energyManager", "operationsManager", "hotelOwner"],
-    dedupeKey: `energy_${day}_${type}`, data: { day, type, consumption, baseline, deviation },
+    dedupeKey: `energy_${day}_${type}`, data: alert.data,
   });
-  if (raised) z.emit(app, "energy.anomaly", hotelId, { day, type, consumption, baseline, deviation });
+  if (raised) z.emit(app, "energy.anomaly", hotelId, alert.data);
 }
 
 // -------------------------------------------------------- daily operations
@@ -508,11 +538,16 @@ function onAlertUpdate(e) {
   e.next();
 }
 
+/** Plain status updates (older app versions); new clients use /api/zarin/insights/{id}/decide. */
 function onInsightUpdate(e) {
   if (e.hasSuperuserAuth()) return e.next();
   const c = z.caller(e);
   z.onlyFields(e, ["status"]);
+  if (e.record.original().getString("status") === "resolved") throw z.bad("insight_resolved");
   e.record.set("updatedBy", c.id);
+  e.record.set("decidedBy", c.id);
+  e.record.set("decidedByName", c.name);
+  e.record.set("decidedAt", z.pbDate(new Date()));
   e.next();
 }
 
