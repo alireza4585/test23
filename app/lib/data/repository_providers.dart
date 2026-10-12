@@ -4,7 +4,10 @@ import '../core/di/core_providers.dart';
 import '../features/admin/domain/user_admin.dart';
 import '../features/ai/domain/ai_models.dart';
 import '../features/auth/domain/auth_repository.dart';
+import '../features/calendar/domain/calendar_event.dart';
+import '../features/energy/domain/energy_analysis.dart';
 import '../features/energy/domain/energy_reading.dart';
+import '../features/forecast/domain/forecast.dart';
 import '../features/hotel/domain/hotel.dart';
 import '../features/housekeeping/domain/housekeeping_task.dart';
 import '../features/inventory/domain/inventory_item.dart';
@@ -17,13 +20,16 @@ import '../features/staff/domain/staff.dart';
 import 'backend.dart';
 import 'demo/demo_ai_assistant.dart';
 import 'demo/demo_auth_repository.dart';
+import 'demo/demo_intelligence_repositories.dart';
 import 'demo/demo_repositories.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_engagement_repositories.dart';
 import 'firebase/firestore_operations_repositories.dart';
 import 'pocketbase/pb_auth_repository.dart';
 import 'pocketbase/pb_engagement_repositories.dart';
+import 'pocketbase/pb_intelligence_repositories.dart';
 import 'pocketbase/pb_operations_repositories.dart';
+import 'unsupported_repositories.dart';
 
 /// Composition root for the data layer.
 ///
@@ -149,5 +155,29 @@ final userAdminRepositoryProvider = Provider<UserAdminRepository>(
     final PocketBaseBackend b => PocketBaseUserAdminRepository(b.client),
     final FirebaseBackend b => FirebaseUserAdminRepository(b.firestore, b.functions),
     final DemoBackend b => DemoUserAdminRepository(b.store),
+  },
+);
+
+final forecastRepositoryProvider = Provider<ForecastRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseForecastRepository(b.client),
+    FirebaseBackend() => const UnsupportedForecastRepository(),
+    final DemoBackend b => DemoForecastRepository(b.store),
+  },
+);
+
+final energyAnalysisRepositoryProvider = Provider<EnergyAnalysisRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseEnergyAnalysisRepository(b.client),
+    FirebaseBackend() => const UnsupportedEnergyAnalysisRepository(),
+    final DemoBackend b => DemoEnergyAnalysisRepository(b.store),
+  },
+);
+
+final calendarRepositoryProvider = Provider<CalendarRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseCalendarRepository(b.client),
+    FirebaseBackend() => const UnsupportedCalendarRepository(),
+    final DemoBackend b => DemoCalendarRepository(b.store),
   },
 );

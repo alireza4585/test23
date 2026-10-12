@@ -1401,4 +1401,387 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get recentReadings => 'ثبت‌های اخیر';
+
+  @override
+  String get recommendationCenterTitle => 'مرکز پیشنهادها';
+
+  @override
+  String get recommendationCenterSubtitle =>
+      'تصمیم بگیرید، کار را ارجاع دهید و ببینید هر پیشنهاد واقعاً چه تغییری ایجاد کرد.';
+
+  @override
+  String get tabOpen => 'باز';
+
+  @override
+  String get tabDecided => 'تصمیم‌گرفته';
+
+  @override
+  String get tabClosed => 'بسته‌شده';
+
+  @override
+  String get nothingHereYet => 'هنوز موردی نیست.';
+
+  @override
+  String expectedSavingOpen(String amount) {
+    return 'صرفه‌جویی ماهانهٔ پیش‌بینی‌شده (باز): $amount';
+  }
+
+  @override
+  String measuredSaving(String amount) {
+    return 'صرفه‌جویی ماهانهٔ اندازه‌گیری‌شده: $amount';
+  }
+
+  @override
+  String get measuredSavingNote =>
+      'فقط ارزیابی‌هایی که از آزمون آماری عبور کرده‌اند شمرده می‌شوند.';
+
+  @override
+  String get expectedImpactLabel => 'اثر مورد انتظار';
+
+  @override
+  String impactFromTo(String from, String to, String unit) {
+    return '$from ← $to $unit';
+  }
+
+  @override
+  String get decideAction => 'تصمیم';
+
+  @override
+  String get decisionTitle => 'تصمیم';
+
+  @override
+  String get decisionNoteHint => 'توضیح: چرا، چه کسی، تا چه زمانی';
+
+  @override
+  String get createLinkedTicket => 'ایجاد تیکت تعمیرات برای این پیشنهاد';
+
+  @override
+  String get decisionSaved => 'تصمیم ثبت شد';
+
+  @override
+  String decidedByLine(String status, String name, String date) {
+    return '$status توسط $name · $date';
+  }
+
+  @override
+  String get openLinkedTicket => 'تیکت مرتبط';
+
+  @override
+  String get evaluationLabel => 'نتیجهٔ اندازه‌گیری';
+
+  @override
+  String evaluationPending(String date) {
+    return 'پس از $date اندازه‌گیری می‌شود';
+  }
+
+  @override
+  String get evaluationImproved => 'بهبود تأیید شد';
+
+  @override
+  String get evaluationWorse => 'بدتر از قبل';
+
+  @override
+  String get evaluationNoProblem => 'مشکل رخ نداد';
+
+  @override
+  String get evaluationProblemHappened => 'مشکل همچنان رخ داد';
+
+  @override
+  String get evaluationInconclusive =>
+      'نامشخص: تغییر در محدودهٔ نوسان عادی است';
+
+  @override
+  String get evaluationInsufficient => 'دادهٔ کافی برای ارزیابی نیست';
+
+  @override
+  String get evaluationNotSupported => 'ارزیابی خودکار برای این نوع وجود ندارد';
+
+  @override
+  String beforeAfter(String before, String after, String unit) {
+    return 'قبل $before · بعد $after $unit';
+  }
+
+  @override
+  String get evaluationLimitEnergy =>
+      'در مقایسه با مصرف مورد انتظار برای اشغال و فصل هر روز؛ آب‌وهوا و تغییرات دیگر مدل نشده‌اند.';
+
+  @override
+  String get evaluationLimitBeforeAfter =>
+      'مقایسهٔ سادهٔ قبل و بعد؛ تغییرات دیگرِ همان دوره کنترل نشده‌اند.';
+
+  @override
+  String get evaluationLimitOutcome =>
+      'نشان می‌دهد مشکل رخ داد یا نه، نه سهم دقیق این اقدام را.';
+
+  @override
+  String get closedNotDetected =>
+      'بسته‌شدهٔ خودکار: در آخرین تحلیل دیگر دیده نشد.';
+
+  @override
+  String get insStatusActive => 'باز';
+
+  @override
+  String get insStatusAccepted => 'پذیرفته';
+
+  @override
+  String get insStatusDismissed => 'ردشده';
+
+  @override
+  String get insStatusImplemented => 'اجراشده';
+
+  @override
+  String get insStatusResolved => 'برطرف‌شده';
+
+  @override
+  String get insPriorityLow => 'اولویت پایین';
+
+  @override
+  String get insPriorityMedium => 'اولویت متوسط';
+
+  @override
+  String get insPriorityHigh => 'اولویت بالا';
+
+  @override
+  String get unitMinutes => 'دقیقه';
+
+  @override
+  String get unitTickets => 'تیکت';
+
+  @override
+  String get unitRooms => 'اتاق';
+
+  @override
+  String get unitDays => 'روز';
+
+  @override
+  String get unitPoints => 'واحد';
+
+  @override
+  String get navForecasts => 'پیش‌بینی';
+
+  @override
+  String get forecastsTitle => 'پیش‌بینی‌ها';
+
+  @override
+  String get forecastsSubtitle =>
+      '۲۸ روز آینده بر اساس سابقهٔ خود هتل. هر مدل پیش از استفاده روی دادهٔ گذشته آزموده می‌شود.';
+
+  @override
+  String get forecastIsEstimate =>
+      'پیش‌بینی برآورد همراه با بازه است، نه رقم قطعی.';
+
+  @override
+  String get seriesOccupancy => 'نرخ اشغال';
+
+  @override
+  String get seriesRoomRevenue => 'درآمد اتاق';
+
+  @override
+  String get seriesTotalRevenue => 'درآمد کل';
+
+  @override
+  String get modelSeasonalNaive => 'همان روز هفتهٔ قبل';
+
+  @override
+  String get modelHoltWinters => 'هموارسازی نمایی هفتگی (هولت-وینترز)';
+
+  @override
+  String get modelCalendarRegression =>
+      'رگرسیون تقویمی (روز هفته، تعطیلات، فصل)';
+
+  @override
+  String forecastAccuracy(String mape, String naive) {
+    return 'خطای آزمون گذشته $mape · معیار ساده $naive';
+  }
+
+  @override
+  String forecastLive(String mape, String days) {
+    return 'پیش‌بینی‌های روز بعد تاکنون: خطای $mape در $days روز';
+  }
+
+  @override
+  String get forecastNoData => 'هنوز داده‌ای نیست';
+
+  @override
+  String get forecastShortHistory => 'حداقل ۵ هفته داده لازم است';
+
+  @override
+  String get forecastGaps => 'روزهای بدون داده زیاد است';
+
+  @override
+  String get forecastStale => 'در هفتهٔ اخیر داده‌ای ثبت نشده';
+
+  @override
+  String get forecastNotRun => 'هنوز محاسبه نشده';
+
+  @override
+  String get forecastRange => 'بازهٔ ۸۰٪';
+
+  @override
+  String get forecastNext7 => 'میانگین ۷ روز آینده';
+
+  @override
+  String get forecastNext7Total => 'جمع ۷ روز آینده';
+
+  @override
+  String get refreshForecasts => 'محاسبهٔ دوباره';
+
+  @override
+  String get forecastsRefreshed => 'پیش‌بینی‌ها به‌روز شد';
+
+  @override
+  String get forecastLabel => 'پیش‌بینی';
+
+  @override
+  String get actualLabel => 'واقعی';
+
+  @override
+  String get baselineSection => 'خط مبنا و صرفه‌جویی';
+
+  @override
+  String get baselineExplain =>
+      'مصرف مورد انتظار با توجه به اشغال هر روز، آموخته‌شده از سال قبل از این دوره.';
+
+  @override
+  String baselineFit(String cv, String nmbe) {
+    return 'برازش: CV(RMSE) $cv · NMBE $nmbe · حد ۲۵٪';
+  }
+
+  @override
+  String get baselineInvalid =>
+      'مدل برای ادعای صرفه‌جویی به‌اندازهٔ کافی دقیق نیست.';
+
+  @override
+  String get baselineMissing =>
+      'هنوز سابقهٔ کافی برای خط مبنا نیست (۲۸ روز با دادهٔ اشغال لازم است).';
+
+  @override
+  String get expectedLabel => 'مورد انتظار';
+
+  @override
+  String get cusumTitle => 'اختلاف تجمعی با مقدار مورد انتظار (CUSUM)';
+
+  @override
+  String savingsResult(String amount, String unc) {
+    return 'صرفه‌جویی $amount ± $unc';
+  }
+
+  @override
+  String overuseResult(String amount, String unc) {
+    return 'مصرف اضافه $amount ± $unc';
+  }
+
+  @override
+  String get withinNormalVariation => 'در محدودهٔ نوسان عادی';
+
+  @override
+  String costPerOccupiedRoom(String amount) {
+    return '$amount به ازای هر اتاق اشغال';
+  }
+
+  @override
+  String carbonPerOccupiedRoom(String kg) {
+    return '$kg کیلوگرم CO₂ به ازای هر اتاق اشغال';
+  }
+
+  @override
+  String carbonTotal(String kg) {
+    return 'مجموع $kg کیلوگرم CO₂';
+  }
+
+  @override
+  String emissionFactorNote(String kind, String source) {
+    return 'ضریب انتشار ($kind): $source';
+  }
+
+  @override
+  String get assumptionLabel => 'فرض';
+
+  @override
+  String get navCalendar => 'تقویم';
+
+  @override
+  String get calendarTitle => 'تعطیلات و رویدادها';
+
+  @override
+  String get calendarSubtitle =>
+      'تعطیلات رسمی ثابت از پیش وجود دارند. تعطیلات مذهبی (قمری) را از تقویم رسمی و رویدادهای محلی را اضافه کنید؛ پیش‌بینی‌ها از آن‌ها استفاده می‌کنند.';
+
+  @override
+  String get calendarAdd => 'افزودن رویداد';
+
+  @override
+  String get eventTitleLabel => 'عنوان';
+
+  @override
+  String get eventKindLabel => 'نوع';
+
+  @override
+  String get eventFromLabel => 'از';
+
+  @override
+  String get eventToLabel => 'تا (اختیاری)';
+
+  @override
+  String get eventKindPublicHoliday => 'تعطیل رسمی';
+
+  @override
+  String get eventKindReligious => 'مناسبت مذهبی';
+
+  @override
+  String get eventKindSchool => 'تعطیلات مدارس';
+
+  @override
+  String get eventKindLocalEvent => 'رویداد محلی';
+
+  @override
+  String get eventKindClosure => 'تعطیلی';
+
+  @override
+  String get eventKindOther => 'سایر';
+
+  @override
+  String get builtInHolidays => 'تعطیلات رسمی ثابت (۱۲ ماه آینده)';
+
+  @override
+  String get hotelEvents => 'ثبت‌شده توسط هتل';
+
+  @override
+  String get noEvents => 'هنوز رویدادی ثبت نشده.';
+
+  @override
+  String get eventSaved => 'رویداد ثبت شد';
+
+  @override
+  String get eventDeleted => 'رویداد حذف شد';
+
+  @override
+  String get deleteAction => 'حذف';
+
+  @override
+  String get eventDateOrder => 'تاریخ پایان نباید قبل از تاریخ شروع باشد.';
+
+  @override
+  String get billionRialUnit => 'میلیارد ریال';
+
+  @override
+  String get forecastCardTitle => 'پیش‌بینی';
+
+  @override
+  String forecastOccupancyNext7(String value) {
+    return 'اشغال ۷ روز آینده: $value';
+  }
+
+  @override
+  String forecastRevenueNext7(String value) {
+    return 'درآمد اتاق ۷ روز آینده: $value';
+  }
+
+  @override
+  String get forecastOpenAll => 'همهٔ پیش‌بینی‌ها';
+
+  @override
+  String forecastModelLine(String model) {
+    return 'مدل: $model';
+  }
 }

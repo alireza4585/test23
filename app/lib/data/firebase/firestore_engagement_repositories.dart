@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../core/domain/actor.dart';
+import '../../core/error/app_failure.dart';
 import '../../core/security/app_role.dart';
 import '../../features/admin/domain/user_admin.dart';
 import '../../features/ai/domain/ai_models.dart';
@@ -157,19 +158,29 @@ class FirestoreInsightsRepository implements InsightsRepository {
         .mapFailures();
   }
 
+  /// The Firebase backend records the decision only; linked tickets and
+  /// evaluations need the PocketBase backend.
   @override
-  Future<void> updateStatus(
+  Future<void> decide(
     String hotelId,
     String insightId,
-    InsightStatus status,
-    Actor actor,
-  ) => guard(
-    () => _db.doc('${FsPaths.insights(hotelId)}/$insightId').update({
-      'status': status.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'updatedBy': actorJson(actor),
-    }),
-  );
+    InsightDecision decision, {
+    String note = '',
+    bool createTicket = false,
+    required Actor actor,
+  }) {
+    if (createTicket) {
+      return Future.error(const UnsupportedFailure('linked tickets need the PocketBase backend'));
+    }
+    return guard(
+      () => _db.doc('${FsPaths.insights(hotelId)}/$insightId').update({
+        'status': decision.name,
+        'decisionNote': note,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': actorJson(actor),
+      }),
+    );
+  }
 }
 
 /// Calls the `aiAssistant` Cloud Function, which grounds the question in the

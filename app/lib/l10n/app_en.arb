@@ -82,7 +82,7 @@
   "navStaff": "Staff",
   "navReports": "Reports",
   "navNotifications": "Notifications",
-  "navInsights": "AI insights",
+  "navInsights": "Recommendations",
   "navAssistant": "AI assistant",
   "navUsers": "Users",
   "navProfile": "Profile",
@@ -428,5 +428,278 @@
   "hotelLabel": "Hotel",
   "statusLabel": "Status",
   "roomTypeLabel": "Room type",
-  "recentReadings": "Recent readings"
+  "recentReadings": "Recent readings",
+  "recommendationCenterTitle": "Recommendation center",
+  "recommendationCenterSubtitle": "Decide, assign the work and see what each recommendation actually changed.",
+  "tabOpen": "Open",
+  "tabDecided": "Decided",
+  "tabClosed": "Closed",
+  "nothingHereYet": "Nothing here yet.",
+  "expectedSavingOpen": "Expected monthly savings (open): {amount}",
+  "@expectedSavingOpen": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "measuredSaving": "Measured monthly savings: {amount}",
+  "@measuredSaving": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "measuredSavingNote": "Only evaluations that pass the statistical check are counted.",
+  "expectedImpactLabel": "Expected impact",
+  "impactFromTo": "{from} → {to} {unit}",
+  "@impactFromTo": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "decideAction": "Decide",
+  "decisionTitle": "Decision",
+  "decisionNoteHint": "Note: why, who, by when",
+  "createLinkedTicket": "Open a maintenance ticket for this",
+  "decisionSaved": "Decision saved",
+  "decidedByLine": "{status} by {name} · {date}",
+  "@decidedByLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "openLinkedTicket": "Linked ticket",
+  "evaluationLabel": "Measured result",
+  "evaluationPending": "Will be measured after {date}",
+  "@evaluationPending": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "evaluationImproved": "Improvement confirmed",
+  "evaluationWorse": "Worse than before",
+  "evaluationNoProblem": "The problem did not occur",
+  "evaluationProblemHappened": "The problem still occurred",
+  "evaluationInconclusive": "Inconclusive: the change is within normal variation",
+  "evaluationInsufficient": "Not enough data to evaluate",
+  "evaluationNotSupported": "No automatic evaluation for this type",
+  "beforeAfter": "Before {before} · after {after} {unit}",
+  "@beforeAfter": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "evaluationLimitEnergy": "Compared with the expected use for each day's occupancy and season; weather and other changes are not modelled.",
+  "evaluationLimitBeforeAfter": "Simple before/after comparison; other changes in the same period are not controlled for.",
+  "evaluationLimitOutcome": "Shows whether the problem occurred, not how much the action contributed.",
+  "closedNotDetected": "Closed automatically: no longer detected in the latest analysis.",
+  "insStatusActive": "Open",
+  "insStatusAccepted": "Accepted",
+  "insStatusDismissed": "Dismissed",
+  "insStatusImplemented": "Implemented",
+  "insStatusResolved": "Resolved",
+  "insPriorityLow": "Low priority",
+  "insPriorityMedium": "Medium priority",
+  "insPriorityHigh": "High priority",
+  "unitMinutes": "min",
+  "unitTickets": "tickets",
+  "unitRooms": "rooms",
+  "unitDays": "days",
+  "unitPoints": "pts",
+  "navForecasts": "Forecasts",
+  "forecastsTitle": "Forecasts",
+  "forecastsSubtitle": "The next 28 days, from the hotel's own history. Each model is tested on past data before it is used.",
+  "forecastIsEstimate": "Forecasts are estimates with a range, not confirmed figures.",
+  "seriesOccupancy": "Occupancy",
+  "seriesRoomRevenue": "Room revenue",
+  "seriesTotalRevenue": "Total revenue",
+  "modelSeasonalNaive": "Same weekday last week",
+  "modelHoltWinters": "Weekly exponential smoothing (Holt-Winters)",
+  "modelCalendarRegression": "Calendar regression (weekday, holidays, season)",
+  "forecastAccuracy": "Backtest error {mape} · simple benchmark {naive}",
+  "@forecastAccuracy": {
+    "placeholders": {
+      "mape": {
+        "type": "String"
+      },
+      "naive": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastLive": "Next-day forecasts so far: {mape} error over {days} days",
+  "@forecastLive": {
+    "placeholders": {
+      "mape": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastNoData": "No data yet",
+  "forecastShortHistory": "Needs at least 5 weeks of data",
+  "forecastGaps": "Too many missing days",
+  "forecastStale": "No data recorded in the last week",
+  "forecastNotRun": "Not computed yet",
+  "forecastRange": "80% range",
+  "forecastNext7": "Next 7 days, average",
+  "forecastNext7Total": "Next 7 days, total",
+  "refreshForecasts": "Recompute",
+  "forecastsRefreshed": "Forecasts updated",
+  "forecastLabel": "Forecast",
+  "actualLabel": "Actual",
+  "baselineSection": "Baseline and savings",
+  "baselineExplain": "Expected use for each day's occupancy, learned from the year before this period.",
+  "baselineFit": "Fit: CV(RMSE) {cv} · NMBE {nmbe} · limit 25%",
+  "@baselineFit": {
+    "placeholders": {
+      "cv": {
+        "type": "String"
+      },
+      "nmbe": {
+        "type": "String"
+      }
+    }
+  },
+  "baselineInvalid": "The model is too imprecise for savings claims.",
+  "baselineMissing": "Not enough history for a baseline yet (28 days with occupancy needed).",
+  "expectedLabel": "Expected",
+  "cusumTitle": "Cumulative difference from expected (CUSUM)",
+  "savingsResult": "Savings {amount} ± {unc}",
+  "@savingsResult": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "unc": {
+        "type": "String"
+      }
+    }
+  },
+  "overuseResult": "Over-use {amount} ± {unc}",
+  "@overuseResult": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "unc": {
+        "type": "String"
+      }
+    }
+  },
+  "withinNormalVariation": "Within normal variation",
+  "costPerOccupiedRoom": "{amount} per occupied room",
+  "@costPerOccupiedRoom": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "carbonPerOccupiedRoom": "{kg} kg CO₂ per occupied room",
+  "@carbonPerOccupiedRoom": {
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "carbonTotal": "{kg} kg CO₂ in total",
+  "@carbonTotal": {
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "emissionFactorNote": "Emission factor ({kind}): {source}",
+  "@emissionFactorNote": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "assumptionLabel": "assumption",
+  "navCalendar": "Calendar",
+  "calendarTitle": "Holidays and events",
+  "calendarSubtitle": "Fixed public holidays are built in. Add religious (lunar) holidays from the official calendar, and local events; forecasts use them.",
+  "calendarAdd": "Add event",
+  "eventTitleLabel": "Title",
+  "eventKindLabel": "Type",
+  "eventFromLabel": "From",
+  "eventToLabel": "To (optional)",
+  "eventKindPublicHoliday": "Public holiday",
+  "eventKindReligious": "Religious holiday",
+  "eventKindSchool": "School holiday",
+  "eventKindLocalEvent": "Local event",
+  "eventKindClosure": "Closure",
+  "eventKindOther": "Other",
+  "builtInHolidays": "Built-in public holidays (next 12 months)",
+  "hotelEvents": "Added by the hotel",
+  "noEvents": "No events added yet.",
+  "eventSaved": "Event saved",
+  "eventDeleted": "Event deleted",
+  "deleteAction": "Delete",
+  "eventDateOrder": "The end date must not be before the start date.",
+  "billionRialUnit": "billion IRR",
+  "forecastCardTitle": "Forecast",
+  "forecastOccupancyNext7": "Occupancy, next 7 days: {value}",
+  "@forecastOccupancyNext7": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastRevenueNext7": "Room revenue, next 7 days: {value}",
+  "@forecastRevenueNext7": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastOpenAll": "All forecasts",
+  "forecastModelLine": "Model: {model}",
+  "@forecastModelLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  }
 }

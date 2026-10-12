@@ -754,5 +754,278 @@
   "hotelLabel": "هتل",
   "statusLabel": "وضعیت",
   "roomTypeLabel": "نوع اتاق",
-  "recentReadings": "ثبت‌های اخیر"
+  "recentReadings": "ثبت‌های اخیر",
+  "recommendationCenterTitle": "مرکز پیشنهادها",
+  "recommendationCenterSubtitle": "تصمیم بگیرید، کار را ارجاع دهید و ببینید هر پیشنهاد واقعاً چه تغییری ایجاد کرد.",
+  "tabOpen": "باز",
+  "tabDecided": "تصمیم‌گرفته",
+  "tabClosed": "بسته‌شده",
+  "nothingHereYet": "هنوز موردی نیست.",
+  "expectedSavingOpen": "صرفه‌جویی ماهانهٔ پیش‌بینی‌شده (باز): {amount}",
+  "@expectedSavingOpen": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "measuredSaving": "صرفه‌جویی ماهانهٔ اندازه‌گیری‌شده: {amount}",
+  "@measuredSaving": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "measuredSavingNote": "فقط ارزیابی‌هایی که از آزمون آماری عبور کرده‌اند شمرده می‌شوند.",
+  "expectedImpactLabel": "اثر مورد انتظار",
+  "impactFromTo": "{from} ← {to} {unit}",
+  "@impactFromTo": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "decideAction": "تصمیم",
+  "decisionTitle": "تصمیم",
+  "decisionNoteHint": "توضیح: چرا، چه کسی، تا چه زمانی",
+  "createLinkedTicket": "ایجاد تیکت تعمیرات برای این پیشنهاد",
+  "decisionSaved": "تصمیم ثبت شد",
+  "decidedByLine": "{status} توسط {name} · {date}",
+  "@decidedByLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "openLinkedTicket": "تیکت مرتبط",
+  "evaluationLabel": "نتیجهٔ اندازه‌گیری",
+  "evaluationPending": "پس از {date} اندازه‌گیری می‌شود",
+  "@evaluationPending": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "evaluationImproved": "بهبود تأیید شد",
+  "evaluationWorse": "بدتر از قبل",
+  "evaluationNoProblem": "مشکل رخ نداد",
+  "evaluationProblemHappened": "مشکل همچنان رخ داد",
+  "evaluationInconclusive": "نامشخص: تغییر در محدودهٔ نوسان عادی است",
+  "evaluationInsufficient": "دادهٔ کافی برای ارزیابی نیست",
+  "evaluationNotSupported": "ارزیابی خودکار برای این نوع وجود ندارد",
+  "beforeAfter": "قبل {before} · بعد {after} {unit}",
+  "@beforeAfter": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "evaluationLimitEnergy": "در مقایسه با مصرف مورد انتظار برای اشغال و فصل هر روز؛ آب‌وهوا و تغییرات دیگر مدل نشده‌اند.",
+  "evaluationLimitBeforeAfter": "مقایسهٔ سادهٔ قبل و بعد؛ تغییرات دیگرِ همان دوره کنترل نشده‌اند.",
+  "evaluationLimitOutcome": "نشان می‌دهد مشکل رخ داد یا نه، نه سهم دقیق این اقدام را.",
+  "closedNotDetected": "بسته‌شدهٔ خودکار: در آخرین تحلیل دیگر دیده نشد.",
+  "insStatusActive": "باز",
+  "insStatusAccepted": "پذیرفته",
+  "insStatusDismissed": "ردشده",
+  "insStatusImplemented": "اجراشده",
+  "insStatusResolved": "برطرف‌شده",
+  "insPriorityLow": "اولویت پایین",
+  "insPriorityMedium": "اولویت متوسط",
+  "insPriorityHigh": "اولویت بالا",
+  "unitMinutes": "دقیقه",
+  "unitTickets": "تیکت",
+  "unitRooms": "اتاق",
+  "unitDays": "روز",
+  "unitPoints": "واحد",
+  "navForecasts": "پیش‌بینی",
+  "forecastsTitle": "پیش‌بینی‌ها",
+  "forecastsSubtitle": "۲۸ روز آینده بر اساس سابقهٔ خود هتل. هر مدل پیش از استفاده روی دادهٔ گذشته آزموده می‌شود.",
+  "forecastIsEstimate": "پیش‌بینی برآورد همراه با بازه است، نه رقم قطعی.",
+  "seriesOccupancy": "نرخ اشغال",
+  "seriesRoomRevenue": "درآمد اتاق",
+  "seriesTotalRevenue": "درآمد کل",
+  "modelSeasonalNaive": "همان روز هفتهٔ قبل",
+  "modelHoltWinters": "هموارسازی نمایی هفتگی (هولت-وینترز)",
+  "modelCalendarRegression": "رگرسیون تقویمی (روز هفته، تعطیلات، فصل)",
+  "forecastAccuracy": "خطای آزمون گذشته {mape} · معیار ساده {naive}",
+  "@forecastAccuracy": {
+    "placeholders": {
+      "mape": {
+        "type": "String"
+      },
+      "naive": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastLive": "پیش‌بینی‌های روز بعد تاکنون: خطای {mape} در {days} روز",
+  "@forecastLive": {
+    "placeholders": {
+      "mape": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastNoData": "هنوز داده‌ای نیست",
+  "forecastShortHistory": "حداقل ۵ هفته داده لازم است",
+  "forecastGaps": "روزهای بدون داده زیاد است",
+  "forecastStale": "در هفتهٔ اخیر داده‌ای ثبت نشده",
+  "forecastNotRun": "هنوز محاسبه نشده",
+  "forecastRange": "بازهٔ ۸۰٪",
+  "forecastNext7": "میانگین ۷ روز آینده",
+  "forecastNext7Total": "جمع ۷ روز آینده",
+  "refreshForecasts": "محاسبهٔ دوباره",
+  "forecastsRefreshed": "پیش‌بینی‌ها به‌روز شد",
+  "forecastLabel": "پیش‌بینی",
+  "actualLabel": "واقعی",
+  "baselineSection": "خط مبنا و صرفه‌جویی",
+  "baselineExplain": "مصرف مورد انتظار با توجه به اشغال هر روز، آموخته‌شده از سال قبل از این دوره.",
+  "baselineFit": "برازش: CV(RMSE) {cv} · NMBE {nmbe} · حد ۲۵٪",
+  "@baselineFit": {
+    "placeholders": {
+      "cv": {
+        "type": "String"
+      },
+      "nmbe": {
+        "type": "String"
+      }
+    }
+  },
+  "baselineInvalid": "مدل برای ادعای صرفه‌جویی به‌اندازهٔ کافی دقیق نیست.",
+  "baselineMissing": "هنوز سابقهٔ کافی برای خط مبنا نیست (۲۸ روز با دادهٔ اشغال لازم است).",
+  "expectedLabel": "مورد انتظار",
+  "cusumTitle": "اختلاف تجمعی با مقدار مورد انتظار (CUSUM)",
+  "savingsResult": "صرفه‌جویی {amount} ± {unc}",
+  "@savingsResult": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "unc": {
+        "type": "String"
+      }
+    }
+  },
+  "overuseResult": "مصرف اضافه {amount} ± {unc}",
+  "@overuseResult": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "unc": {
+        "type": "String"
+      }
+    }
+  },
+  "withinNormalVariation": "در محدودهٔ نوسان عادی",
+  "costPerOccupiedRoom": "{amount} به ازای هر اتاق اشغال",
+  "@costPerOccupiedRoom": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "carbonPerOccupiedRoom": "{kg} کیلوگرم CO₂ به ازای هر اتاق اشغال",
+  "@carbonPerOccupiedRoom": {
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "carbonTotal": "مجموع {kg} کیلوگرم CO₂",
+  "@carbonTotal": {
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "emissionFactorNote": "ضریب انتشار ({kind}): {source}",
+  "@emissionFactorNote": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "assumptionLabel": "فرض",
+  "navCalendar": "تقویم",
+  "calendarTitle": "تعطیلات و رویدادها",
+  "calendarSubtitle": "تعطیلات رسمی ثابت از پیش وجود دارند. تعطیلات مذهبی (قمری) را از تقویم رسمی و رویدادهای محلی را اضافه کنید؛ پیش‌بینی‌ها از آن‌ها استفاده می‌کنند.",
+  "calendarAdd": "افزودن رویداد",
+  "eventTitleLabel": "عنوان",
+  "eventKindLabel": "نوع",
+  "eventFromLabel": "از",
+  "eventToLabel": "تا (اختیاری)",
+  "eventKindPublicHoliday": "تعطیل رسمی",
+  "eventKindReligious": "مناسبت مذهبی",
+  "eventKindSchool": "تعطیلات مدارس",
+  "eventKindLocalEvent": "رویداد محلی",
+  "eventKindClosure": "تعطیلی",
+  "eventKindOther": "سایر",
+  "builtInHolidays": "تعطیلات رسمی ثابت (۱۲ ماه آینده)",
+  "hotelEvents": "ثبت‌شده توسط هتل",
+  "noEvents": "هنوز رویدادی ثبت نشده.",
+  "eventSaved": "رویداد ثبت شد",
+  "eventDeleted": "رویداد حذف شد",
+  "deleteAction": "حذف",
+  "eventDateOrder": "تاریخ پایان نباید قبل از تاریخ شروع باشد.",
+  "billionRialUnit": "میلیارد ریال",
+  "forecastCardTitle": "پیش‌بینی",
+  "forecastOccupancyNext7": "اشغال ۷ روز آینده: {value}",
+  "@forecastOccupancyNext7": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastRevenueNext7": "درآمد اتاق ۷ روز آینده: {value}",
+  "@forecastRevenueNext7": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "forecastOpenAll": "همهٔ پیش‌بینی‌ها",
+  "forecastModelLine": "مدل: {model}",
+  "@forecastModelLine": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  }
 }

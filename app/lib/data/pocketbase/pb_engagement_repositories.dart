@@ -8,6 +8,7 @@ import '../../core/domain/actor.dart';
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/notifications/domain/notification_models.dart';
 import '../../features/reports/domain/report_models.dart';
+import '../insight_json.dart';
 import 'pb_support.dart';
 
 // ----------------------------------------------------------- notifications
@@ -101,33 +102,51 @@ class PocketBaseInsightsRepository implements InsightsRepository {
       .list(
         'aiInsights',
         filter: _pb.filter('hotel = {:h}${activeOnly ? ' && status = "active"' : ''}', {'h': hotelId}),
-        sort: '-created',
-        limit: 30,
+        sort: '-updated',
+        limit: activeOnly ? 30 : 120,
       )
-      .map(
-        (records) => [
-          for (final r in records)
-            AiInsight(
-              id: r.id,
-              category: r.enumValue('category', InsightCategory.values, InsightCategory.energy),
-              title: r.str('title'),
-              summary: r.str('summary'),
-              recommendation: r.str('recommendation'),
-              confidence: r.dbl('confidence', 0.5),
-              status: r.enumValue('status', InsightStatus.values, InsightStatus.active),
-              source: r.strOrNull('source') ?? 'rules',
-              createdAt: r.createdAt,
-              evidence: r.strings('evidence'),
-              estimatedMonthlySaving: r.dblOrNull('estimatedMonthlySaving'),
-              route: r.strOrNull('route'),
-            ),
-        ],
-      );
+      .map((records) => [for (final r in records) insightFromRecord(r)]);
 
   @override
-  Future<void> updateStatus(String hotelId, String insightId, InsightStatus status, Actor actor) =>
-      pbGuard(() => _pb.collection('aiInsights').update(insightId, body: {'status': status.name}));
+  Future<void> decide(
+    String hotelId,
+    String insightId,
+    InsightDecision decision, {
+    String note = '',
+    bool createTicket = false,
+    required Actor actor,
+  }) => pbGuard(
+    () => _pb.send(
+      '/api/zarin/insights/$insightId/decide',
+      method: 'POST',
+      body: {'decision': decision.name, 'note': note, if (createTicket) 'ticket': <String, Object>{}},
+    ),
+  );
 }
+
+AiInsight insightFromRecord(RecordModel r) => AiInsight(
+  id: r.id,
+  category: r.enumValue('category', InsightCategory.values, InsightCategory.energy),
+  title: r.str('title'),
+  summary: r.str('summary'),
+  recommendation: r.str('recommendation'),
+  confidence: r.dbl('confidence', 0.5),
+  status: r.enumValue('status', InsightStatus.values, InsightStatus.active),
+  source: r.strOrNull('source') ?? 'rules',
+  createdAt: r.createdAt,
+  evidence: r.strings('evidence'),
+  estimatedMonthlySaving: r.dblOrNull('estimatedMonthlySaving'),
+  route: r.strOrNull('route'),
+  rule: r.strOrNull('rule'),
+  priority: r.enumValue('priority', InsightPriority.values, InsightPriority.medium),
+  expectedImpact: expectedImpactFromJson(r.data['expectedImpact']),
+  evaluation: evaluationFromJson(r.data['evaluation']),
+  decisionNote: r.strOrNull('decisionNote'),
+  decidedByName: r.strOrNull('decidedByName'),
+  decidedAt: r.date('decidedAt'),
+  linkedTicketId: r.strOrNull('linkedTicket'),
+  closedReason: r.strOrNull('closedReason'),
+);
 
 /// `POST /api/zarin/ai/ask`: grounded in the hotel's analytics on the
 /// server; answers from the configured LLM or the rule-based fallback.

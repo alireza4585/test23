@@ -8,6 +8,7 @@ import '../../../data/repository_providers.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../hotel/application/hotel_providers.dart';
 import '../../operations/application/operations_providers.dart';
+import '../domain/energy_analysis.dart';
 import '../domain/energy_analytics.dart';
 import '../domain/energy_reading.dart';
 
@@ -68,3 +69,18 @@ class EnergyActions {
 }
 
 final energyActionsProvider = Provider<EnergyActions>(EnergyActions.new);
+
+/// Last 30 days (to yesterday) against the occupancy-normalised baseline
+/// fitted on the year before; recomputed when readings change.
+final energyAnalysisProvider = FutureProvider.family<EnergyAnalysis?, EnergyType>((ref, type) async {
+  final user = ref.watch(sessionUserProvider);
+  if (user == null || !user.hasHotel || !user.can(AppPermission.energyView)) return null;
+  ref.watch(energyReadingsProvider.select((r) => r.value?.length));
+  final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+  return ref.watch(energyAnalysisRepositoryProvider).analyze(
+    user.hotelId,
+    type,
+    from: today.subtract(const Duration(days: 30)),
+    to: today.subtract(const Duration(days: 1)),
+  );
+});

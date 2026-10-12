@@ -560,6 +560,12 @@ class DemoSeed {
           'تیکت باز mt-2 — HVAC — اولویت بالا',
         ],
         route: '/energy',
+        rule: 'energyIntensity',
+        priority: InsightPriority.high,
+        expectedImpact: const ExpectedImpact(
+          metric: 'electricityPerOccupiedRoom', unit: 'kWh', baseline: 66, expected: 54,
+          method: 'energyBaseline', monthlySaving: 52000000,
+        ),
       ),
       AiInsight(
         id: 'ai-2',
@@ -573,6 +579,10 @@ class DemoSeed {
         createdAt: now.subtract(const Duration(hours: 6)),
         evidence: const ['موجودی: ۱۴۰', 'نقطه سفارش: ۲۰۰', 'میانگین مصرف ۷ روز: ۴۵/روز'],
         route: '/inventory/inv-1',
+        rule: 'stockout',
+        expectedImpact: const ExpectedImpact(
+          metric: 'daysOfCover', unit: 'days', baseline: 3.1, expected: 14, method: 'stockout',
+        ),
       ),
       AiInsight(
         id: 'ai-3',
@@ -587,6 +597,10 @@ class DemoSeed {
         createdAt: now.subtract(const Duration(hours: 2)),
         evidence: const ['تکمیل‌شده امروز: ۲ اتاق checkout', 'میانگین: ۴۰.۵ دقیقه', 'هدف: ۳۵ دقیقه'],
         route: '/housekeeping',
+        rule: 'hkEfficiency',
+        expectedImpact: const ExpectedImpact(
+          metric: 'checkoutCleanMinutes', unit: 'min', baseline: 40.5, expected: 35, method: 'durationAvg',
+        ),
       ),
       AiInsight(
         id: 'ai-4',

@@ -439,7 +439,7 @@ class LegendKey extends StatelessWidget {
           Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
         ],
-        Text(label, style: theme.textTheme.bodySmall),
+        Flexible(child: Text(label, style: theme.textTheme.bodySmall)),
       ],
     );
   }

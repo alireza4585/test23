@@ -7,8 +7,10 @@ import '../../features/ai/presentation/ai_pages.dart';
 import '../../features/auth/application/auth_providers.dart';
 import '../../features/auth/presentation/auth_misc_pages.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/calendar/presentation/calendar_page.dart';
 import '../../features/dashboard/presentation/home_page.dart';
 import '../../features/energy/presentation/energy_page.dart';
+import '../../features/forecast/presentation/forecasts_page.dart';
 import '../../features/housekeeping/presentation/housekeeping_pages.dart';
 import '../../features/inventory/presentation/inventory_pages.dart';
 import '../../features/maintenance/presentation/maintenance_pages.dart';
@@ -151,6 +153,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.dailyOps, pageBuilder: (_, s) => tab(const DailyOpsPage(), s)),
           GoRoute(path: Routes.reports, pageBuilder: (_, s) => tab(const ReportsPage(), s)),
           GoRoute(path: Routes.insights, pageBuilder: (_, s) => tab(const InsightsPage(), s)),
+          GoRoute(path: Routes.forecasts, pageBuilder: (_, s) => tab(const ForecastsPage(), s)),
+          GoRoute(path: Routes.calendar, pageBuilder: (_, s) => tab(const CalendarPage(), s)),
           GoRoute(
             path: Routes.users,
             pageBuilder: (_, s) => tab(const UsersPage(), s),

@@ -15,17 +15,48 @@ final insightsProvider = StreamProvider<List<AiInsight>>((ref) {
   return ref.watch(insightsRepositoryProvider).watchInsights(user.hotelId);
 });
 
+/// The whole recommendation ledger (open, decided, dismissed, resolved).
+final recommendationLedgerProvider = StreamProvider<List<AiInsight>>((ref) {
+  final user = ref.watch(sessionUserProvider);
+  if (user == null || !user.hasHotel || !user.can(AppPermission.aiInsightsView)) {
+    return Stream.value(const []);
+  }
+  return ref.watch(insightsRepositoryProvider).watchInsights(user.hotelId, activeOnly: false);
+});
+
 class InsightActions {
   InsightActions(this.ref);
 
   final Ref ref;
 
-  Future<void> setStatus(AiInsight insight, InsightStatus status) async {
+  /// Executives and department managers decide; the server checks again.
+  bool get canDecide {
+    final user = ref.read(sessionUserProvider);
+    return user != null &&
+        user.can(AppPermission.aiInsightsView) &&
+        user.canAny(const {AppPermission.dashboardExecutive, AppPermission.dashboardOperations});
+  }
+
+  bool get canCreateTicket => ref.read(sessionUserProvider)?.can(AppPermission.maintenanceReport) ?? false;
+
+  Future<void> decide(
+    AiInsight insight,
+    InsightDecision decision, {
+    String note = '',
+    bool createTicket = false,
+  }) async {
     final user = ref.read(sessionUserProvider);
     if (user == null) throw const SessionExpiredFailure();
-    await ref
-        .read(insightsRepositoryProvider)
-        .updateStatus(user.hotelId, insight.id, status, user.asActor);
+    if (!canDecide) throw const PermissionDeniedFailure('insight.decide');
+    if (createTicket && !canCreateTicket) throw const PermissionDeniedFailure('maintenance.report');
+    await ref.read(insightsRepositoryProvider).decide(
+      user.hotelId,
+      insight.id,
+      decision,
+      note: note.trim(),
+      createTicket: createTicket,
+      actor: user.asActor,
+    );
   }
 }
 

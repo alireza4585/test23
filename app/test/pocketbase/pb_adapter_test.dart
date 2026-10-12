@@ -20,11 +20,14 @@ import 'package:zarin_hooshmand/core/security/app_permission.dart';
 import 'package:zarin_hooshmand/core/security/app_role.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_auth_repository.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_engagement_repositories.dart';
+import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_operations_repositories.dart';
 import 'package:zarin_hooshmand/features/admin/domain/user_admin.dart';
 import 'package:zarin_hooshmand/features/ai/domain/ai_models.dart';
 import 'package:zarin_hooshmand/features/auth/domain/app_user.dart';
+import 'package:zarin_hooshmand/features/calendar/domain/calendar_event.dart';
 import 'package:zarin_hooshmand/features/energy/domain/energy_reading.dart';
+import 'package:zarin_hooshmand/features/forecast/domain/forecast.dart';
 import 'package:zarin_hooshmand/features/housekeeping/domain/housekeeping_task.dart';
 import 'package:zarin_hooshmand/features/inventory/domain/inventory_item.dart';
 import 'package:zarin_hooshmand/features/maintenance/domain/maintenance_ticket.dart';
@@ -177,6 +180,48 @@ void main() {
     );
     expect(reply.text, contains('برق'));
     expect(reply.dataPoints, hasLength(3));
+  }, skip: skip);
+
+  test('AI core: forecasts, energy baseline, recommendation decision and calendar', () async {
+    final s = await _Session.signIn('0012345679');
+    final hotelId = s.user.hotelId;
+
+    final forecasts = PocketBaseForecastRepository(s.pb);
+    await forecasts.refresh(hotelId);
+    final map = await firstWhere(forecasts.watchForecasts(hotelId), (m) => m[ForecastSeries.occupancy]?.run.ok ?? false);
+    final occ = map[ForecastSeries.occupancy]!;
+    expect(occ.points, hasLength(28));
+    expect(occ.run.model, isNotNull);
+    expect(occ.run.chosen!.mae, lessThanOrEqualTo(occ.run.benchmark!.mae!));
+
+    final today = DateTime.now();
+    final analysis = await PocketBaseEnergyAnalysisRepository(s.pb).analyze(
+      hotelId, EnergyType.electricity,
+      from: today.subtract(const Duration(days: 7)), to: today.subtract(const Duration(days: 1)),
+    );
+    expect(analysis.baseline!.valid, isTrue);
+    expect(analysis.days, isNotEmpty);
+    expect(analysis.emissionFactorIsDefault, isTrue);
+
+    final insights = PocketBaseInsightsRepository(s.pb);
+    final open = await insights.watchInsights(hotelId).first;
+    if (open.isNotEmpty) {
+      await insights.decide(hotelId, open.first.id, InsightDecision.accepted, note: 'adapter test', actor: s.user.asActor);
+      final ledger = await firstWhere(insights.watchInsights(hotelId, activeOnly: false), (l) => l.any((i) => i.id == open.first.id && i.status == InsightStatus.accepted));
+      final decided = ledger.firstWhere((i) => i.id == open.first.id);
+      expect(decided.decisionNote, 'adapter test');
+      expect(decided.decidedByName, isNotEmpty);
+    }
+
+    final calendar = PocketBaseCalendarRepository(s.pb);
+    await calendar.addEvent(hotelId, CalendarEventDraft(day: DateTime(2027, 3, 1), endDay: DateTime(2027, 3, 2), kind: CalendarEventKind.religious, title: 'adapter test'));
+    final events = await firstWhere(calendar.watchEvents(hotelId), (l) => l.any((e) => e.title == 'adapter test'));
+    final ev = events.firstWhere((e) => e.title == 'adapter test');
+    expect(ev.endDay, DateTime(2027, 3, 2));
+    await calendar.deleteEvent(hotelId, ev.id);
+
+    final housekeeper = await _Session.signIn('0102345678');
+    await expectLater(PocketBaseForecastRepository(housekeeper.pb).refresh(hotelId), throwsA(isA<PermissionDeniedFailure>()));
   }, skip: skip);
 
   test('a provisioned user must change the temporary password and stays signed in', () async {

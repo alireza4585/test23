@@ -710,34 +710,64 @@ class DemoInsightsRepository implements InsightsRepository {
     sort: (a, b) => b.createdAt.compareTo(a.createdAt),
   );
 
+  /// Same rules as the server: a resolved recommendation cannot be decided,
+  /// one linked ticket at most, and an evaluation is scheduled for accepted
+  /// or implemented recommendations that carry an expected impact.
   @override
-  Future<void> updateStatus(
+  Future<void> decide(
     String hotelId,
     String insightId,
-    InsightStatus status,
-    Actor actor,
-  ) async {
-    await _store.latency();
+    InsightDecision decision, {
+    String note = '',
+    bool createTicket = false,
+    required Actor actor,
+  }) async {
     final i = _store.insights.get(insightId);
     if (i == null) throw const NotFoundFailure('insight');
+    if (i.status == InsightStatus.resolved) throw const ValidationFailure('insight_resolved');
+    final now = _store.clock.now();
+    String? ticketId = i.linkedTicketId;
+    if (createTicket && decision != InsightDecision.dismissed && ticketId == null) {
+      ticketId = await DemoMaintenanceRepository(_store).createTicket(
+        hotelId,
+        TicketDraft(
+          title: i.title,
+          description: '${i.recommendation}\n\n— از پیشنهاد هوشمند: ${i.title}',
+          category: i.category == InsightCategory.energy ? TicketCategory.hvac : TicketCategory.other,
+          priority: i.priority == InsightPriority.high ? TicketPriority.high : TicketPriority.medium,
+        ),
+        actor,
+        slaDueAt: now.add(const Duration(hours: 24)),
+      );
+    } else {
+      await _store.latency();
+    }
+    final impact = i.expectedImpact;
+    final startEvaluation = decision != InsightDecision.dismissed && impact != null &&
+        (i.status == InsightStatus.active || i.status == InsightStatus.dismissed || i.evaluation == null);
     _store.insights.put(
-      AiInsight(
-        id: i.id,
-        category: i.category,
-        title: i.title,
-        summary: i.summary,
-        recommendation: i.recommendation,
-        confidence: i.confidence,
-        status: status,
-        source: i.source,
-        createdAt: i.createdAt,
-        evidence: i.evidence,
-        estimatedMonthlySaving: i.estimatedMonthlySaving,
-        route: i.route,
+      i.copyWith(
+        status: InsightStatus.values.byName(decision.name),
+        decisionNote: note,
+        decidedByName: actor.name,
+        decidedAt: now,
+        linkedTicketId: ticketId,
+        clearEvaluation: decision == InsightDecision.dismissed,
+        evaluation: startEvaluation
+            ? InsightEvaluation(
+                status: EvaluationStatus.pending,
+                method: impact.method,
+                dueAt: now.add(Duration(days: _evaluationDays[impact.method] ?? 14)),
+              )
+            : null,
       ),
     );
-    _store.audit(actor.name, 'insight.${status.name}', 'aiInsights/$insightId');
+    _store.audit(actor.name, 'insight.${decision.name}', 'aiInsights/$insightId');
   }
+
+  static const _evaluationDays = {
+    'energyBaseline': 15, 'durationAvg': 8, 'ticketCount': 31, 'stockout': 15, 'oooRooms': 8, 'occupancyGap': 29,
+  };
 }
 
 class DemoReportsRepository implements ReportsRepository {

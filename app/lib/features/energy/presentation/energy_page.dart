@@ -15,6 +15,7 @@ import '../../auth/application/auth_providers.dart';
 import '../../dashboard/presentation/dashboard_widgets.dart';
 import '../../hotel/application/hotel_providers.dart';
 import '../application/energy_providers.dart';
+import '../domain/energy_analysis.dart';
 import '../domain/energy_analytics.dart';
 import '../domain/energy_reading.dart';
 
@@ -122,6 +123,7 @@ class _EnergyPageState extends ConsumerState<EnergyPage> {
                   const SizedBox(height: Insets.md),
                   AssistantCta(label: l10n.energyInsightCta),
                 ],
+                _BaselineSection(type: _type),
                 SectionHeader(title: l10n.recentReadings),
                 ZCard(
                   padding: EdgeInsets.zero,
@@ -319,6 +321,156 @@ class _RecordReadingSheetState extends ConsumerState<RecordReadingSheet> {
               onPressed: _busy ? null : _save,
               child: Text(l10n.save),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Expected vs actual against the occupancy-normalised baseline, CUSUM,
+/// savings with uncertainty, cost and carbon per occupied room.
+class _BaselineSection extends ConsumerWidget {
+  const _BaselineSection({required this.type});
+
+  final EnergyType type;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final fmt = context.fmt;
+    final theme = Theme.of(context);
+    final analysis = ref.watch(energyAnalysisProvider(type));
+    return Column(
+      key: const Key('energy.baseline'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(title: l10n.baselineSection, subtitle: l10n.baselineExplain),
+        AsyncValueView<EnergyAnalysis?>(
+          value: analysis,
+          data: (a) {
+            if (a == null) return const SizedBox.shrink();
+            final b = a.baseline;
+            final decimals = type == EnergyType.water ? 1 : 0;
+            String qty(double v) => '${fmt.number(v, decimals: decimals)} ${type.unit}';
+            return ZCard(
+              padding: const EdgeInsets.fromLTRB(Insets.sm, Insets.lg, Insets.lg, Insets.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (b == null)
+                    Text(l10n.baselineMissing, style: theme.textTheme.bodySmall)
+                  else ...[
+                    Text(
+                      l10n.baselineFit(fmt.percent(b.cvrmse, decimals: 1), fmt.percent(b.nmbe, decimals: 1)),
+                      style: theme.textTheme.labelMedium,
+                    ),
+                    if (!b.valid)
+                      Text(l10n.baselineInvalid, style: theme.textTheme.bodySmall?.copyWith(color: context.status.warning)),
+                    if (a.days.isNotEmpty) ...[
+                      const SizedBox(height: Insets.md),
+                      TrendLineChart(
+                        points: [for (final d in a.days) ChartPoint(d.day, d.actual)],
+                        dayLabel: fmt.dayOfMonth,
+                        valueLabel: (v) => fmt.number(v),
+                      ),
+                      Wrap(
+                        spacing: Insets.lg,
+                        children: [
+                          LegendKey(color: context.status.series, label: l10n.actualLabel),
+                          Text(
+                            '${l10n.expectedLabel}: ${qty(a.days.fold(0.0, (s, d) => s + d.expected))}',
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: Insets.md),
+                      Text(l10n.cusumTitle, style: theme.textTheme.labelLarge),
+                      const SizedBox(height: Insets.sm),
+                      _CusumBar(days: a.days),
+                      if (a.savings != null && a.uncertainty != null) ...[
+                        const SizedBox(height: Insets.sm),
+                        Text(
+                          !a.significant
+                              ? '${l10n.withinNormalVariation} (${l10n.savingsResult(qty(a.savings!), qty(a.uncertainty!))})'
+                              : a.savings! >= 0
+                              ? l10n.savingsResult(qty(a.savings!), qty(a.uncertainty!))
+                              : l10n.overuseResult(qty(-a.savings!), qty(a.uncertainty!)),
+                          key: const Key('energy.savings'),
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ],
+                  ],
+                  const SizedBox(height: Insets.md),
+                  if (a.costPerOccupiedRoom != null)
+                    Text(l10n.costPerOccupiedRoom('${fmt.money(a.costPerOccupiedRoom!)} ${l10n.currencyRial}'), style: theme.textTheme.bodySmall),
+                  if (a.carbonPerOccupiedRoomKg != null) ...[
+                    Text(l10n.carbonPerOccupiedRoom(fmt.number(a.carbonPerOccupiedRoomKg!, decimals: 1)), style: theme.textTheme.bodySmall),
+                    Text(l10n.carbonTotal(fmt.number(a.carbonKg ?? 0)), style: theme.textTheme.bodySmall),
+                    Text(
+                      l10n.emissionFactorNote(l10n.assumptionLabel, a.emissionFactorSource ?? ''),
+                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Daily CUSUM as bars around zero (above: more than expected).
+class _CusumBar extends StatelessWidget {
+  const _CusumBar({required this.days});
+
+  final List<MeasuredDay> days;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxAbs = days.fold<double>(1, (m, d) => d.cusum.abs() > m ? d.cusum.abs() : m);
+    final over = context.status.warning;
+    final under = context.status.success;
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        height: 64,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final d in days)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FractionallySizedBox(
+                            heightFactor: d.cusum > 0 ? d.cusum / maxAbs : 0,
+                            child: Container(color: over),
+                          ),
+                        ),
+                      ),
+                      Container(height: 1, color: Theme.of(context).colorScheme.outline),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: FractionallySizedBox(
+                            heightFactor: d.cusum < 0 ? -d.cusum / maxAbs : 0,
+                            child: Container(color: under),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

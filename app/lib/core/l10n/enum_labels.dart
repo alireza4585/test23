@@ -1,6 +1,8 @@
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/auth/domain/app_user.dart';
+import '../../features/calendar/domain/calendar_event.dart';
 import '../../features/energy/domain/energy_reading.dart';
+import '../../features/forecast/domain/forecast.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
 import '../../features/inventory/domain/inventory_item.dart';
 import '../../features/maintenance/domain/maintenance_ticket.dart';
@@ -161,6 +163,68 @@ extension EnumLabels on AppLocalizations {
     InsightCategory.staffing => insCatStaffing,
   };
 
+  String insightStatus(InsightStatus s) => switch (s) {
+    InsightStatus.active => insStatusActive,
+    InsightStatus.accepted => insStatusAccepted,
+    InsightStatus.dismissed => insStatusDismissed,
+    InsightStatus.implemented => insStatusImplemented,
+    InsightStatus.resolved => insStatusResolved,
+  };
+
+  String insightDecision(InsightDecision d) => switch (d) {
+    InsightDecision.accepted => acceptInsight,
+    InsightDecision.implemented => implementedInsight,
+    InsightDecision.dismissed => dismissInsight,
+  };
+
+  String insightPriority(InsightPriority p) => switch (p) {
+    InsightPriority.low => insPriorityLow,
+    InsightPriority.medium => insPriorityMedium,
+    InsightPriority.high => insPriorityHigh,
+  };
+
+  /// Units used in expected impacts and evaluations (server codes).
+  String impactUnit(String unit) => switch (unit) {
+    'min' => unitMinutes,
+    'tickets' => unitTickets,
+    'rooms' => unitRooms,
+    'days' => unitDays,
+    'pts' => unitPoints,
+    _ => unit,
+  };
+
+  String forecastSeries(ForecastSeries s) => switch (s) {
+    ForecastSeries.occupancy => seriesOccupancy,
+    ForecastSeries.roomRevenue => seriesRoomRevenue,
+    ForecastSeries.totalRevenue => seriesTotalRevenue,
+    ForecastSeries.electricity => energyElectricity,
+    ForecastSeries.water => energyWater,
+    ForecastSeries.gas => energyGas,
+  };
+
+  String forecastModel(ForecastModel m) => switch (m) {
+    ForecastModel.seasonalNaive => modelSeasonalNaive,
+    ForecastModel.holtWinters => modelHoltWinters,
+    ForecastModel.calendarRegression => modelCalendarRegression,
+  };
+
+  String forecastReason(String? reason) => switch (reason) {
+    'no_data' => forecastNoData,
+    'insufficient_history' => forecastShortHistory,
+    'too_many_gaps' => forecastGaps,
+    'stale_data' => forecastStale,
+    _ => forecastNotRun,
+  };
+
+  String calendarKind(CalendarEventKind k) => switch (k) {
+    CalendarEventKind.publicHoliday => eventKindPublicHoliday,
+    CalendarEventKind.religious => eventKindReligious,
+    CalendarEventKind.school => eventKindSchool,
+    CalendarEventKind.localEvent => eventKindLocalEvent,
+    CalendarEventKind.closure => eventKindClosure,
+    CalendarEventKind.other => eventKindOther,
+  };
+
   String reportType(ReportType t) => switch (t) {
     ReportType.executiveSummary => reportExecutive,
     ReportType.energy => reportEnergy,
@@ -197,6 +261,8 @@ extension EnumLabels on AppLocalizations {
         'task_not_pending' ||
         'task_not_in_progress' ||
         'ticket_status_changed' => errorTaskChanged,
+        'insight_resolved' => closedNotDetected,
+        'invalid_range' => eventDateOrder,
         _ => errorValidation,
       },
       _ => errorGeneric,

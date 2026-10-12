@@ -11,29 +11,84 @@ import '../application/ai_providers.dart';
 import '../domain/ai_models.dart';
 import 'insight_card.dart';
 
+/// Recommendation center: open recommendations to decide, decided ones with
+/// their linked work and measured result, and closed ones. Expected savings
+/// and measured savings are shown separately; only evaluations that pass the
+/// statistical check count as measured.
 class InsightsPage extends ConsumerWidget {
   const InsightsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final insights = ref.watch(insightsProvider);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.insightsTitle), actions: const [ShellActions()]),
-      body: AsyncValueView<List<AiInsight>>(
-        value: insights,
-        data: (list) => PageBody(
-          maxWidth: 820,
-          children: [
-            Text(l10n.insightsSubtitle, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: Insets.md),
-            if (list.isEmpty) EmptyState(icon: Icons.auto_awesome_outlined, message: l10n.noInsights),
-            for (final i in list)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Insets.md),
-                child: InsightCard(insight: i, expanded: true),
-              ),
-          ],
+    final fmt = context.fmt;
+    final ledger = ref.watch(recommendationLedgerProvider);
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.recommendationCenterTitle),
+          actions: const [ShellActions()],
+          bottom: TabBar(
+            tabs: [
+              Tab(key: const Key('recs.tab.open'), text: l10n.tabOpen),
+              Tab(key: const Key('recs.tab.decided'), text: l10n.tabDecided),
+              Tab(key: const Key('recs.tab.closed'), text: l10n.tabClosed),
+            ],
+          ),
+        ),
+        body: AsyncValueView<List<AiInsight>>(
+          value: ledger,
+          data: (all) {
+            final open = [for (final i in all) if (i.isOpen) i];
+            final decided = [for (final i in all) if (i.isDecided) i];
+            final closed = [for (final i in all) if (i.isClosed) i];
+            final expected = open.fold<double>(0, (s, i) => s + (i.estimatedMonthlySaving ?? 0));
+            final measured = decided.fold<double>(0, (s, i) {
+              final e = i.evaluation;
+              return e != null && e.status == EvaluationStatus.evaluated && e.improved == true ? s + (e.monthlySaving ?? 0) : s;
+            });
+            Widget list(List<AiInsight> items, {required bool header}) => PageBody(
+              maxWidth: 820,
+              children: [
+                if (header) ...[
+                  Text(l10n.recommendationCenterSubtitle, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: Insets.md),
+                  ZCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.expectedSavingOpen('${fmt.money(expected)} ${l10n.currencyRial}'),
+                          key: const Key('recs.expected'),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: Insets.xs),
+                        Text(
+                          l10n.measuredSaving('${fmt.money(measured)} ${l10n.currencyRial}'),
+                          key: const Key('recs.measured'),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: Insets.xs),
+                        Text(l10n.measuredSavingNote, style: Theme.of(context).textTheme.labelSmall),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: Insets.md),
+                ],
+                if (items.isEmpty)
+                  EmptyState(icon: Icons.auto_awesome_outlined, message: header ? l10n.noInsights : l10n.nothingHereYet),
+                for (final i in items)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Insets.md),
+                    child: InsightCard(insight: i, expanded: true),
+                  ),
+              ],
+            );
+            return TabBarView(
+              children: [list(open, header: true), list(decided, header: false), list(closed, header: false)],
+            );
+          },
         ),
       ),
     );

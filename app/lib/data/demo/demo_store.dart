@@ -6,6 +6,7 @@ import '../../core/utils/day_key.dart';
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/auth/domain/app_user.dart';
 import '../../features/auth/domain/user_session.dart';
+import '../../features/calendar/domain/calendar_event.dart';
 import '../../features/energy/domain/energy_reading.dart';
 import '../../features/hotel/domain/hotel.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
@@ -89,6 +90,7 @@ class DemoStore {
   final insights = DemoCollection<AiInsight>((i) => i.id);
   final reports = DemoCollection<ReportRecord>((r) => r.id);
   final sessions = DemoCollection<Scoped<UserSession>>((s) => s.id);
+  final calendarEvents = DemoCollection<CalendarEvent>((e) => e.id);
 
   /// Append-only audit trail (mirrors `hotels/{id}/auditLogs`).
   final List<String> auditLog = [];

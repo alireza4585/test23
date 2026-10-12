@@ -10,6 +10,7 @@ import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/domain/app_user.dart';
+import '../../forecast/presentation/forecasts_page.dart';
 import '../../notifications/presentation/alert_card.dart';
 import '../application/dashboard_providers.dart';
 import '../domain/dashboard_metrics.dart';
@@ -91,6 +92,8 @@ class ExecutiveDashboard extends ConsumerWidget {
     return [
       SectionHeader(title: l10n.sectionAlerts, action: const SeeAllButton(route: Routes.notifications)),
       const AlertsSection(),
+      const SizedBox(height: Insets.md),
+      const ForecastSummaryCard(),
       if (user.can(AppPermission.aiInsightsView)) ...[
         SectionHeader(title: l10n.sectionInsights, action: const SeeAllButton(route: Routes.insights)),
         const InsightsPreview(),

@@ -2671,6 +2671,672 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'ثبت‌های اخیر'**
   String get recentReadings;
+
+  /// No description provided for @recommendationCenterTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'مرکز پیشنهادها'**
+  String get recommendationCenterTitle;
+
+  /// No description provided for @recommendationCenterSubtitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم بگیرید، کار را ارجاع دهید و ببینید هر پیشنهاد واقعاً چه تغییری ایجاد کرد.'**
+  String get recommendationCenterSubtitle;
+
+  /// No description provided for @tabOpen.
+  ///
+  /// In fa, this message translates to:
+  /// **'باز'**
+  String get tabOpen;
+
+  /// No description provided for @tabDecided.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم‌گرفته'**
+  String get tabDecided;
+
+  /// No description provided for @tabClosed.
+  ///
+  /// In fa, this message translates to:
+  /// **'بسته‌شده'**
+  String get tabClosed;
+
+  /// No description provided for @nothingHereYet.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز موردی نیست.'**
+  String get nothingHereYet;
+
+  /// No description provided for @expectedSavingOpen.
+  ///
+  /// In fa, this message translates to:
+  /// **'صرفه‌جویی ماهانهٔ پیش‌بینی‌شده (باز): {amount}'**
+  String expectedSavingOpen(String amount);
+
+  /// No description provided for @measuredSaving.
+  ///
+  /// In fa, this message translates to:
+  /// **'صرفه‌جویی ماهانهٔ اندازه‌گیری‌شده: {amount}'**
+  String measuredSaving(String amount);
+
+  /// No description provided for @measuredSavingNote.
+  ///
+  /// In fa, this message translates to:
+  /// **'فقط ارزیابی‌هایی که از آزمون آماری عبور کرده‌اند شمرده می‌شوند.'**
+  String get measuredSavingNote;
+
+  /// No description provided for @expectedImpactLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'اثر مورد انتظار'**
+  String get expectedImpactLabel;
+
+  /// No description provided for @impactFromTo.
+  ///
+  /// In fa, this message translates to:
+  /// **'{from} ← {to} {unit}'**
+  String impactFromTo(String from, String to, String unit);
+
+  /// No description provided for @decideAction.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم'**
+  String get decideAction;
+
+  /// No description provided for @decisionTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم'**
+  String get decisionTitle;
+
+  /// No description provided for @decisionNoteHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'توضیح: چرا، چه کسی، تا چه زمانی'**
+  String get decisionNoteHint;
+
+  /// No description provided for @createLinkedTicket.
+  ///
+  /// In fa, this message translates to:
+  /// **'ایجاد تیکت تعمیرات برای این پیشنهاد'**
+  String get createLinkedTicket;
+
+  /// No description provided for @decisionSaved.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم ثبت شد'**
+  String get decisionSaved;
+
+  /// No description provided for @decidedByLine.
+  ///
+  /// In fa, this message translates to:
+  /// **'{status} توسط {name} · {date}'**
+  String decidedByLine(String status, String name, String date);
+
+  /// No description provided for @openLinkedTicket.
+  ///
+  /// In fa, this message translates to:
+  /// **'تیکت مرتبط'**
+  String get openLinkedTicket;
+
+  /// No description provided for @evaluationLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'نتیجهٔ اندازه‌گیری'**
+  String get evaluationLabel;
+
+  /// No description provided for @evaluationPending.
+  ///
+  /// In fa, this message translates to:
+  /// **'پس از {date} اندازه‌گیری می‌شود'**
+  String evaluationPending(String date);
+
+  /// No description provided for @evaluationImproved.
+  ///
+  /// In fa, this message translates to:
+  /// **'بهبود تأیید شد'**
+  String get evaluationImproved;
+
+  /// No description provided for @evaluationWorse.
+  ///
+  /// In fa, this message translates to:
+  /// **'بدتر از قبل'**
+  String get evaluationWorse;
+
+  /// No description provided for @evaluationNoProblem.
+  ///
+  /// In fa, this message translates to:
+  /// **'مشکل رخ نداد'**
+  String get evaluationNoProblem;
+
+  /// No description provided for @evaluationProblemHappened.
+  ///
+  /// In fa, this message translates to:
+  /// **'مشکل همچنان رخ داد'**
+  String get evaluationProblemHappened;
+
+  /// No description provided for @evaluationInconclusive.
+  ///
+  /// In fa, this message translates to:
+  /// **'نامشخص: تغییر در محدودهٔ نوسان عادی است'**
+  String get evaluationInconclusive;
+
+  /// No description provided for @evaluationInsufficient.
+  ///
+  /// In fa, this message translates to:
+  /// **'دادهٔ کافی برای ارزیابی نیست'**
+  String get evaluationInsufficient;
+
+  /// No description provided for @evaluationNotSupported.
+  ///
+  /// In fa, this message translates to:
+  /// **'ارزیابی خودکار برای این نوع وجود ندارد'**
+  String get evaluationNotSupported;
+
+  /// No description provided for @beforeAfter.
+  ///
+  /// In fa, this message translates to:
+  /// **'قبل {before} · بعد {after} {unit}'**
+  String beforeAfter(String before, String after, String unit);
+
+  /// No description provided for @evaluationLimitEnergy.
+  ///
+  /// In fa, this message translates to:
+  /// **'در مقایسه با مصرف مورد انتظار برای اشغال و فصل هر روز؛ آب‌وهوا و تغییرات دیگر مدل نشده‌اند.'**
+  String get evaluationLimitEnergy;
+
+  /// No description provided for @evaluationLimitBeforeAfter.
+  ///
+  /// In fa, this message translates to:
+  /// **'مقایسهٔ سادهٔ قبل و بعد؛ تغییرات دیگرِ همان دوره کنترل نشده‌اند.'**
+  String get evaluationLimitBeforeAfter;
+
+  /// No description provided for @evaluationLimitOutcome.
+  ///
+  /// In fa, this message translates to:
+  /// **'نشان می‌دهد مشکل رخ داد یا نه، نه سهم دقیق این اقدام را.'**
+  String get evaluationLimitOutcome;
+
+  /// No description provided for @closedNotDetected.
+  ///
+  /// In fa, this message translates to:
+  /// **'بسته‌شدهٔ خودکار: در آخرین تحلیل دیگر دیده نشد.'**
+  String get closedNotDetected;
+
+  /// No description provided for @insStatusActive.
+  ///
+  /// In fa, this message translates to:
+  /// **'باز'**
+  String get insStatusActive;
+
+  /// No description provided for @insStatusAccepted.
+  ///
+  /// In fa, this message translates to:
+  /// **'پذیرفته'**
+  String get insStatusAccepted;
+
+  /// No description provided for @insStatusDismissed.
+  ///
+  /// In fa, this message translates to:
+  /// **'ردشده'**
+  String get insStatusDismissed;
+
+  /// No description provided for @insStatusImplemented.
+  ///
+  /// In fa, this message translates to:
+  /// **'اجراشده'**
+  String get insStatusImplemented;
+
+  /// No description provided for @insStatusResolved.
+  ///
+  /// In fa, this message translates to:
+  /// **'برطرف‌شده'**
+  String get insStatusResolved;
+
+  /// No description provided for @insPriorityLow.
+  ///
+  /// In fa, this message translates to:
+  /// **'اولویت پایین'**
+  String get insPriorityLow;
+
+  /// No description provided for @insPriorityMedium.
+  ///
+  /// In fa, this message translates to:
+  /// **'اولویت متوسط'**
+  String get insPriorityMedium;
+
+  /// No description provided for @insPriorityHigh.
+  ///
+  /// In fa, this message translates to:
+  /// **'اولویت بالا'**
+  String get insPriorityHigh;
+
+  /// No description provided for @unitMinutes.
+  ///
+  /// In fa, this message translates to:
+  /// **'دقیقه'**
+  String get unitMinutes;
+
+  /// No description provided for @unitTickets.
+  ///
+  /// In fa, this message translates to:
+  /// **'تیکت'**
+  String get unitTickets;
+
+  /// No description provided for @unitRooms.
+  ///
+  /// In fa, this message translates to:
+  /// **'اتاق'**
+  String get unitRooms;
+
+  /// No description provided for @unitDays.
+  ///
+  /// In fa, this message translates to:
+  /// **'روز'**
+  String get unitDays;
+
+  /// No description provided for @unitPoints.
+  ///
+  /// In fa, this message translates to:
+  /// **'واحد'**
+  String get unitPoints;
+
+  /// No description provided for @navForecasts.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی'**
+  String get navForecasts;
+
+  /// No description provided for @forecastsTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی‌ها'**
+  String get forecastsTitle;
+
+  /// No description provided for @forecastsSubtitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'۲۸ روز آینده بر اساس سابقهٔ خود هتل. هر مدل پیش از استفاده روی دادهٔ گذشته آزموده می‌شود.'**
+  String get forecastsSubtitle;
+
+  /// No description provided for @forecastIsEstimate.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی برآورد همراه با بازه است، نه رقم قطعی.'**
+  String get forecastIsEstimate;
+
+  /// No description provided for @seriesOccupancy.
+  ///
+  /// In fa, this message translates to:
+  /// **'نرخ اشغال'**
+  String get seriesOccupancy;
+
+  /// No description provided for @seriesRoomRevenue.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد اتاق'**
+  String get seriesRoomRevenue;
+
+  /// No description provided for @seriesTotalRevenue.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد کل'**
+  String get seriesTotalRevenue;
+
+  /// No description provided for @modelSeasonalNaive.
+  ///
+  /// In fa, this message translates to:
+  /// **'همان روز هفتهٔ قبل'**
+  String get modelSeasonalNaive;
+
+  /// No description provided for @modelHoltWinters.
+  ///
+  /// In fa, this message translates to:
+  /// **'هموارسازی نمایی هفتگی (هولت-وینترز)'**
+  String get modelHoltWinters;
+
+  /// No description provided for @modelCalendarRegression.
+  ///
+  /// In fa, this message translates to:
+  /// **'رگرسیون تقویمی (روز هفته، تعطیلات، فصل)'**
+  String get modelCalendarRegression;
+
+  /// No description provided for @forecastAccuracy.
+  ///
+  /// In fa, this message translates to:
+  /// **'خطای آزمون گذشته {mape} · معیار ساده {naive}'**
+  String forecastAccuracy(String mape, String naive);
+
+  /// No description provided for @forecastLive.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی‌های روز بعد تاکنون: خطای {mape} در {days} روز'**
+  String forecastLive(String mape, String days);
+
+  /// No description provided for @forecastNoData.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز داده‌ای نیست'**
+  String get forecastNoData;
+
+  /// No description provided for @forecastShortHistory.
+  ///
+  /// In fa, this message translates to:
+  /// **'حداقل ۵ هفته داده لازم است'**
+  String get forecastShortHistory;
+
+  /// No description provided for @forecastGaps.
+  ///
+  /// In fa, this message translates to:
+  /// **'روزهای بدون داده زیاد است'**
+  String get forecastGaps;
+
+  /// No description provided for @forecastStale.
+  ///
+  /// In fa, this message translates to:
+  /// **'در هفتهٔ اخیر داده‌ای ثبت نشده'**
+  String get forecastStale;
+
+  /// No description provided for @forecastNotRun.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز محاسبه نشده'**
+  String get forecastNotRun;
+
+  /// No description provided for @forecastRange.
+  ///
+  /// In fa, this message translates to:
+  /// **'بازهٔ ۸۰٪'**
+  String get forecastRange;
+
+  /// No description provided for @forecastNext7.
+  ///
+  /// In fa, this message translates to:
+  /// **'میانگین ۷ روز آینده'**
+  String get forecastNext7;
+
+  /// No description provided for @forecastNext7Total.
+  ///
+  /// In fa, this message translates to:
+  /// **'جمع ۷ روز آینده'**
+  String get forecastNext7Total;
+
+  /// No description provided for @refreshForecasts.
+  ///
+  /// In fa, this message translates to:
+  /// **'محاسبهٔ دوباره'**
+  String get refreshForecasts;
+
+  /// No description provided for @forecastsRefreshed.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی‌ها به‌روز شد'**
+  String get forecastsRefreshed;
+
+  /// No description provided for @forecastLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی'**
+  String get forecastLabel;
+
+  /// No description provided for @actualLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'واقعی'**
+  String get actualLabel;
+
+  /// No description provided for @baselineSection.
+  ///
+  /// In fa, this message translates to:
+  /// **'خط مبنا و صرفه‌جویی'**
+  String get baselineSection;
+
+  /// No description provided for @baselineExplain.
+  ///
+  /// In fa, this message translates to:
+  /// **'مصرف مورد انتظار با توجه به اشغال هر روز، آموخته‌شده از سال قبل از این دوره.'**
+  String get baselineExplain;
+
+  /// No description provided for @baselineFit.
+  ///
+  /// In fa, this message translates to:
+  /// **'برازش: CV(RMSE) {cv} · NMBE {nmbe} · حد ۲۵٪'**
+  String baselineFit(String cv, String nmbe);
+
+  /// No description provided for @baselineInvalid.
+  ///
+  /// In fa, this message translates to:
+  /// **'مدل برای ادعای صرفه‌جویی به‌اندازهٔ کافی دقیق نیست.'**
+  String get baselineInvalid;
+
+  /// No description provided for @baselineMissing.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز سابقهٔ کافی برای خط مبنا نیست (۲۸ روز با دادهٔ اشغال لازم است).'**
+  String get baselineMissing;
+
+  /// No description provided for @expectedLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'مورد انتظار'**
+  String get expectedLabel;
+
+  /// No description provided for @cusumTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'اختلاف تجمعی با مقدار مورد انتظار (CUSUM)'**
+  String get cusumTitle;
+
+  /// No description provided for @savingsResult.
+  ///
+  /// In fa, this message translates to:
+  /// **'صرفه‌جویی {amount} ± {unc}'**
+  String savingsResult(String amount, String unc);
+
+  /// No description provided for @overuseResult.
+  ///
+  /// In fa, this message translates to:
+  /// **'مصرف اضافه {amount} ± {unc}'**
+  String overuseResult(String amount, String unc);
+
+  /// No description provided for @withinNormalVariation.
+  ///
+  /// In fa, this message translates to:
+  /// **'در محدودهٔ نوسان عادی'**
+  String get withinNormalVariation;
+
+  /// No description provided for @costPerOccupiedRoom.
+  ///
+  /// In fa, this message translates to:
+  /// **'{amount} به ازای هر اتاق اشغال'**
+  String costPerOccupiedRoom(String amount);
+
+  /// No description provided for @carbonPerOccupiedRoom.
+  ///
+  /// In fa, this message translates to:
+  /// **'{kg} کیلوگرم CO₂ به ازای هر اتاق اشغال'**
+  String carbonPerOccupiedRoom(String kg);
+
+  /// No description provided for @carbonTotal.
+  ///
+  /// In fa, this message translates to:
+  /// **'مجموع {kg} کیلوگرم CO₂'**
+  String carbonTotal(String kg);
+
+  /// No description provided for @emissionFactorNote.
+  ///
+  /// In fa, this message translates to:
+  /// **'ضریب انتشار ({kind}): {source}'**
+  String emissionFactorNote(String kind, String source);
+
+  /// No description provided for @assumptionLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'فرض'**
+  String get assumptionLabel;
+
+  /// No description provided for @navCalendar.
+  ///
+  /// In fa, this message translates to:
+  /// **'تقویم'**
+  String get navCalendar;
+
+  /// No description provided for @calendarTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیلات و رویدادها'**
+  String get calendarTitle;
+
+  /// No description provided for @calendarSubtitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیلات رسمی ثابت از پیش وجود دارند. تعطیلات مذهبی (قمری) را از تقویم رسمی و رویدادهای محلی را اضافه کنید؛ پیش‌بینی‌ها از آن‌ها استفاده می‌کنند.'**
+  String get calendarSubtitle;
+
+  /// No description provided for @calendarAdd.
+  ///
+  /// In fa, this message translates to:
+  /// **'افزودن رویداد'**
+  String get calendarAdd;
+
+  /// No description provided for @eventTitleLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'عنوان'**
+  String get eventTitleLabel;
+
+  /// No description provided for @eventKindLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'نوع'**
+  String get eventKindLabel;
+
+  /// No description provided for @eventFromLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'از'**
+  String get eventFromLabel;
+
+  /// No description provided for @eventToLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'تا (اختیاری)'**
+  String get eventToLabel;
+
+  /// No description provided for @eventKindPublicHoliday.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیل رسمی'**
+  String get eventKindPublicHoliday;
+
+  /// No description provided for @eventKindReligious.
+  ///
+  /// In fa, this message translates to:
+  /// **'مناسبت مذهبی'**
+  String get eventKindReligious;
+
+  /// No description provided for @eventKindSchool.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیلات مدارس'**
+  String get eventKindSchool;
+
+  /// No description provided for @eventKindLocalEvent.
+  ///
+  /// In fa, this message translates to:
+  /// **'رویداد محلی'**
+  String get eventKindLocalEvent;
+
+  /// No description provided for @eventKindClosure.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیلی'**
+  String get eventKindClosure;
+
+  /// No description provided for @eventKindOther.
+  ///
+  /// In fa, this message translates to:
+  /// **'سایر'**
+  String get eventKindOther;
+
+  /// No description provided for @builtInHolidays.
+  ///
+  /// In fa, this message translates to:
+  /// **'تعطیلات رسمی ثابت (۱۲ ماه آینده)'**
+  String get builtInHolidays;
+
+  /// No description provided for @hotelEvents.
+  ///
+  /// In fa, this message translates to:
+  /// **'ثبت‌شده توسط هتل'**
+  String get hotelEvents;
+
+  /// No description provided for @noEvents.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز رویدادی ثبت نشده.'**
+  String get noEvents;
+
+  /// No description provided for @eventSaved.
+  ///
+  /// In fa, this message translates to:
+  /// **'رویداد ثبت شد'**
+  String get eventSaved;
+
+  /// No description provided for @eventDeleted.
+  ///
+  /// In fa, this message translates to:
+  /// **'رویداد حذف شد'**
+  String get eventDeleted;
+
+  /// No description provided for @deleteAction.
+  ///
+  /// In fa, this message translates to:
+  /// **'حذف'**
+  String get deleteAction;
+
+  /// No description provided for @eventDateOrder.
+  ///
+  /// In fa, this message translates to:
+  /// **'تاریخ پایان نباید قبل از تاریخ شروع باشد.'**
+  String get eventDateOrder;
+
+  /// No description provided for @billionRialUnit.
+  ///
+  /// In fa, this message translates to:
+  /// **'میلیارد ریال'**
+  String get billionRialUnit;
+
+  /// No description provided for @forecastCardTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌بینی'**
+  String get forecastCardTitle;
+
+  /// No description provided for @forecastOccupancyNext7.
+  ///
+  /// In fa, this message translates to:
+  /// **'اشغال ۷ روز آینده: {value}'**
+  String forecastOccupancyNext7(String value);
+
+  /// No description provided for @forecastRevenueNext7.
+  ///
+  /// In fa, this message translates to:
+  /// **'درآمد اتاق ۷ روز آینده: {value}'**
+  String forecastRevenueNext7(String value);
+
+  /// No description provided for @forecastOpenAll.
+  ///
+  /// In fa, this message translates to:
+  /// **'همهٔ پیش‌بینی‌ها'**
+  String get forecastOpenAll;
+
+  /// No description provided for @forecastModelLine.
+  ///
+  /// In fa, this message translates to:
+  /// **'مدل: {model}'**
+  String forecastModelLine(String model);
 }
 
 class _AppLocalizationsDelegate

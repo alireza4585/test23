@@ -279,7 +279,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navNotifications => 'Notifications';
 
   @override
-  String get navInsights => 'AI insights';
+  String get navInsights => 'Recommendations';
 
   @override
   String get navAssistant => 'AI assistant';
@@ -1402,4 +1402,388 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recentReadings => 'Recent readings';
+
+  @override
+  String get recommendationCenterTitle => 'Recommendation center';
+
+  @override
+  String get recommendationCenterSubtitle =>
+      'Decide, assign the work and see what each recommendation actually changed.';
+
+  @override
+  String get tabOpen => 'Open';
+
+  @override
+  String get tabDecided => 'Decided';
+
+  @override
+  String get tabClosed => 'Closed';
+
+  @override
+  String get nothingHereYet => 'Nothing here yet.';
+
+  @override
+  String expectedSavingOpen(String amount) {
+    return 'Expected monthly savings (open): $amount';
+  }
+
+  @override
+  String measuredSaving(String amount) {
+    return 'Measured monthly savings: $amount';
+  }
+
+  @override
+  String get measuredSavingNote =>
+      'Only evaluations that pass the statistical check are counted.';
+
+  @override
+  String get expectedImpactLabel => 'Expected impact';
+
+  @override
+  String impactFromTo(String from, String to, String unit) {
+    return '$from → $to $unit';
+  }
+
+  @override
+  String get decideAction => 'Decide';
+
+  @override
+  String get decisionTitle => 'Decision';
+
+  @override
+  String get decisionNoteHint => 'Note: why, who, by when';
+
+  @override
+  String get createLinkedTicket => 'Open a maintenance ticket for this';
+
+  @override
+  String get decisionSaved => 'Decision saved';
+
+  @override
+  String decidedByLine(String status, String name, String date) {
+    return '$status by $name · $date';
+  }
+
+  @override
+  String get openLinkedTicket => 'Linked ticket';
+
+  @override
+  String get evaluationLabel => 'Measured result';
+
+  @override
+  String evaluationPending(String date) {
+    return 'Will be measured after $date';
+  }
+
+  @override
+  String get evaluationImproved => 'Improvement confirmed';
+
+  @override
+  String get evaluationWorse => 'Worse than before';
+
+  @override
+  String get evaluationNoProblem => 'The problem did not occur';
+
+  @override
+  String get evaluationProblemHappened => 'The problem still occurred';
+
+  @override
+  String get evaluationInconclusive =>
+      'Inconclusive: the change is within normal variation';
+
+  @override
+  String get evaluationInsufficient => 'Not enough data to evaluate';
+
+  @override
+  String get evaluationNotSupported => 'No automatic evaluation for this type';
+
+  @override
+  String beforeAfter(String before, String after, String unit) {
+    return 'Before $before · after $after $unit';
+  }
+
+  @override
+  String get evaluationLimitEnergy =>
+      'Compared with the expected use for each day\'s occupancy and season; weather and other changes are not modelled.';
+
+  @override
+  String get evaluationLimitBeforeAfter =>
+      'Simple before/after comparison; other changes in the same period are not controlled for.';
+
+  @override
+  String get evaluationLimitOutcome =>
+      'Shows whether the problem occurred, not how much the action contributed.';
+
+  @override
+  String get closedNotDetected =>
+      'Closed automatically: no longer detected in the latest analysis.';
+
+  @override
+  String get insStatusActive => 'Open';
+
+  @override
+  String get insStatusAccepted => 'Accepted';
+
+  @override
+  String get insStatusDismissed => 'Dismissed';
+
+  @override
+  String get insStatusImplemented => 'Implemented';
+
+  @override
+  String get insStatusResolved => 'Resolved';
+
+  @override
+  String get insPriorityLow => 'Low priority';
+
+  @override
+  String get insPriorityMedium => 'Medium priority';
+
+  @override
+  String get insPriorityHigh => 'High priority';
+
+  @override
+  String get unitMinutes => 'min';
+
+  @override
+  String get unitTickets => 'tickets';
+
+  @override
+  String get unitRooms => 'rooms';
+
+  @override
+  String get unitDays => 'days';
+
+  @override
+  String get unitPoints => 'pts';
+
+  @override
+  String get navForecasts => 'Forecasts';
+
+  @override
+  String get forecastsTitle => 'Forecasts';
+
+  @override
+  String get forecastsSubtitle =>
+      'The next 28 days, from the hotel\'s own history. Each model is tested on past data before it is used.';
+
+  @override
+  String get forecastIsEstimate =>
+      'Forecasts are estimates with a range, not confirmed figures.';
+
+  @override
+  String get seriesOccupancy => 'Occupancy';
+
+  @override
+  String get seriesRoomRevenue => 'Room revenue';
+
+  @override
+  String get seriesTotalRevenue => 'Total revenue';
+
+  @override
+  String get modelSeasonalNaive => 'Same weekday last week';
+
+  @override
+  String get modelHoltWinters => 'Weekly exponential smoothing (Holt-Winters)';
+
+  @override
+  String get modelCalendarRegression =>
+      'Calendar regression (weekday, holidays, season)';
+
+  @override
+  String forecastAccuracy(String mape, String naive) {
+    return 'Backtest error $mape · simple benchmark $naive';
+  }
+
+  @override
+  String forecastLive(String mape, String days) {
+    return 'Next-day forecasts so far: $mape error over $days days';
+  }
+
+  @override
+  String get forecastNoData => 'No data yet';
+
+  @override
+  String get forecastShortHistory => 'Needs at least 5 weeks of data';
+
+  @override
+  String get forecastGaps => 'Too many missing days';
+
+  @override
+  String get forecastStale => 'No data recorded in the last week';
+
+  @override
+  String get forecastNotRun => 'Not computed yet';
+
+  @override
+  String get forecastRange => '80% range';
+
+  @override
+  String get forecastNext7 => 'Next 7 days, average';
+
+  @override
+  String get forecastNext7Total => 'Next 7 days, total';
+
+  @override
+  String get refreshForecasts => 'Recompute';
+
+  @override
+  String get forecastsRefreshed => 'Forecasts updated';
+
+  @override
+  String get forecastLabel => 'Forecast';
+
+  @override
+  String get actualLabel => 'Actual';
+
+  @override
+  String get baselineSection => 'Baseline and savings';
+
+  @override
+  String get baselineExplain =>
+      'Expected use for each day\'s occupancy, learned from the year before this period.';
+
+  @override
+  String baselineFit(String cv, String nmbe) {
+    return 'Fit: CV(RMSE) $cv · NMBE $nmbe · limit 25%';
+  }
+
+  @override
+  String get baselineInvalid =>
+      'The model is too imprecise for savings claims.';
+
+  @override
+  String get baselineMissing =>
+      'Not enough history for a baseline yet (28 days with occupancy needed).';
+
+  @override
+  String get expectedLabel => 'Expected';
+
+  @override
+  String get cusumTitle => 'Cumulative difference from expected (CUSUM)';
+
+  @override
+  String savingsResult(String amount, String unc) {
+    return 'Savings $amount ± $unc';
+  }
+
+  @override
+  String overuseResult(String amount, String unc) {
+    return 'Over-use $amount ± $unc';
+  }
+
+  @override
+  String get withinNormalVariation => 'Within normal variation';
+
+  @override
+  String costPerOccupiedRoom(String amount) {
+    return '$amount per occupied room';
+  }
+
+  @override
+  String carbonPerOccupiedRoom(String kg) {
+    return '$kg kg CO₂ per occupied room';
+  }
+
+  @override
+  String carbonTotal(String kg) {
+    return '$kg kg CO₂ in total';
+  }
+
+  @override
+  String emissionFactorNote(String kind, String source) {
+    return 'Emission factor ($kind): $source';
+  }
+
+  @override
+  String get assumptionLabel => 'assumption';
+
+  @override
+  String get navCalendar => 'Calendar';
+
+  @override
+  String get calendarTitle => 'Holidays and events';
+
+  @override
+  String get calendarSubtitle =>
+      'Fixed public holidays are built in. Add religious (lunar) holidays from the official calendar, and local events; forecasts use them.';
+
+  @override
+  String get calendarAdd => 'Add event';
+
+  @override
+  String get eventTitleLabel => 'Title';
+
+  @override
+  String get eventKindLabel => 'Type';
+
+  @override
+  String get eventFromLabel => 'From';
+
+  @override
+  String get eventToLabel => 'To (optional)';
+
+  @override
+  String get eventKindPublicHoliday => 'Public holiday';
+
+  @override
+  String get eventKindReligious => 'Religious holiday';
+
+  @override
+  String get eventKindSchool => 'School holiday';
+
+  @override
+  String get eventKindLocalEvent => 'Local event';
+
+  @override
+  String get eventKindClosure => 'Closure';
+
+  @override
+  String get eventKindOther => 'Other';
+
+  @override
+  String get builtInHolidays => 'Built-in public holidays (next 12 months)';
+
+  @override
+  String get hotelEvents => 'Added by the hotel';
+
+  @override
+  String get noEvents => 'No events added yet.';
+
+  @override
+  String get eventSaved => 'Event saved';
+
+  @override
+  String get eventDeleted => 'Event deleted';
+
+  @override
+  String get deleteAction => 'Delete';
+
+  @override
+  String get eventDateOrder =>
+      'The end date must not be before the start date.';
+
+  @override
+  String get billionRialUnit => 'billion IRR';
+
+  @override
+  String get forecastCardTitle => 'Forecast';
+
+  @override
+  String forecastOccupancyNext7(String value) {
+    return 'Occupancy, next 7 days: $value';
+  }
+
+  @override
+  String forecastRevenueNext7(String value) {
+    return 'Room revenue, next 7 days: $value';
+  }
+
+  @override
+  String get forecastOpenAll => 'All forecasts';
+
+  @override
+  String forecastModelLine(String model) {
+    return 'Model: $model';
+  }
 }
