@@ -116,6 +116,26 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 | `POST /v1/hotels/{id}/forecasts/run` | HMAC | همان، برای n8n |
 | `POST /v1/hotels/{id}/notifications` | HMAC | فیلدهای اختیاری `dedupeKey` و `dedupeHours` برای جلوگیری از اعلان تکراری |
 
+از فاز ۰ AI، `energy/analysis` فقط با پرچم هتل `energyBaseline` و دو route پیش‌بینی فقط با پرچم `forecasts` کار می‌کنند. در غیر این صورت `400 feature_disabled` برمی‌گردد. جزئیات در [۱۶ §۴](16-ai-architecture.md#۴-پرچمهای-قابلیت-به-تفکیک-هتل).
+
+## AI فاز ۰ (PocketBase)
+
+جزئیات در [۱۶](16-ai-architecture.md) آمده است.
+
+| مسیر | دسترسی | کار |
+|---|---|---|
+| `POST /api/zarin/ai/ask` | `ai.assistant.use` | پاسخ از context فیلترشده با مجوز. ورودی تازهٔ `threadId` و خروجی `threadId`. فیلد `history` پذیرفته ولی نادیده گرفته می‌شود |
+| `POST /api/zarin/admin/ai/context` | superuser | context دقیق دستیار برای یک کاربر (بازبینی و eval) |
+| `POST /api/zarin/admin/integration-keys` | superuser | ساخت کلید scoped. سکرت فقط در همین پاسخ برمی‌گردد |
+| `POST /api/zarin/admin/integration-keys/{keyId}/revoke` | superuser | لغو کلید |
+| `GET /v1/hotels/{id}/ai/budget` | HMAC | بودجهٔ ماهانهٔ توکن هتل: `month`، `limit`، `used`، `remaining`، `calls`، `costMicros` |
+| `POST /v1/hotels/{id}/ai/usage` | HMAC | ثبت مصرف یک فراخوانی worker با بدنهٔ `{tokensIn, tokensOut}` |
+| `POST /v1/maintenance/purge` | HMAC (فقط shared secret) | حذف گفتگوهای قدیمی‌تر از مهلت نگهداری و nonceهای منقضی |
+
+**امضای v2 (کلید scoped):** هدرهای `x-zarin-key-id` و `x-zarin-nonce` اضافه می‌شوند و رشتهٔ امضا `"<ts>.<nonce>." + rawBody` است. این امضا فقط برای `/v1/hotels/{id}/…` و هتل‌های داخل scope کلید معتبر است. هر nonce یک بار پذیرفته می‌شود. خطاها: `401 replayed_request` و `403 key_not_allowed_for_hotel`. امضای v1 تا وقتی `ZH_ALLOW_SHARED_SECRET` روشن است کار می‌کند.
+
+**route در insights:** فقط مسیر داخلی اپ پذیرفته می‌شود (`400 invalid_route`).
+
 ## رویدادهای خروجی (Backend → n8n)
 
 `POST N8N_WEBHOOK_URL` با همان امضا. بدنه: `{id, type, hotelId, occurredAt, data}`.

@@ -2,6 +2,11 @@
 
 Status: **implemented and tested locally; not yet deployed to Liara** (deployment steps are in §8).
 
+> Since AI phase 0 ([16](16-ai-architecture.md)) every Batch 1 behaviour change sits behind a per-hotel flag in
+> `hotels.settings.features`, off by default: `energyBaseline` (model-based energy alerts and the analysis
+> route; off = the original static rule), `forecasts` (cron, run routes, app pages) and `recommendationLoop`
+> (auto-close and impact evaluation). Turn them on per hotel with `npm run hotel-features`.
+
 Batch 1 of the plan in [13-ai-architecture-and-plan.md](13-ai-architecture-and-plan.md) contains:
 
 | Item | What it is |
