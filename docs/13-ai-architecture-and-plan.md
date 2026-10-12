@@ -397,6 +397,9 @@ Effort is in focused engineering days, including tests and docs. "Cost" means ex
 
 ### Phase A: high value, low complexity, current data
 
+The research report ranks twelve features as feasible with current data (its Tier A). This plan builds the shared foundation first (ledger, forecasts, baselines, ranking, copilot). Its other Tier A items (effort-weighted housekeeping, inventory reorder and fraud rules, labour KPIs, staff SOP assistant, pooled benchmark, tariff-capped rate adviser) follow in Phases B and C on top of that foundation.
+
+
 | # | Feature | Business value | Data / dependencies | Effort | Cost | Risks | Acceptance criteria |
 |---|---|---|---|---|---|---|---|
 | A1 | **Recommendation Center + closed loop**: extended `aiInsights` ledger, decide with note, create task or ticket from a recommendation, auto-close when the condition clears, evaluation of energy / SLA / stock effects, history | Turns insights into tracked decisions; the basis for every later agent | Existing insights; migration | 5–7 | none | Users ignore it; mitigated by briefing and inbox | Approve, reject or modify is audited; a linked task or ticket is created idempotently; stale insights close; evaluations show baseline, actual, delta and confidence; RBAC tests pass |
