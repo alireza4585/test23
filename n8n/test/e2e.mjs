@@ -11,6 +11,9 @@
 // N8N_IMAGE=n8nio/n8n:2.26.2 runs n8n from that Docker image (host network)
 // instead of the local n8n package, e.g. to match the version in production.
 //
+// E2E_SIGNING=scoped       n8n signs with a scoped key (ZARIN_KEY_ID / ZARIN_KEY_SECRET)
+// E2E_SIGNING=scoped-only  … and PocketBase refuses the shared secret (ZH_ALLOW_SHARED_SECRET=false)
+//
 // Uses ports 5688 (n8n), 5689 (HTTP mocks) and 2526 (SMTP).
 import { execFileSync, spawn } from "node:child_process";
 import { createHmac } from "node:crypto";
@@ -24,7 +27,8 @@ import { SMTPServer } from "smtp-server";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
-const { startTestServer, SECRET } = await import(pathToFileURL(join(REPO, "pocketbase/scripts/test-server.mjs")));
+const { startTestServer, SECRET, SUPERUSER } = await import(pathToFileURL(join(REPO, "pocketbase/scripts/test-server.mjs")));
+const SIGNING = process.env.E2E_SIGNING || "shared";
 const PocketBase = createRequire(join(REPO, "pocketbase/package.json"))("pocketbase/cjs");
 
 const CHANNELS = process.env.E2E_CHANNELS !== "none";
@@ -82,12 +86,21 @@ const smtp = new SMTPServer({
 smtp.listen(SMTP_PORT, "127.0.0.1");
 
 // -------------------------------------------------------------- PocketBase
-const pbServer = await startTestServer({ webhookUrl: `${N8N}/webhook/zarin-events` });
+const pbServer = await startTestServer({
+  webhookUrl: `${N8N}/webhook/zarin-events`,
+  env: SIGNING === "scoped-only" ? { ZH_ALLOW_SHARED_SECRET: "false" } : {},
+});
 const PB = pbServer.url;
+const su = new PocketBase(PB);
+su.autoCancellation(false);
+await su.collection("_superusers").authWithPassword(SUPERUSER.email, SUPERUSER.password);
+// A scoped key for the test hotel, the way an operator creates one for n8n (npm run integration-key).
+const scopedKey = SIGNING === "shared" ? null
+  : await su.send("/api/zarin/admin/integration-keys", { method: "POST", body: { label: "n8n e2e", hotels: [pbServer.hotelId] } });
 
 // ------------------------------------------------------------------- n8n
 const work = mkdtempSync(join(tmpdir(), "zarin-n8n-e2e-"));
-console.log(`channels: ${CHANNELS ? "all" : "none"} · PocketBase ${PB} · n8n ${N8N} · logs in ${work}`);
+console.log(`channels: ${CHANNELS ? "all" : "none"} · signing: ${SIGNING} · PocketBase ${PB} · n8n ${N8N} · logs in ${work}`);
 const channelEnv = {
   BALE_BOT_TOKEN: "bale-token", BALE_MANAGEMENT_CHAT_ID: "mgmt", BALE_MAINTENANCE_CHAT_ID: "mnt", BALE_ENERGY_CHAT_ID: "nrg",
   KAVENEGAR_API_KEY: "kave-key", ONCALL_MANAGER_MOBILE: "09120000001", MAINTENANCE_MANAGER_MOBILE: "09120000002",
@@ -101,6 +114,7 @@ const n8nEnv = {
   // The settings and variables docs/09-liara-runbook.md asks for:
   NODE_FUNCTION_ALLOW_BUILTIN: "crypto", N8N_BLOCK_ENV_ACCESS_IN_NODE: "false", GENERIC_TIMEZONE: "Asia/Tehran",
   ZARIN_INTEGRATION_SECRET: SECRET, ZARIN_API_BASE: PB, ZARIN_HOTEL_IDS: pbServer.hotelId,
+  ...(scopedKey ? { ZARIN_KEY_ID: scopedKey.keyId, ZARIN_KEY_SECRET: scopedKey.secret } : {}),
   // Set on Liara before SMTP exists: the e-mail gate passes, the switched-off node no-ops.
   ZARIN_MAIL_FROM: "no-reply@example.ir", ZARIN_REPORT_RECIPIENTS: "gm@example.ir,owner@example.ir",
   ...(CHANNELS ? channelEnv : {}),
@@ -194,6 +208,16 @@ const pbLogin = async (nid) => {
   return pb;
 };
 const flush = async () => {
+  if (SIGNING === "scoped-only") {
+    // The shared secret is refused: deliver through the outbox cron itself (superuser API).
+    for (let i = 0; i < 20; i++) {
+      await su.send("/api/crons/zarin_outbox", { method: "POST" });
+      const pending = await su.collection("outbox").getList(1, 1, { filter: "deliveredAt = '' && attempts < 8" });
+      if (pending.totalItems === 0) return;
+      await wait(500);
+    }
+    return;
+  }
   for (let delivered = 1; delivered > 0;) {
     const ts = Math.floor(Date.now() / 1000);
     const res = await fetch(`${PB}/v1/outbox/flush`, {
@@ -291,6 +315,17 @@ try {
   else check("nothing sent to Bale / SMS / e-mail", sends.length === 0 && mails.length === 0, `${sends.length} sends, ${mails.length} mails`);
   const failed = (await Promise.all(WORKFLOWS.map((f) => executions(f, "error")))).flat();
   check("no failed executions", failed.length === 0, failed.map((e) => `${e.workflowId}#${e.id}`).join(" "));
+  if (scopedKey) {
+    const key = await su.collection("integrationKeys").getFirstListItem(su.filter("keyId = {:k}", { k: scopedKey.keyId }));
+    check("n8n signed with the scoped key (v2)", !!key.lastUsedAt);
+  }
+  if (SIGNING === "scoped-only") {
+    const ts = Math.floor(Date.now() / 1000);
+    const res = await fetch(`${PB}/v1/hotels/${pbServer.hotelId}/summary`, {
+      headers: { "x-zarin-timestamp": String(ts), "x-zarin-signature": createHmac("sha256", SECRET).update(`${ts}.`).digest("hex") },
+    });
+    check("shared-secret requests are refused", res.status === 401, `HTTP ${res.status}`);
+  }
 
   // forged event: rejected by the signature check (this run fails on purpose)
   await fetch(`${N8N}/webhook/zarin-events`, {

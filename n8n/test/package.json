@@ -9,6 +9,8 @@
   "scripts": {
     "e2e": "node e2e.mjs",
     "e2e:no-channels": "E2E_CHANNELS=none node e2e.mjs",
+    "e2e:scoped": "E2E_SIGNING=scoped node e2e.mjs",
+    "e2e:scoped-only": "E2E_SIGNING=scoped-only node e2e.mjs",
     "browser-check": "node browser-check.mjs"
   },
   "devDependencies": {

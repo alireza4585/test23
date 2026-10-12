@@ -116,6 +116,15 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
    در `n8n/.env` هم `ZARIN_API_BASE=https://<دامنهٔ سرور PocketBase>` را بگذارید. شناسهٔ هتل‌ها را خروجی `npm run create-hotel` نشان می‌دهد.
 
+   **کلید scoped (پیشنهادی):**
+   - با `npm run integration-key` (در `pocketbase/`) یک کلید برای هتل‌های `ZARIN_HOTEL_IDS` بسازید.
+   - شناسه و سکرت کلید را در `ZARIN_KEY_ID` و `ZARIN_KEY_SECRET` بگذارید.
+   - از آن به بعد درخواست‌های n8n به PocketBase با کلید و nonce امضا می‌شوند (v2).
+   - `ZARIN_INTEGRATION_SECRET` لازم می‌ماند، چون رویدادهایی که PocketBase می‌فرستد با آن تأیید می‌شوند.
+   - وقتی اجرای workflowها با کلید تأیید شد، در PocketBase `ZH_ALLOW_SHARED_SECRET=false` را بگذارید.
+
+   آزمون: `npm run e2e:scoped` و `npm run e2e:scoped-only` در `n8n/test`.
+
    **Firebase:**
    ```bash
    cd firebase/functions
