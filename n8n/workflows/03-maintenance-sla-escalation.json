@@ -83,7 +83,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Escalate tickets more than 60 min past SLA (once per run window).\nconst out = [];\nfor (const [i, { json }] of $input.all().entries()) {\n  const hotelId = $('Hotels').all()[i].json.hotelId;\n  const late = (json.tickets || []).filter((t) => t.overdueMinutes >= 60);\n  if (late.length === 0) continue;\n  const lines = late.slice(0, 5).map((t) => `• ${t.title} (${t.location ?? '—'}) — ${Math.round(t.overdueMinutes / 60)} ساعت تأخیر`);\n  out.push({ json: {\n    hotelId,\n    critical: late.some((t) => t.priority === 'critical'),\n    smsText: `زرین: ${late.length} خرابی از SLA گذشته\\n${lines.join('\\n')}`,\n    requestBody: {\n      roles: ['maintenanceManager', 'generalManager', 'operationsManager'],\n      title: `${late.length} خرابی خارج از SLA`,\n      body: lines.join('\\n'),\n      severity: 'critical',\n      category: 'maintenance',\n      route: '/maintenance',\n    },\n  } });\n}\nreturn out;"
+        "jsCode": "// Escalate tickets more than 60 min past SLA. The dedupe key is the set of late\n// tickets: the backend skips a repeat of the same set for 4 hours, and the SMS\n// below is only sent when the in-app notification was not skipped.\nconst out = [];\nfor (const [i, { json }] of $input.all().entries()) {\n  const hotelId = $('Hotels').all()[i].json.hotelId;\n  const late = (json.tickets || []).filter((t) => t.overdueMinutes >= 60);\n  if (late.length === 0) continue;\n  const lines = late.slice(0, 5).map((t) => `• ${t.title} (${t.location ?? '—'}) — ${Math.round(t.overdueMinutes / 60)} ساعت تأخیر`);\n  out.push({ json: {\n    hotelId,\n    critical: late.some((t) => t.priority === 'critical'),\n    smsText: `زرین: ${late.length} خرابی از SLA گذشته\\n${lines.join('\\n')}`,\n    requestBody: {\n      roles: ['maintenanceManager', 'generalManager', 'operationsManager'],\n      title: `${late.length} خرابی خارج از SLA`,\n      body: lines.join('\\n'),\n      severity: 'critical',\n      category: 'maintenance',\n      route: '/maintenance',\n      dedupeKey: `sla:${late.map((t) => t.id).sort().join(',')}`,\n      dedupeHours: 4,\n    },\n  } });\n}\nreturn out;"
       },
       "id": "d3084daf-e74a-52ab-8b87-619fee2aa6a3",
       "name": "Escalation payload",
@@ -156,7 +156,7 @@
           "conditions": [
             {
               "id": "04444f6a-e3ac-47b6-87dc-5efcd9a8f2ab",
-              "leftValue": "={{ $json.critical }}",
+              "leftValue": "={{ $json.skipped !== true && $('Escalation payload').item.json.critical }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true"
@@ -234,7 +234,7 @@
             },
             {
               "name": "message",
-              "value": "={{ $json.smsText }}"
+              "value": "={{ $('Escalation payload').item.json.smsText }}"
             }
           ]
         },
@@ -304,11 +304,6 @@
             "node": "Sign notification",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Critical?",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -340,6 +335,17 @@
         [
           {
             "node": "SMS · maintenance manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST in-app notification": {
+      "main": [
+        [
+          {
+            "node": "Critical?",
             "type": "main",
             "index": 0
           }

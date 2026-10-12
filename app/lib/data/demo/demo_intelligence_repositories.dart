@@ -20,13 +20,13 @@ class DemoForecastRepository implements ForecastRepository {
   final _refresh = StreamController<void>.broadcast();
 
   Map<ForecastSeries, SeriesForecast> _compute() {
-    final today = _store.clock.now();
+    final today = DayKey.hotelToday(_store.clock.now());
     final occ = <DateTime, double>{};
     final room = <DateTime, double>{};
     final total = <DateTime, double>{};
     for (final o in _store.operations.all) {
       final d = DayKey.startOfDay(o.day);
-      if (!d.isBefore(DayKey.startOfDay(today))) continue;
+      if (!d.isBefore(today)) continue;
       if (o.roomsAvailable > 0) occ[d] = o.roomsOccupied / o.roomsAvailable * 100;
       room[d] = o.roomRevenue;
       total[d] = o.roomRevenue + o.fnbRevenue + o.otherRevenue;
@@ -34,7 +34,7 @@ class DemoForecastRepository implements ForecastRepository {
     final energy = {for (final t in EnergyType.values) t: <DateTime, double>{}};
     for (final r in _store.energy.all) {
       final d = DayKey.startOfDay(r.day);
-      if (!d.isBefore(DayKey.startOfDay(today))) continue;
+      if (!d.isBefore(today)) continue;
       energy[r.type]![d] = (energy[r.type]![d] ?? 0) + r.consumption;
     }
     return {

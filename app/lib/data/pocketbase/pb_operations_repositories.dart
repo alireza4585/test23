@@ -162,7 +162,7 @@ class PocketBaseHousekeepingRepository extends _PbRepository implements Housekee
     final r = await pb.collection('tasks').create(body: {
       'hotel': hotelId,
       'kind': 'housekeeping',
-      'day': DayKey.of(DateTime.now()),
+      'day': DayKey.of(DayKey.hotelToday(DateTime.now())),
       'room': draft.roomId,
       'type': draft.type.name,
       'status': TaskStatus.pending.name,

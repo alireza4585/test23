@@ -49,6 +49,18 @@ describe("integration API v1 (n8n / IoT)", () => {
     expect((await mm.collection("inbox").getFullList({ sort: "-created" }))[0].title).toBe("۲ خرابی خارج از SLA");
   });
 
+  it("skips a repeated notification with the same dedupe key inside its window", async () => {
+    const body = { roles: ["maintenanceManager"], title: "۱ خرابی خارج از SLA", body: "تست تکرار", severity: "critical", dedupeKey: "sla:t1,t2" };
+    const first = await signed(v1("/notifications"), { method: "POST", body });
+    expect(first.json).toEqual({ recipients: 1, skipped: false });
+    const again = await signed(v1("/notifications"), { method: "POST", body });
+    expect(again.json).toEqual({ recipients: 0, skipped: true });
+    const other = await signed(v1("/notifications"), { method: "POST", body: { ...body, dedupeKey: "sla:t1,t2,t3" } });
+    expect(other.json.skipped).toBe(false);
+    const mm = await login(NID.maintenanceManager);
+    expect((await mm.collection("inbox").getFullList({ filter: 'body = "تست تکرار"' })).length).toBe(2);
+  });
+
   it("ingests smart-meter readings idempotently, in the manual-entry shape", async () => {
     const body = { type: "water", day: "2026-01-15", consumption: 41.5, meterId: "MTR-W1", source: "smartMeter" };
     const first = await signed(v1("/energy/readings"), { method: "POST", body });

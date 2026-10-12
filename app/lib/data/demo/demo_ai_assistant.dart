@@ -70,7 +70,7 @@ class DemoAiAssistantRepository implements AiAssistantRepository {
   }
 
   EnergySummary _electricity({int days = 4}) {
-    final today = DayKey.startOfDay(_store.clock.now());
+    final today = DayKey.hotelToday(_store.clock.now());
     final hotel = _store.hotels.all.first;
     return EnergyAnalytics.summarize(
       type: EnergyType.electricity,
@@ -205,7 +205,7 @@ class DemoAiAssistantRepository implements AiAssistantRepository {
   }
 
   AssistantReply _housekeeping(bool fa) {
-    final key = DayKey.of(_store.clock.now());
+    final key = DayKey.of(DayKey.hotelToday(_store.clock.now()));
     final today = _store.tasks.all.where((t) => DayKey.of(t.createdAt) == key).toList();
     final done = today.where((t) => t.status == TaskStatus.done).length;
     final dirty = _store.rooms.all.where((r) => r.status.name == 'vacantDirty').length;

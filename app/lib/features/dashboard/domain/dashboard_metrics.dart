@@ -92,7 +92,7 @@ class DashboardMetrics {
     required List<InventoryItem> inventory,
     int trendDays = 14,
   }) {
-    final today = DayKey.startOfDay(now);
+    final today = DayKey.hotelToday(now);
     final yesterdayDay = today.subtract(const Duration(days: 1));
 
     final byStatus = {

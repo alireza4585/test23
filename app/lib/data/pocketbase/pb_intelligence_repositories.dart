@@ -25,7 +25,7 @@ class PocketBaseForecastRepository implements ForecastRepository {
   Stream<Map<ForecastSeries, SeriesForecast>> watchForecasts(String hotelId) => _live
       .list('forecastRuns', filter: _pb.filter('hotel = {:h}', {'h': hotelId}), limit: 20)
       .asyncMap((runs) async {
-        final today = DayKey.of(DateTime.now());
+        final today = DayKey.of(DayKey.hotelToday(DateTime.now()));
         final points = await pbGuard(
           () => _pb.collection('forecasts').getFullList(
             filter: _pb.filter('hotel = {:h} && day >= {:d}', {'h': hotelId, 'd': today}),

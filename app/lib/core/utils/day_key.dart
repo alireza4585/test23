@@ -17,6 +17,14 @@ abstract final class DayKey {
   static DateTime startOfDay(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
+  /// The hotel's calendar day at [instant]. Hotels run on Tehran time
+  /// (UTC+03:30 all year since 2022), whatever time zone the device is set
+  /// to, so "today" matches the server's day keys.
+  static DateTime hotelToday(DateTime instant) {
+    final t = instant.toUtc().add(const Duration(hours: 3, minutes: 30));
+    return DateTime(t.year, t.month, t.day);
+  }
+
   /// Inclusive list of days between [from] and [to].
   static List<DateTime> range(DateTime from, DateTime to) {
     final start = startOfDay(from);

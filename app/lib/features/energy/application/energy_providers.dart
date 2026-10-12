@@ -19,7 +19,7 @@ final energyReadingsProvider = StreamProvider<List<EnergyReading>>((ref) {
   if (user == null || !user.hasHotel || !user.can(AppPermission.energyView)) {
     return Stream.value(const []);
   }
-  final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+  final today = DayKey.hotelToday(ref.watch(clockProvider).now());
   return ref.watch(energyRepositoryProvider).watchReadings(
     user.hotelId,
     from: today.subtract(const Duration(days: 60)),
@@ -35,7 +35,7 @@ final energySummaryProvider = Provider.family<EnergySummary?, EnergyType>((
   final readings = ref.watch(energyReadingsProvider).value;
   if (readings == null) return null;
   final settings = ref.watch(hotelSettingsProvider);
-  final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+  final today = DayKey.hotelToday(ref.watch(clockProvider).now());
   return EnergyAnalytics.summarize(
     type: type,
     readings: readings,
@@ -76,7 +76,7 @@ final energyAnalysisProvider = FutureProvider.family<EnergyAnalysis?, EnergyType
   final user = ref.watch(sessionUserProvider);
   if (user == null || !user.hasHotel || !user.can(AppPermission.energyView)) return null;
   ref.watch(energyReadingsProvider.select((r) => r.value?.length));
-  final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+  final today = DayKey.hotelToday(ref.watch(clockProvider).now());
   return ref.watch(energyAnalysisRepositoryProvider).analyze(
     user.hotelId,
     type,

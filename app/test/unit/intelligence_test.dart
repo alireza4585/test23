@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zarin_hooshmand/core/utils/day_key.dart';
 import 'package:zarin_hooshmand/data/insight_json.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dart';
 import 'package:zarin_hooshmand/features/ai/domain/ai_models.dart';
@@ -9,6 +10,12 @@ import 'package:zarin_hooshmand/features/forecast/domain/forecast.dart';
 import 'package:zarin_hooshmand/features/forecast/domain/naive_forecaster.dart';
 
 void main() {
+  test('the hotel day follows Tehran time whatever the device time zone', () {
+    expect(DayKey.hotelToday(DateTime.utc(2026, 10, 11, 20, 29)), DateTime(2026, 10, 11));
+    expect(DayKey.hotelToday(DateTime.utc(2026, 10, 11, 20, 30)), DateTime(2026, 10, 12));
+    expect(DayKey.hotelToday(DateTime.utc(2026, 3, 20, 23)), DateTime(2026, 3, 21));
+  });
+
   group('Iran fixed holidays', () {
     test('match the server calendar (Nowruz 1405, 12/13 Farvardin, Khordad, Esfand)', () {
       final days = iranFixedHolidays(DateTime(2026, 3, 1), DateTime(2026, 6, 30)).map((e) => e.day).toList();

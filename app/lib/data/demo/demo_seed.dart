@@ -33,7 +33,7 @@ class DemoSeed {
   final DateTime now;
   final Random _rng;
 
-  DateTime get today => DayKey.startOfDay(now);
+  DateTime get today => DayKey.hotelToday(now);
 
   void populate() {
     store.hotels.put(

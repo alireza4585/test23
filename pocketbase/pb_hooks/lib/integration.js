@@ -72,14 +72,24 @@ function postNotification(e) {
   const title = String(b.title || "").slice(0, 120);
   const body = String(b.body || "").slice(0, 500);
   if (!title || !body) throw z.bad("invalid_body");
+  // Optional dedupe: the same key within `dedupeHours` (default 4, 1–72) is skipped.
+  const dedupeKey = typeof b.dedupeKey === "string" ? b.dedupeKey.slice(0, 160) : "";
+  if (dedupeKey) {
+    const hours = Math.min(72, Math.max(1, Number(b.dedupeHours) || 4));
+    const since = z.pbDate(new Date(Date.now() - hours * 3600 * 1000));
+    if (z.findFirst(e.app, "notifications", "hotel = {:h} && dedupeKey = {:k} && created >= {:s}", { h: hotelId, k: dedupeKey, s: since })) {
+      return e.json(200, { recipients: 0, skipped: true });
+    }
+  }
   const recipients = z.notify(e.app, {
     hotelId, roles, userIds, title, body,
     severity: oneOf(b.severity, ["info", "warning", "critical"], "info"),
     category: oneOf(b.category, ["alert", "task", "maintenance", "inventory", "report", "ai", "system"], "system"),
     route: typeof b.route === "string" && b.route.charAt(0) === "/" ? b.route.slice(0, 200) : "",
     createdBy: "n8n",
+    dedupeKey,
   });
-  return e.json(200, { recipients });
+  return e.json(200, { recipients, skipped: false });
 }
 
 function postInsight(e) {

@@ -184,7 +184,7 @@ class _OnDutyList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+    final today = DayKey.hotelToday(ref.watch(clockProvider).now());
     final shifts = ref.watch(shiftsProvider((day: today, mine: false))).value ?? const [];
     final onDuty = shifts.where((s) => s.status == ShiftStatus.checkedIn).toList();
     if (onDuty.isEmpty) {

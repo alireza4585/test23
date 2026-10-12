@@ -29,7 +29,7 @@ class _StaffPageState extends ConsumerState<StaffPage> {
     final l10n = context.l10n;
     final user = ref.watch(sessionUserProvider)!;
     final canSeeAll = user.can(AppPermission.staffView);
-    final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+    final today = DayKey.hotelToday(ref.watch(clockProvider).now());
     final day = today.add(Duration(days: _dayOffset));
 
     final shiftsView = _ShiftsView(day: day, mine: !canSeeAll);

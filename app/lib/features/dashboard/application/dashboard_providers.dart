@@ -21,7 +21,7 @@ final dashboardMetricsProvider = Provider<AsyncValue<DashboardMetrics>>((ref) {
   if (!rooms.hasValue) return const AsyncLoading();
 
   final now = ref.watch(clockProvider).now();
-  final today = DayKey.startOfDay(now);
+  final today = DayKey.hotelToday(now);
   return AsyncData(
     DashboardMetrics.compute(
       now: now,

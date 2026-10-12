@@ -217,7 +217,7 @@ class _RecordReadingSheetState extends ConsumerState<RecordReadingSheet> {
   @override
   void initState() {
     super.initState();
-    _day = DayKey.startOfDay(ref.read(clockProvider).now()).subtract(const Duration(days: 1));
+    _day = DayKey.hotelToday(ref.read(clockProvider).now()).subtract(const Duration(days: 1));
   }
 
   @override
@@ -257,7 +257,7 @@ class _RecordReadingSheetState extends ConsumerState<RecordReadingSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final fmt = context.fmt;
-    final today = DayKey.startOfDay(ref.read(clockProvider).now());
+    final today = DayKey.hotelToday(ref.read(clockProvider).now());
     return Padding(
       padding: EdgeInsets.fromLTRB(
         Insets.xl,

@@ -59,7 +59,7 @@ class ReportGenerator {
       throw const PermissionDeniedFailure();
     }
     final now = ref.read(clockProvider).now();
-    final to = DayKey.startOfDay(now).subtract(const Duration(days: 1));
+    final to = DayKey.hotelToday(now).subtract(const Duration(days: 1));
     final from = to.subtract(Duration(days: days - 1));
 
     final data = await _load(user, from: from, to: to, days: days);
@@ -188,7 +188,9 @@ class ReportGenerator {
     }
 
     if (type == ReportType.maintenance) {
-      final tickets = data.tickets;
+      // Tickets reported in the period (the executive summary uses the current backlog).
+      final end = to.add(const Duration(days: 1));
+      final tickets = data.tickets.where((t) => !t.createdAt.isBefore(from) && t.createdAt.isBefore(end)).toList();
       final byStatus = {
         for (final s in TicketStatus.values) s: tickets.where((t) => t.status == s).length,
       };
@@ -202,7 +204,7 @@ class ReportGenerator {
         ))
         ..add(heading(l10n.sectionRequests))
         ..add(table(
-          [l10n.ticketTitleLabel, l10n.ticketLocationLabel, l10n.priorityLabel, l10n.ticketCategoryLabel, l10n.dateLabel],
+          [l10n.ticketTitleLabel, l10n.ticketLocationLabel, l10n.priorityLabel, l10n.statusLabel, l10n.dateLabel],
           [
             for (final t in tickets)
               [
@@ -221,10 +223,11 @@ class ReportGenerator {
       sections
         ..add(heading(l10n.hkTitle))
         ..add(table(
-          [l10n.roomLabel(''), l10n.taskTypeLabel, l10n.assignee, l10n.priorityLabel, l10n.taskStatusDone],
+          [l10n.dateLabel, l10n.roomLabel(''), l10n.taskTypeLabel, l10n.assignee, l10n.priorityLabel, l10n.taskStatusDone],
           [
             for (final t in tasks)
               [
+                fmt.dateShort(t.dueAt ?? t.startedAt ?? t.createdAt),
                 fmt.digits(t.roomNumber),
                 l10n.taskType(t.type),
                 t.assigneeName ?? l10n.unassigned,
@@ -366,16 +369,18 @@ class ReportGenerator {
       AppPermission.housekeepingViewAll,
       AppPermission.housekeepingViewOwn,
     });
-    final tasks = canSeeTasks
-        ? await ref
+    // Tasks are stored per day: one read per day of the period.
+    final tasks = <HousekeepingTask>[];
+    if (canSeeTasks) {
+      for (final day in DayKey.range(from, to)) {
+        tasks.addAll(
+          await ref
               .read(housekeepingRepositoryProvider)
-              .watchTasks(
-                h,
-                day: ref.read(clockProvider).now(),
-                assigneeId: user.can(AppPermission.housekeepingViewAll) ? null : user.uid,
-              )
-              .first
-        : const <HousekeepingTask>[];
+              .watchTasks(h, day: day, assigneeId: user.can(AppPermission.housekeepingViewAll) ? null : user.uid)
+              .first,
+        );
+      }
+    }
 
     return _ReportData(
       hotel: hotel,

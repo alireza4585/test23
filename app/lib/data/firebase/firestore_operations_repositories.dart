@@ -217,7 +217,7 @@ class FirestoreHousekeepingRepository implements HousekeepingRepository {
     final ref = _db.collection(FsPaths.tasks(hotelId)).doc();
     await ref.set({
       'kind': 'housekeeping',
-      'day': DayKey.of(DateTime.now()),
+      'day': DayKey.of(DayKey.hotelToday(DateTime.now())),
       'roomId': draft.roomId,
       'roomNumber': draft.roomNumber,
       'type': draft.type.name,

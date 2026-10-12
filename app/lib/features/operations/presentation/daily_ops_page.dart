@@ -37,7 +37,7 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
   @override
   void initState() {
     super.initState();
-    _day = DayKey.startOfDay(ref.read(clockProvider).now());
+    _day = DayKey.hotelToday(ref.read(clockProvider).now());
   }
 
   @override
@@ -109,7 +109,7 @@ class _DailyOpsPageState extends ConsumerState<DailyOpsPage> {
     final existing = ref.watch(operationsRangeProvider).value ?? const [];
     final rooms = ref.watch(roomsProvider).value ?? const [];
     _prefill(existing, rooms);
-    final today = DayKey.startOfDay(ref.read(clockProvider).now());
+    final today = DayKey.hotelToday(ref.read(clockProvider).now());
 
     String? requiredNumber(String? v) => _parse(v ?? '') == null ? l10n.invalidNumber : null;
     String? optionalNumber(String? v) =>

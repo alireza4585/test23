@@ -19,7 +19,7 @@ final operationsRangeProvider = StreamProvider<List<DailyOperations>>((ref) {
     AppPermission.dashboardOperations,
   });
   if (!allowed) return Stream.value(const []);
-  final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+  final today = DayKey.hotelToday(ref.watch(clockProvider).now());
   return ref.watch(operationsRepositoryProvider).watchRange(
     user.hotelId,
     from: today.subtract(const Duration(days: 45)),

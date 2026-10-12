@@ -35,7 +35,7 @@ class StaffHome extends ConsumerWidget {
     final user = ref.watch(sessionUserProvider)!;
     final l10n = context.l10n;
     final fmt = context.fmt;
-    final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+    final today = DayKey.hotelToday(ref.watch(clockProvider).now());
     final shifts = ref.watch(shiftsProvider((day: today, mine: true))).value ?? const [];
     final shift = shifts.isEmpty ? null : shifts.first;
     final hasTasks = user.can(AppPermission.housekeepingViewOwn);

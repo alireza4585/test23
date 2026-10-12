@@ -299,6 +299,7 @@ function notify(app, n) {
     audienceUsers: n.userIds || [],
     recipientCount: recipients.length,
     createdBy: n.createdBy || "system",
+    dedupeKey: n.dedupeKey || "",
   }));
   if (recipients.length && $os.getenv("ZH_PUSH_VIA_N8N") === "1") {
     emit(app, "push.requested", n.hotelId, { userIds: recipients, title: n.title, body: n.body || "", route: n.route || "", severity: n.severity || "info" });

@@ -24,7 +24,7 @@ class CalendarPage extends ConsumerWidget {
     final fmt = context.fmt;
     final theme = Theme.of(context);
     final actions = ref.watch(calendarActionsProvider);
-    final today = DayKey.startOfDay(ref.watch(clockProvider).now());
+    final today = DayKey.hotelToday(ref.watch(clockProvider).now());
     final builtIn = iranFixedHolidays(today, DateTime(today.year + 1, today.month, today.day));
     final events = ref.watch(calendarEventsProvider);
 

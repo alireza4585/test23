@@ -252,6 +252,16 @@ try {
   } else {
     check("03 run succeeds with no channel set up", !!(await until(async () => (await executions(WORKFLOWS[2], "success")).length > 0)));
   }
+  // A second run with the same late tickets inside 4 hours: nothing new.
+  await settled();
+  const slaInbox = async () => (await mm.collection("inbox").getFullList()).filter((n) => /خارج از SLA/.test(n.title)).length;
+  const slaSms = () => http.filter((r) => JSON.stringify(r).includes("09120000002")).length;
+  const [inboxBefore, smsBefore, runsBefore] = [await slaInbox(), slaSms(), (await executions(WORKFLOWS[2], "success")).length];
+  await run(3);
+  await until(async () => (await executions(WORKFLOWS[2], "success")).length > runsBefore);
+  await settled();
+  check("03 repeat run: no duplicate notification or SMS", (await slaInbox()) === inboxBefore && slaSms() === smsBefore,
+    `${await slaInbox()} vs ${inboxBefore} notifications, ${slaSms()} vs ${smsBefore} SMS`);
 
   // ---------------------------------------------- 04 smart-meter ingestion
   const meterBody = JSON.stringify({ readings: [{ hotelId: pbServer.hotelId, meterId: "MTR-E1", type: "electricity", day: "2026-03-01", value: 2777.5 }] });
