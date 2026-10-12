@@ -13,7 +13,10 @@ export async function compare(pb, hotelId, plan, scenarios) {
   const insights = await all("aiInsights", "status = 'active'", "rule,title,priority,estimatedMonthlySaving");
   const alerts = await all("alerts", "", "type,status,severity,dedupeKey,title,data");
   const metricsDay = addDays(plan.asOfDay, -1);
-  const metrics = (await all("dailyMetrics", pb.filter("day = {:d}", { d: metricsDay }), "data"))[0]?.data ?? null;
+  const operational = (await all("dailyMetrics", pb.filter("day = {:d}", { d: metricsDay }), "data"))[0]?.data ?? null;
+  // ADR / RevPAR / revenue live in dailyFinance since AI phase 0.5.
+  const finance = (await all("dailyFinance", pb.filter("day = {:d}", { d: metricsDay }), "adr,revpar,totalRevenue"))[0] ?? null;
+  const metrics = operational ? { ...operational, adr: finance?.adr ?? null, revpar: finance?.revpar ?? null, totalRevenue: finance?.totalRevenue ?? null } : null;
   const tickets = new Map((await all("maintenanceTickets", "", "id,description,status,priority")).map((t) => [t.id, t]));
   const tasksOfDay = await all("tasks", pb.filter("day = {:d}", { d: metricsDay }), "status");
   const ticketKey = (id) => /^(TKT-\d+)/.exec(tickets.get(id)?.description ?? "")?.[1] ?? id;
