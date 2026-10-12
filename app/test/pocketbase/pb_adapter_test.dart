@@ -192,7 +192,7 @@ void main() {
       hotelId: s.user.hotelId, question: 'و خرابی‌ها؟', history: const [], localeCode: 'fa', threadId: first.threadId,
     );
     expect(second.threadId, first.threadId);
-  });
+  }, skip: skip);
 
   test('AI core: forecasts, energy baseline, recommendation decision and calendar', () async {
     final s = await _Session.signIn('0012345679');
