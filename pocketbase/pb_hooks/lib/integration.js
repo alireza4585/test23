@@ -1,11 +1,20 @@
 /// <reference path="../../pb_data/types.d.ts" />
 /**
- * Integration API v1 for n8n / IoT gateways (same contract as the Firebase
- * `api` function) and the outbox that delivers events to n8n.
+ * Integration API v1 for n8n / IoT gateways / the AI worker (same contract
+ * as the Firebase `api` function) and the outbox that delivers events to n8n.
  *
- * Signing (both directions):
- *   x-zarin-timestamp: <unix seconds>
- *   x-zarin-signature: hex(HMAC_SHA256(ZH_INTEGRATION_SECRET, `${timestamp}.${rawBody}`))
+ * Signing, two schemes:
+ *   v1 (shared secret, all routes; kept for the existing n8n workflows and
+ *   switched off with ZH_ALLOW_SHARED_SECRET=false):
+ *     x-zarin-timestamp: <unix seconds>
+ *     x-zarin-signature: hex(HMAC_SHA256(ZH_INTEGRATION_SECRET, `${timestamp}.${rawBody}`))
+ *   v2 (scoped key from integrationKeys, /v1/hotels/{id}/… only, and only
+ *   for the hotels in the key's scope; every nonce is accepted once):
+ *     x-zarin-key-id: <keyId>
+ *     x-zarin-timestamp: <unix seconds>
+ *     x-zarin-nonce: <16–64 chars [A-Za-z0-9_-]>
+ *     x-zarin-signature: hex(HMAC_SHA256(keySecret, `${timestamp}.${nonce}.${rawBody}`))
+ * Key secrets are stored encrypted with ZH_SECRETS_KEY (32 characters).
  */
 const z = require(`${__hooks}/lib/zarin.js`);
 const analytics = require(`${__hooks}/lib/analytics.js`);
@@ -13,20 +22,70 @@ const ai = require(`${__hooks}/lib/ai.js`);
 const core = z.core;
 
 const MAX_SKEW_SECONDS = 300;
+const NONCE_RE = /^[A-Za-z0-9_-]{16,64}$/;
 
 function sign(secret, timestamp, raw) {
   return $security.hs256(`${timestamp}.${raw}`, secret);
 }
 
-/** Verifies the request signature and returns the parsed JSON body. */
+function denied(code) {
+  return new UnauthorizedError(code || "invalid_signature", z.details(code || "invalid_signature"));
+}
+
+function sharedSecretAllowed() {
+  return ($os.getenv("ZH_ALLOW_SHARED_SECRET") || "true").toLowerCase() !== "false";
+}
+
+/** ZH_SECRETS_KEY, or null when it is not a 32-character key. */
+function secretsKey() {
+  const k = $os.getenv("ZH_SECRETS_KEY") || "";
+  return k.length === 32 ? k : null;
+}
+
+/** v2: scoped key + nonce. Returns nothing; throws when the request is not valid. */
+function verifyKey(e, keyId, ts, sig, raw, fresh) {
+  const nonce = String(e.request.header.get("x-zarin-nonce") || "");
+  const master = secretsKey();
+  if (!fresh || !sig || !NONCE_RE.test(nonce) || !master) throw denied();
+  const key = z.findFirst(e.app, "integrationKeys", "keyId = {:k} && active = true", { k: keyId });
+  if (!key) throw denied();
+  let secret = "";
+  try {
+    secret = $security.decrypt(key.getString("secretEnc"), master);
+  } catch (_) {
+    throw denied();
+  }
+  if (!secret || !$security.equal(sig, sign(secret, ts, `${nonce}.${raw}`))) throw denied();
+  const hotelId = e.request.pathValue("hotelId");
+  if (!hotelId || z.arr(key.getStringSlice("hotels")).indexOf(hotelId) < 0) {
+    throw z.forbidden("key_not_allowed_for_hotel");
+  }
+  try {
+    e.app.save(new Record(z.col(e.app, "integrationNonces"), { keyId, nonce }));
+  } catch (_) {
+    throw denied("replayed_request");
+  }
+  const last = z.parseDate(key.getString("lastUsedAt"));
+  if (!last || Date.now() - last.getTime() > 60 * 1000) {
+    key.set("lastUsedAt", z.pbDate(new Date()));
+    e.app.save(key);
+  }
+}
+
+/** Verifies the request signature (v1 or v2) and returns the parsed JSON body. */
 function verified(e) {
-  const secret = $os.getenv("ZH_INTEGRATION_SECRET");
   const raw = e.request.body ? toString(e.request.body) : "";
   const ts = Number(e.request.header.get("x-zarin-timestamp"));
   const sig = String(e.request.header.get("x-zarin-signature") || "");
   const fresh = isFinite(ts) && Math.abs(Date.now() / 1000 - ts) <= MAX_SKEW_SECONDS;
-  if (!secret || !fresh || !sig || !$security.equal(sig, sign(secret, ts, raw))) {
-    throw new UnauthorizedError("invalid_signature", z.details("invalid_signature"));
+  const keyId = String(e.request.header.get("x-zarin-key-id") || "");
+  if (keyId) {
+    verifyKey(e, keyId, ts, sig, raw, fresh);
+  } else {
+    const secret = $os.getenv("ZH_INTEGRATION_SECRET");
+    if (!sharedSecretAllowed() || !secret || !fresh || !sig || !$security.equal(sig, sign(secret, ts, raw))) {
+      throw denied();
+    }
   }
   if (!raw) return {};
   try {
@@ -34,6 +93,12 @@ function verified(e) {
   } catch (_) {
     throw z.bad("invalid_body");
   }
+}
+
+/** An in-app route such as "/energy" or "/inventory/abc123?tab=moves"; "" when invalid. */
+function appRoute(value) {
+  const v = typeof value === "string" ? value.trim() : "";
+  return /^\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9_=&-]*)?$/.test(v) && v.length <= 200 ? v : "";
 }
 
 function hotelOf(e) {
@@ -85,7 +150,7 @@ function postNotification(e) {
     hotelId, roles, userIds, title, body,
     severity: oneOf(b.severity, ["info", "warning", "critical"], "info"),
     category: oneOf(b.category, ["alert", "task", "maintenance", "inventory", "report", "ai", "system"], "system"),
-    route: typeof b.route === "string" && b.route.charAt(0) === "/" ? b.route.slice(0, 200) : "",
+    route: appRoute(b.route),
     createdBy: "n8n",
     dedupeKey,
   });
@@ -96,6 +161,7 @@ function postInsight(e) {
   const b = verified(e);
   const hotelId = hotelOf(e);
   if (!/^[\w-]{3,80}$/.test(String(b.id || "")) || !b.title || !b.recommendation) throw z.bad("invalid_body");
+  if (b.route !== undefined && b.route !== "" && !appRoute(b.route)) throw z.bad("invalid_route");
   const key = `llm_${b.id}`;
   let rec = z.findFirst(e.app, "aiInsights", "hotel = {:h} && key = {:k}", { h: hotelId, k: key });
   if (!rec) rec = new Record(z.col(e.app, "aiInsights"), { hotel: hotelId, key });
@@ -108,7 +174,7 @@ function postInsight(e) {
     confidence: Math.max(0, Math.min(1, Number(b.confidence) || 0)),
     evidence: (Array.isArray(b.evidence) ? b.evidence : []).slice(0, 10).map((s) => String(s).slice(0, 200)),
     estimatedMonthlySaving: Math.max(0, Number(b.estimatedMonthlySaving) || 0),
-    route: typeof b.route === "string" ? b.route.slice(0, 200) : "",
+    route: appRoute(b.route),
     priority: "medium",
     status: "active",
     source: "external",
@@ -223,10 +289,60 @@ function flushNow(e) {
   return e.json(200, { delivered: flushOutbox(e.app) });
 }
 
-/** POST /v1/maintenance/purge — retention clean-up now (the cron runs it daily). */
-function purge(e) {
-  verified(e);
-  return e.json(200, { conversations: ai.purgeConversations(e.app, new Date()) });
+/** Cron: forgets nonces once their timestamps can no longer be accepted. */
+function purgeNonces(app, now) {
+  const cutoff = z.pbDate(new Date(now.getTime() - 2 * MAX_SKEW_SECONDS * 1000));
+  return app.db().newQuery("DELETE FROM integrationNonces WHERE created < {:c}").bind({ c: cutoff }).execute().rowsAffected();
 }
 
-module.exports = { purge, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };
+/** POST /v1/maintenance/purge — retention clean-up now (the crons run it on schedule). */
+function purge(e) {
+  verified(e);
+  const now = new Date();
+  return e.json(200, { conversations: ai.purgeConversations(e.app, now), nonces: purgeNonces(e.app, now) });
+}
+
+// ------------------------------------------------------ key management
+/**
+ * POST /api/zarin/admin/integration-keys  {label, hotels: [id…]}  (superuser)
+ * Creates a scoped key; the secret is in this response only.
+ */
+function createKey(e) {
+  const b = e.requestInfo().body || {};
+  const master = secretsKey();
+  if (!master) throw z.bad("secrets_key_not_configured");
+  const hotels = z.unique((Array.isArray(b.hotels) ? b.hotels : []).map(String)).slice(0, 200);
+  if (!hotels.length) throw z.bad("hotels_required");
+  for (const id of hotels) z.find(e.app, "hotels", id);
+  const label = String(b.label || "").trim().slice(0, 80);
+  const keyId = `zk_${$security.randomStringWithAlphabet(16, "abcdefghijklmnopqrstuvwxyz0123456789")}`;
+  const secret = $security.randomStringWithAlphabet(48, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+  const rec = new Record(z.col(e.app, "integrationKeys"), {
+    keyId, secretEnc: $security.encrypt(secret, master), hotels, label, active: true,
+  });
+  e.app.save(rec);
+  for (const id of hotels) {
+    z.audit(e.app, id, {
+      action: "integrationKeys.create", collection: "integrationKeys", id: rec.id,
+      actor: { uid: "superuser", type: "superuser" }, source: "server", changes: { keyId, label },
+    });
+  }
+  return e.json(200, { keyId, secret, hotels, label });
+}
+
+/** POST /api/zarin/admin/integration-keys/{keyId}/revoke  (superuser) */
+function revokeKey(e) {
+  const key = z.findFirst(e.app, "integrationKeys", "keyId = {:k}", { k: e.request.pathValue("keyId") });
+  if (!key) throw z.notFound("key_not_found");
+  key.set("active", false);
+  e.app.save(key);
+  for (const id of z.arr(key.getStringSlice("hotels"))) {
+    z.audit(e.app, id, {
+      action: "integrationKeys.revoke", collection: "integrationKeys", id: key.id,
+      actor: { uid: "superuser", type: "superuser" }, source: "server", changes: { keyId: key.getString("keyId") },
+    });
+  }
+  return e.json(200, { keyId: key.getString("keyId"), active: false });
+}
+
+module.exports = { purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };

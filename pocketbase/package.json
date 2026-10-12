@@ -14,7 +14,8 @@
     "create-hotel": "node scripts/create-hotel.mjs",
     "test-server": "node scripts/test-server.mjs",
     "reset-demo": "node scripts/reset-demo.mjs",
-    "import-dataset": "node scripts/import-dataset.mjs"
+    "import-dataset": "node scripts/import-dataset.mjs",
+    "integration-key": "node scripts/integration-key.mjs"
   },
   "dependencies": {
     "pocketbase": "^0.28.1"

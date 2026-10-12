@@ -54,6 +54,8 @@ routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__
 
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));
+routerAdd("POST", "/api/zarin/admin/integration-keys", (e) => require(`${__hooks}/lib/integration.js`).createKey(e), $apis.requireSuperuserAuth());
+routerAdd("POST", "/api/zarin/admin/integration-keys/{keyId}/revoke", (e) => require(`${__hooks}/lib/integration.js`).revokeKey(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/v1/maintenance/purge", (e) => require(`${__hooks}/lib/integration.js`).purge(e));
 routerAdd("POST", "/v1/outbox/flush", (e) => require(`${__hooks}/lib/integration.js`).flushNow(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/summary", (e) => require(`${__hooks}/lib/integration.js`).summary(e));
@@ -146,6 +148,10 @@ cronAdd("zarin_sla", "*/15 * * * *", () => {
 
 cronAdd("zarin_ai_retention", "25 0 * * *", () => {
   try { require(`${__hooks}/lib/ai.js`).purgeConversations($app, new Date()); } catch (err) { console.log("ai retention failed", String(err)); }
+});
+
+cronAdd("zarin_nonces", "*/10 * * * *", () => {
+  try { require(`${__hooks}/lib/integration.js`).purgeNonces($app, new Date()); } catch (err) { console.log("nonce purge failed", String(err)); }
 });
 
 cronAdd("zarin_outbox", "* * * * *", () => {
