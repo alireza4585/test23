@@ -82,10 +82,20 @@ describe("integration API v1 (n8n / IoT)", () => {
     const rows = await gm.collection("dailyMetrics").getFullList({ filter: `day = "${yesterday.json.day}"` });
     expect(rows).toHaveLength(1);
     expect(rows[0].data.energy.electricity).toBeGreaterThan(0);
-    expect(rows[0].revpar).toBe(yesterday.json.metrics.revpar);
+    // ADR / RevPAR / revenue live in dailyFinance (finance.view), not in dailyMetrics.
+    expect(rows[0].revpar).toBeUndefined();
+    expect(rows[0].data.revpar).toBeUndefined();
+    const fin = await gm.collection("dailyFinance").getFirstListItem(`day = "${yesterday.json.day}"`);
+    expect(fin.revpar).toBe(yesterday.json.metrics.revpar);
   });
 
   it("runs the rule engine on demand and stores explainable insights", async () => {
+    // Earlier files decide on this hotel's insights (decided ones stay quiet for 14 days);
+    // start from none so "created" does not depend on the order the files run in.
+    const cleaner = await superuser();
+    for (const i of await cleaner.collection("aiInsights").getFullList({ filter: `hotel = "${hotelId()}"` })) {
+      await cleaner.collection("aiInsights").delete(i.id);
+    }
     const { status, json } = await signed(v1("/insights/run"), { method: "POST", body: {} });
     expect(status, JSON.stringify(json)).toBe(200);
     // The seed's electricity spike is relative to the Tehran day it was seeded on. If the run

@@ -16,6 +16,7 @@
  *   POST /api/zarin/tasks/{id}/transition     task + room, one transaction
  *   POST /api/zarin/tickets/{id}/status|assign
  *   POST /api/zarin/inventory/{id}/movements  item + ledger, one transaction
+ *   POST /api/zarin/operations/daily          occupancy + write-only revenue (finance.record) → dailyFinance
  *   POST /api/zarin/ai/ask                    assistant (permission-filtered, server-side threads)
  *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket)
  *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon [energyBaseline]
@@ -45,6 +46,7 @@ routerAdd("POST", "/api/zarin/tasks/{id}/transition", (e) => require(`${__hooks}
 routerAdd("POST", "/api/zarin/tickets/{id}/status", (e) => require(`${__hooks}/lib/ops.js`).ticketStatus(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/tickets/{id}/assign", (e) => require(`${__hooks}/lib/ops.js`).ticketAssign(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/inventory/{id}/movements", (e) => require(`${__hooks}/lib/ops.js`).recordMovement(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/operations/daily", (e) => require(`${__hooks}/lib/finance.js`).recordDaily(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).ask(e), $apis.requireAuth("users"));
 
 // ------------------------------------------- AI core: forecasts, energy, recommendations
@@ -95,6 +97,9 @@ onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onItemUpdate(e), "
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onEnergyWrite(e), "energyReadings");
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onEnergyWrite(e), "energyReadings");
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onOperationsWrite(e), "dailyOperations");
+// Every path (REST, routes, importer, scripts): revenue moves to dailyFinance.
+onRecordCreate((e) => require(`${__hooks}/lib/finance.js`).moveRevenue(e), "dailyOperations");
+onRecordUpdate((e) => require(`${__hooks}/lib/finance.js`).moveRevenue(e), "dailyOperations");
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onOperationsWrite(e), "dailyOperations");
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onStaffWrite(e), "staff");
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onStaffWrite(e), "staff");

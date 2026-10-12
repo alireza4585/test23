@@ -74,6 +74,9 @@ function decide(e) {
   e.app.runInTransaction((tx) => {
     const rec = z.find(tx, "aiInsights", e.request.pathValue("id"));
     const hotelId = z.requireHotel(c, rec.getString("hotel"));
+    // The Recommendation Center (and this route) belong to the recommendationLoop flag;
+    // without it the app keeps the plain accept / implemented / dismiss buttons.
+    z.requireFeature(tx, hotelId, "recommendationLoop");
     if (!canDecide(c)) throw z.forbidden("missing_permission", { permission: "dashboard.operations" });
     if (rec.getString("status") === "resolved") throw z.bad("insight_resolved");
     const before = rec.getString("status");

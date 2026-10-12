@@ -496,6 +496,7 @@ function afterEnergyWritten(e) {
 }
 
 // -------------------------------------------------------- daily operations
+/** REST writes: superuser only since AI phase 0.5 (users go through POST /api/zarin/operations/daily). */
 function onOperationsWrite(e) {
   if (e.hasSuperuserAuth()) return e.next();
   const c = z.caller(e);
@@ -577,6 +578,8 @@ function onReportCreate(e) {
   if (e.hasSuperuserAuth()) return e.next();
   const c = z.caller(e);
   e.record.set("format", "pdf");
+  // Only an executive summary made by a finance.view holder carries revenue.
+  e.record.set("containsFinance", e.record.getString("type") === "executiveSummary" && z.has(c, "finance.view"));
   e.record.set("createdBy", c.id);
   e.record.set("createdByName", c.name);
   e.next();

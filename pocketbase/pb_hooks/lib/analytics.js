@@ -1,6 +1,7 @@
 /// <reference path="../../pb_data/types.d.ts" />
 /** Analytics engine on PocketBase (ports analytics/loader.ts + scheduled.ts). */
 const z = require(`${__hooks}/lib/zarin.js`);
+const finance = require(`${__hooks}/lib/finance.js`);
 const core = z.core;
 
 /**
@@ -17,14 +18,20 @@ function loadHotelData(app, hotelId, fromDay, now, taskFromDay) {
     hotelId,
     name: hotel.getString("name") || hotelId,
     settings: z.hotelSettings(app, hotelId),
-    operations: z.findMany(app, "dailyOperations", "hotel = {:h} && day >= {:d}", p, "day").map((r) => ({
-      day: r.getString("day"),
-      roomsAvailable: r.getInt("roomsAvailable"),
-      roomsOccupied: r.getInt("roomsOccupied"),
-      roomRevenue: r.getFloat("roomRevenue"),
-      fnbRevenue: r.getFloat("fnbRevenue"),
-      otherRevenue: r.getFloat("otherRevenue"),
-    })),
+    operations: (() => {
+      const revenue = finance.revenueByDay(app, hotelId, fromDay);
+      return z.findMany(app, "dailyOperations", "hotel = {:h} && day >= {:d}", p, "day").map((r) => {
+        const rev = revenue[r.getString("day")] || { roomRevenue: 0, fnbRevenue: 0, otherRevenue: 0 };
+        return {
+          day: r.getString("day"),
+          roomsAvailable: r.getInt("roomsAvailable"),
+          roomsOccupied: r.getInt("roomsOccupied"),
+          roomRevenue: rev.roomRevenue,
+          fnbRevenue: rev.fnbRevenue,
+          otherRevenue: rev.otherRevenue,
+        };
+      });
+    })(),
     energy: z.findMany(app, "energyReadings", "hotel = {:h} && day >= {:d}", p, "day").map((r) => ({
       day: r.getString("day"), type: r.getString("type"), consumption: r.getFloat("consumption"),
     })),
@@ -73,11 +80,10 @@ function rollup(app, hotelId, day, now) {
   let rec = z.findFirst(app, "dailyMetrics", "hotel = {:h} && day = {:d}", { h: hotelId, d: day });
   if (!rec) rec = new Record(z.col(app, "dailyMetrics"), { hotel: hotelId, day });
   rec.set("occupancyRate", m.occupancyRate);
-  rec.set("adr", m.adr);
-  rec.set("revpar", m.revpar);
-  rec.set("totalRevenue", m.totalRevenue);
-  rec.set("data", m);
+  // ADR, RevPAR and revenue go to dailyFinance (finance.view) only.
+  rec.set("data", finance.withoutFinance(m));
   app.save(rec);
+  finance.writeMetrics(app, hotelId, day, m);
   return m;
 }
 

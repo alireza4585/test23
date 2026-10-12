@@ -267,40 +267,62 @@ export function repeatFailureRule(input: EngineInput): InsightDraft[] {
   return out;
 }
 
-/** Rooms out of order > 24h → lost revenue at current ADR × occupancy. */
+/**
+ * Rooms out of order > 24h. Two insights: the lost revenue at current ADR ×
+ * occupancy for finance roles only, and the same rooms without any money for
+ * the managers who get them back into service.
+ */
 export function outOfOrderRevenueRule(input: EngineInput): InsightDraft[] {
   const ooo = input.rooms.filter(
     (r) => r.status === "outOfOrder" && r.updatedAt && input.now.getTime() - r.updatedAt.getTime() > 864e5,
   );
   if (ooo.length === 0) return [];
+  const numbers = ooo.map((r) => r.number);
+  const out: InsightDraft[] = [];
   const recent = input.operations.slice(-14);
   const sold = recent.reduce((s, o) => s + o.roomsOccupied, 0);
   const available = recent.reduce((s, o) => s + o.roomsAvailable, 0);
   const revenue = recent.reduce((s, o) => s + o.roomRevenue, 0);
-  if (sold === 0 || available === 0) return [];
-  const adr = revenue / sold;
-  const occ = sold / available;
-  const lostPerMonth = ooo.length * adr * occ * 30;
-  return [
-    {
+  if (sold > 0 && available > 0 && revenue > 0) {
+    const adr = revenue / sold;
+    const occ = sold / available;
+    const lostPerMonth = ooo.length * adr * occ * 30;
+    out.push({
       id: "outOfOrder_revenue",
       rule: "outOfOrderRevenue",
       category: "revenue",
       title: `${ooo.length} اتاق بیش از ۲۴ ساعت خارج از سرویس`,
-      summary: `اتاق‌ها: ${ooo.map((r) => r.number).join("، ")}. با ADR و اشغال فعلی، درآمد از دست‌رفته قابل توجه است.`,
+      summary: `اتاق‌ها: ${numbers.join("، ")}. با ADR و اشغال فعلی، درآمد از دست‌رفته قابل توجه است.`,
       recommendation: "اولویت‌دهی تیکت‌های این اتاق‌ها و تعیین تاریخ بازگشت به فروش.",
       confidence: 0.8,
       priority: ooo.length >= 3 ? "high" : "medium",
       estimatedMonthlySaving: Math.round(lostPerMonth),
       evidence: [`ADR ۱۴ روز: ${fmt(adr)}`, `اشغال ۱۴ روز: ${fmt(occ * 100)}٪`],
       route: "/rooms",
-      audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+      audienceRoles: ["generalManager", "hotelOwner", "analyst"],
       expectedImpact: {
         metric: "roomsOutOfOrder", unit: "rooms", baseline: ooo.length, expected: 0,
-        monthlyIrr: Math.round(lostPerMonth), method: "oooRooms", subject: { rooms: ooo.map((r) => r.number) },
+        monthlyIrr: Math.round(lostPerMonth), method: "oooRooms", subject: { rooms: numbers },
       },
+    });
+  }
+  out.push({
+    id: "outOfOrder_rooms",
+    rule: "outOfOrderRooms",
+    category: "maintenance",
+    title: `${ooo.length} اتاق بیش از ۲۴ ساعت خارج از سرویس`,
+    summary: `اتاق‌ها: ${numbers.join("، ")}. این اتاق‌ها قابل فروش نیستند تا تعمیر و بازگشت به سرویس انجام شود.`,
+    recommendation: "اولویت‌دهی تیکت‌های این اتاق‌ها و تعیین تاریخ بازگشت به فروش.",
+    confidence: 0.8,
+    priority: ooo.length >= 3 ? "high" : "medium",
+    evidence: [`اتاق‌های خارج از سرویس: ${numbers.join("، ")}`],
+    route: "/rooms",
+    audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+    expectedImpact: {
+      metric: "roomsOutOfOrder", unit: "rooms", baseline: ooo.length, expected: 0, method: "oooRooms", subject: { rooms: numbers },
     },
-  ];
+  });
+  return out;
 }
 
 /** Weekend vs weekday occupancy gap → dynamic pricing / promotions (Iran weekend: Thu–Fri). */
@@ -330,7 +352,7 @@ export function weekdayOccupancyRule(input: EngineInput): InsightDraft[] {
       priority: "medium",
       evidence: [`آخر هفته: ${fmt(weekend * 100)}٪`, `روزهای میانی: ${fmt(weekday * 100)}٪`],
       route: "/reports",
-      audienceRoles: ["generalManager", "hotelOwner"],
+      audienceRoles: ["generalManager", "hotelOwner", "analyst"],
       expectedImpact: {
         metric: "weekendWeekdayGap", unit: "pts", baseline: round1(gap), expected: 12, method: "occupancyGap",
       },

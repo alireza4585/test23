@@ -657,28 +657,29 @@ function outOfOrderRevenueRule(input) {
     (r) => r.status === "outOfOrder" && r.updatedAt && input.now.getTime() - r.updatedAt.getTime() > 864e5
   );
   if (ooo.length === 0) return [];
+  const numbers = ooo.map((r) => r.number);
+  const out = [];
   const recent = input.operations.slice(-14);
   const sold = recent.reduce((s, o) => s + o.roomsOccupied, 0);
   const available = recent.reduce((s, o) => s + o.roomsAvailable, 0);
   const revenue = recent.reduce((s, o) => s + o.roomRevenue, 0);
-  if (sold === 0 || available === 0) return [];
-  const adr = revenue / sold;
-  const occ = sold / available;
-  const lostPerMonth = ooo.length * adr * occ * 30;
-  return [
-    {
+  if (sold > 0 && available > 0 && revenue > 0) {
+    const adr = revenue / sold;
+    const occ = sold / available;
+    const lostPerMonth = ooo.length * adr * occ * 30;
+    out.push({
       id: "outOfOrder_revenue",
       rule: "outOfOrderRevenue",
       category: "revenue",
       title: `${ooo.length} \u0627\u062A\u0627\u0642 \u0628\u06CC\u0634 \u0627\u0632 \u06F2\u06F4 \u0633\u0627\u0639\u062A \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633`,
-      summary: `\u0627\u062A\u0627\u0642\u200C\u0647\u0627: ${ooo.map((r) => r.number).join("\u060C ")}. \u0628\u0627 ADR \u0648 \u0627\u0634\u063A\u0627\u0644 \u0641\u0639\u0644\u06CC\u060C \u062F\u0631\u0622\u0645\u062F \u0627\u0632 \u062F\u0633\u062A\u200C\u0631\u0641\u062A\u0647 \u0642\u0627\u0628\u0644 \u062A\u0648\u062C\u0647 \u0627\u0633\u062A.`,
+      summary: `\u0627\u062A\u0627\u0642\u200C\u0647\u0627: ${numbers.join("\u060C ")}. \u0628\u0627 ADR \u0648 \u0627\u0634\u063A\u0627\u0644 \u0641\u0639\u0644\u06CC\u060C \u062F\u0631\u0622\u0645\u062F \u0627\u0632 \u062F\u0633\u062A\u200C\u0631\u0641\u062A\u0647 \u0642\u0627\u0628\u0644 \u062A\u0648\u062C\u0647 \u0627\u0633\u062A.`,
       recommendation: "\u0627\u0648\u0644\u0648\u06CC\u062A\u200C\u062F\u0647\u06CC \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u0627\u06CC\u0646 \u0627\u062A\u0627\u0642\u200C\u0647\u0627 \u0648 \u062A\u0639\u06CC\u06CC\u0646 \u062A\u0627\u0631\u06CC\u062E \u0628\u0627\u0632\u06AF\u0634\u062A \u0628\u0647 \u0641\u0631\u0648\u0634.",
       confidence: 0.8,
       priority: ooo.length >= 3 ? "high" : "medium",
       estimatedMonthlySaving: Math.round(lostPerMonth),
       evidence: [`ADR \u06F1\u06F4 \u0631\u0648\u0632: ${fmt(adr)}`, `\u0627\u0634\u063A\u0627\u0644 \u06F1\u06F4 \u0631\u0648\u0632: ${fmt(occ * 100)}\u066A`],
       route: "/rooms",
-      audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+      audienceRoles: ["generalManager", "hotelOwner", "analyst"],
       expectedImpact: {
         metric: "roomsOutOfOrder",
         unit: "rooms",
@@ -686,10 +687,32 @@ function outOfOrderRevenueRule(input) {
         expected: 0,
         monthlyIrr: Math.round(lostPerMonth),
         method: "oooRooms",
-        subject: { rooms: ooo.map((r) => r.number) }
+        subject: { rooms: numbers }
       }
+    });
+  }
+  out.push({
+    id: "outOfOrder_rooms",
+    rule: "outOfOrderRooms",
+    category: "maintenance",
+    title: `${ooo.length} \u0627\u062A\u0627\u0642 \u0628\u06CC\u0634 \u0627\u0632 \u06F2\u06F4 \u0633\u0627\u0639\u062A \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633`,
+    summary: `\u0627\u062A\u0627\u0642\u200C\u0647\u0627: ${numbers.join("\u060C ")}. \u0627\u06CC\u0646 \u0627\u062A\u0627\u0642\u200C\u0647\u0627 \u0642\u0627\u0628\u0644 \u0641\u0631\u0648\u0634 \u0646\u06CC\u0633\u062A\u0646\u062F \u062A\u0627 \u062A\u0639\u0645\u06CC\u0631 \u0648 \u0628\u0627\u0632\u06AF\u0634\u062A \u0628\u0647 \u0633\u0631\u0648\u06CC\u0633 \u0627\u0646\u062C\u0627\u0645 \u0634\u0648\u062F.`,
+    recommendation: "\u0627\u0648\u0644\u0648\u06CC\u062A\u200C\u062F\u0647\u06CC \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u0627\u06CC\u0646 \u0627\u062A\u0627\u0642\u200C\u0647\u0627 \u0648 \u062A\u0639\u06CC\u06CC\u0646 \u062A\u0627\u0631\u06CC\u062E \u0628\u0627\u0632\u06AF\u0634\u062A \u0628\u0647 \u0641\u0631\u0648\u0634.",
+    confidence: 0.8,
+    priority: ooo.length >= 3 ? "high" : "medium",
+    evidence: [`\u0627\u062A\u0627\u0642\u200C\u0647\u0627\u06CC \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633: ${numbers.join("\u060C ")}`],
+    route: "/rooms",
+    audienceRoles: ["generalManager", "maintenanceManager", "operationsManager"],
+    expectedImpact: {
+      metric: "roomsOutOfOrder",
+      unit: "rooms",
+      baseline: ooo.length,
+      expected: 0,
+      method: "oooRooms",
+      subject: { rooms: numbers }
     }
-  ];
+  });
+  return out;
 }
 function weekdayOccupancyRule(input) {
   const last28 = input.operations.slice(-28);
@@ -716,7 +739,7 @@ function weekdayOccupancyRule(input) {
       priority: "medium",
       evidence: [`\u0622\u062E\u0631 \u0647\u0641\u062A\u0647: ${fmt(weekend * 100)}\u066A`, `\u0631\u0648\u0632\u0647\u0627\u06CC \u0645\u06CC\u0627\u0646\u06CC: ${fmt(weekday * 100)}\u066A`],
       route: "/reports",
-      audienceRoles: ["generalManager", "hotelOwner"],
+      audienceRoles: ["generalManager", "hotelOwner", "analyst"],
       expectedImpact: {
         metric: "weekendWeekdayGap",
         unit: "pts",

@@ -165,7 +165,15 @@ describe("energy", () => {
 });
 
 describe("recommendations", () => {
-  it("record decisions, open one linked ticket and start an evaluation", async () => {
+  it("decisions are off until the hotel's recommendationLoop flag is on", async () => {
+    const su = await superuser();
+    await analytics(su, hotelId(), { insights: true });
+    const gm = await login(NID.gm);
+    const insight = await gm.collection("aiInsights").getFirstListItem(`hotel = "${hotelId()}" && status = "active"`);
+    expect((await errorOf(post(gm, `/api/zarin/insights/${insight.id}/decide`, { decision: "accepted" }))).code).toBe("feature_disabled");
+  });
+
+  it("record decisions, open one linked ticket and start an evaluation", () => withFeatures({ recommendationLoop: true }, async () => {
     const su = await superuser();
     await analytics(su, hotelId(), { insights: true });
     const gm = await login(NID.gm);
@@ -197,7 +205,7 @@ describe("recommendations", () => {
     const dismissed = await post(gm, `/api/zarin/insights/${other.id}/decide`, { decision: "dismissed", note: "فصل کم‌سفر", ticket: {} });
     expect(dismissed.evaluation).toBeNull();
     expect(dismissed.linkedTicket).toBe("");
-  });
+  }));
 
   it("are resolved when their condition is no longer detected", async () => {
     const su = await superuser();
@@ -228,13 +236,13 @@ describe("recommendations", () => {
     expect(ev.window.afterFrom).toBe(addDays(h.start, 61));
   });
 
-  it("cannot be re-opened through the plain update once resolved", async () => {
+  it("cannot be re-opened through the plain update once resolved", () => withFeatures({ recommendationLoop: true }, async () => {
     const su = await superuser();
     const gm = await login(NID.gm);
     const rec = await su.collection("aiInsights").create({ hotel: hotelId(), key: "test_resolved", rule: "x", title: "t", status: "resolved", source: "rules" });
     expect((await errorOf(gm.collection("aiInsights").update(rec.id, { status: "accepted" }))).code).toBe("insight_resolved");
     expect((await errorOf(post(gm, `/api/zarin/insights/${rec.id}/decide`, { decision: "accepted" }))).code).toBe("insight_resolved");
-  });
+  }));
 });
 
 describe("calendar events", () => {

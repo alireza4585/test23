@@ -42,12 +42,14 @@ function specialDays(app, hotelId, from, to) {
 
 function operationsByDay(app, hotelId, from, to) {
   const out = {};
+  const revenue = require(`${__hooks}/lib/finance.js`).revenueByDay(app, hotelId, from);
   for (const r of z.findMany(app, "dailyOperations", "hotel = {:h} && day >= {:f} && day <= {:t}", { h: hotelId, f: from, t: to }, "day")) {
+    const rev = revenue[r.getString("day")] || { roomRevenue: 0, fnbRevenue: 0, otherRevenue: 0 };
     out[r.getString("day")] = {
       available: r.getInt("roomsAvailable"),
       occupied: r.getInt("roomsOccupied"),
-      room: r.getFloat("roomRevenue"),
-      total: r.getFloat("roomRevenue") + r.getFloat("fnbRevenue") + r.getFloat("otherRevenue"),
+      room: rev.roomRevenue,
+      total: rev.roomRevenue + rev.fnbRevenue + rev.otherRevenue,
     };
   }
   return out;
