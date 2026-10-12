@@ -254,3 +254,205 @@ describe("revenue is invisible without finance.view (realtime)", () => {
     for (const k of REVENUE_KEYS) expect(opsOpsSub.events[0].data.record[k]).toBeUndefined();
   });
 });
+
+// users.financeView is what the finance API rules test, so it must only ever be
+// derived by the server (role template ∩ hotel override), never set by a client.
+describe("users.financeView cannot be set by a client", () => {
+  const nationalId = (nine) => {
+    const sum = [...nine].reduce((s, d, i) => s + Number(d) * (10 - i), 0) % 11;
+    return `${nine}${sum < 2 ? sum : 11 - sum}`;
+  };
+  const freshNid = () => nationalId(String(100_000_000 + Math.floor(Math.random() * 899_999_999)));
+  const password = () => `Fv-${Math.random().toString(36).slice(2, 10)}A1`;
+  const flagOf = async (id) => (await su.collection("users").getOne(id)).financeView;
+  const created = [];
+  afterAll(async () => {
+    for (const id of created) {
+      for (const s of await su.collection("staff").getFullList({ filter: `user = "${id}"` })) await su.collection("staff").delete(s.id);
+      await su.collection("users").delete(id);
+    }
+  });
+
+  it("REST: a PATCH of one's own record is refused, in JSON, multipart and mixed with allowed fields", async () => {
+    const ops = await login(NID.ops);
+    const id = ops.authStore.record.id;
+    const finView = await su.collection("permissions").getFirstListItem(`code = "finance.view"`);
+    const form = new FormData();
+    form.append("financeView", "true");
+    for (const body of [{ financeView: true }, { locale: "fa", financeView: true }, { financeView: "true" }, form, { permissions: [finView.id] }]) {
+      const err = await errorOf(ops.collection("users").update(id, body));
+      expect(err.status).toBe(400);
+      expect(err.code).toBe("field_not_allowed");
+    }
+    expect(await flagOf(id)).toBe(false);
+    expect((await ops.collection("dailyFinance").getList(1, 1)).totalItems).toBe(0);
+  });
+
+  it("REST: nobody can PATCH another user's record, and the batch API is off", async () => {
+    const gm = await login(NID.gm);
+    const opsId = (await su.collection("users").getFirstListItem(`nationalId = "${NID.ops}"`)).id;
+    expect((await errorOf(gm.collection("users").update(opsId, { financeView: true }))).status).toBe(404);
+    const ops = await login(NID.ops);
+    const batch = ops.createBatch();
+    batch.collection("users").update(opsId, { financeView: true });
+    expect((await errorOf(batch.send())).status).toBeGreaterThanOrEqual(400);
+    expect(await flagOf(opsId)).toBe(false);
+  });
+
+  it("even a superuser write cannot set it: the model hook re-derives it from the role", async () => {
+    const opsId = (await su.collection("users").getFirstListItem(`nationalId = "${NID.ops}"`)).id;
+    const row = await su.collection("users").update(opsId, { financeView: true });
+    expect(row.financeView).toBe(false);
+    expect(await flagOf(opsId)).toBe(false);
+  });
+
+  it("routes: a financeView in any request body is ignored", async () => {
+    const gm = await login(NID.gm);
+    const nid = freshNid();
+    const pw = password();
+    const { uid } = await post(gm, "/api/zarin/users", {
+      hotelId: hotelId(), nationalId: nid, fullName: "آزمون مجوز مالی", role: "receptionStaff", temporaryPassword: pw,
+      financeView: true, permissions: ["finance.view"],
+    });
+    created.push(uid);
+    expect(await flagOf(uid)).toBe(false);
+    const user = await login(nid, pw);
+    const day = addDays(tehranDay(new Date()), -9);
+    const calls = [
+      [user, "/api/zarin/sessions", { deviceId: "finance-view-device-1", platform: "android", financeView: true }],
+      [user, "/api/zarin/operations/daily", { hotelId: hotelId(), day, roomsAvailable: 58, roomsOccupied: 40, financeView: true }],
+      [user, "/api/zarin/ai/ask", { hotelId: hotelId(), question: "درآمد دیروز چقدر بود؟", locale: "fa", financeView: true }],
+      [gm, `/api/zarin/users/${uid}/role`, { hotelId: hotelId(), role: "housekeepingStaff", financeView: true }],
+      [gm, `/api/zarin/users/${uid}/status`, { hotelId: hotelId(), status: "active", financeView: true }],
+      [gm, `/api/zarin/users/${uid}/password`, { hotelId: hotelId(), temporaryPassword: password(), financeView: true }],
+    ];
+    for (const [pb, path, body] of calls) {
+      await post(pb, path, body).catch(() => {}); // success or refusal, the flag must not move
+      expect(await flagOf(uid), path).toBe(false);
+    }
+    const me = await (await login(NID.ops)).send("/api/zarin/me", {});
+    expect(me.permissions).not.toContain("finance.view");
+  });
+});
+
+describe("users.financeView follows role and override changes, both ways, at once", () => {
+  const created = [];
+  const overrides = [];
+  afterAll(async () => {
+    for (const id of overrides) await su.collection("roleOverrides").delete(id).catch(() => {});
+    for (const id of created) {
+      for (const s of await su.collection("staff").getFullList({ filter: `user = "${id}"` })) await su.collection("staff").delete(s.id);
+      await su.collection("users").delete(id);
+    }
+  });
+  const nationalId = (nine) => {
+    const sum = [...nine].reduce((s, d, i) => s + Number(d) * (10 - i), 0) % 11;
+    return `${nine}${sum < 2 ? sum : 11 - sum}`;
+  };
+  const freshNid = () => nationalId(String(100_000_000 + Math.floor(Math.random() * 899_999_999)));
+  const password = () => `Fv-${Math.random().toString(36).slice(2, 10)}A1`;
+  const finance = async (pb) => (await pb.collection("dailyFinance").getList(1, 1)).totalItems;
+  const flagOf = async (id) => (await su.collection("users").getOne(id)).financeView;
+
+  async function provision(role) {
+    const gm = await login(NID.gm);
+    const nid = freshNid();
+    const pw = password();
+    const { uid } = await post(gm, "/api/zarin/users", { hotelId: hotelId(), nationalId: nid, fullName: `آزمون ${role}`, role, temporaryPassword: pw });
+    created.push(uid);
+    return { uid, nid, pw };
+  }
+
+  it("role change by a manager (route): sessions are revoked, the next sign-in has exactly the new access", async () => {
+    const gm = await login(NID.gm);
+    const u = await provision("operationsManager");
+    const asOps = await login(u.nid, u.pw);
+    expect(await finance(asOps)).toBe(0);
+
+    await post(gm, `/api/zarin/users/${u.uid}/role`, { hotelId: hotelId(), role: "analyst" });
+    expect(await flagOf(u.uid)).toBe(true);
+    // The old token is dead (PocketBase treats it as a guest: auth-only routes 401, lists are empty).
+    expect((await errorOf(asOps.send("/api/zarin/me", {}))).status).toBe(401);
+    expect(await finance(asOps)).toBe(0);
+    const asAnalyst = await login(u.nid, u.pw);
+    expect(await finance(asAnalyst)).toBeGreaterThan(0);
+
+    await post(gm, `/api/zarin/users/${u.uid}/role`, { hotelId: hotelId(), role: "operationsManager" });
+    expect(await flagOf(u.uid)).toBe(false);
+    // No window with the old access.
+    expect((await errorOf(asAnalyst.send("/api/zarin/me", {}))).status).toBe(401);
+    expect(await finance(asAnalyst)).toBe(0);
+    expect(await finance(await login(u.nid, u.pw))).toBe(0);
+  });
+
+  it("role change by a superuser (panel): the same token gains and loses access on the next request", async () => {
+    const u = await provision("operationsManager");
+    const pb = await login(u.nid, u.pw);
+    expect(await finance(pb)).toBe(0);
+    await su.collection("users").update(u.uid, { role: "analyst" });
+    expect(await finance(pb)).toBeGreaterThan(0);
+    await su.collection("users").update(u.uid, { role: "operationsManager" });
+    expect(await finance(pb)).toBe(0);
+  });
+
+  it("roleOverrides create / update / delete: the same token loses and regains access immediately (REST and realtime)", async () => {
+    const u = await provision("analyst");
+    const pb = await login(u.nid, u.pw);
+    const seededAnalyst = await login(NID.analyst);
+    const seededId = seededAnalyst.authStore.record.id;
+    expect(await finance(pb)).toBeGreaterThan(0);
+
+    const template = await su.collection("roleTemplates").getFirstListItem(`role = "analyst"`);
+    const finView = await su.collection("permissions").getFirstListItem(`code = "finance.view"`);
+    const without = template.permissions.filter((p) => p !== finView.id);
+    expect(without.length).toBe(template.permissions.length - 1);
+
+    const sub = await subscribe(pb.authStore.token, "dailyFinance");
+    const reception = await login(NID.reception);
+    const record = (day, amount) => post(reception, "/api/zarin/operations/daily", {
+      hotelId: hotelId(), day, roomsAvailable: 58, roomsOccupied: 40, revenue: { roomRevenue: amount, fnbRevenue: 0, otherRevenue: 0 },
+    });
+    const settle = async (n) => {
+      for (let i = 0; i < 40 && sub.events.length < n; i++) await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 150));
+    };
+    try {
+      // Closed: override without finance.view.
+      const o = await su.collection("roleOverrides").create({ hotel: hotelId(), role: "analyst", permissions: without });
+      overrides.push(o.id);
+      expect([await flagOf(u.uid), await flagOf(seededId)]).toEqual([false, false]);
+      expect(await finance(pb)).toBe(0);
+      expect(await finance(seededAnalyst)).toBe(0);
+      expect((await pb.send("/api/zarin/me", {})).permissions).not.toContain("finance.view");
+      await record(addDays(tehranDay(new Date()), -11), 11_000_000);
+      await settle(1);
+      expect(sub.events).toHaveLength(0);
+
+      // Open again: the override now includes finance.view.
+      await su.collection("roleOverrides").update(o.id, { permissions: template.permissions });
+      expect(await flagOf(u.uid)).toBe(true);
+      expect(await finance(pb)).toBeGreaterThan(0);
+      await record(addDays(tehranDay(new Date()), -12), 12_000_000);
+      await settle(1);
+      expect(sub.events.map((ev) => ev.data.record.roomRevenue)).toEqual([12_000_000]);
+
+      // Closed by update, then opened by delete.
+      await su.collection("roleOverrides").update(o.id, { permissions: without });
+      expect(await flagOf(u.uid)).toBe(false);
+      expect(await finance(pb)).toBe(0);
+      await record(addDays(tehranDay(new Date()), -13), 13_000_000);
+      await settle(2);
+      expect(sub.events).toHaveLength(1);
+
+      await su.collection("roleOverrides").delete(o.id);
+      expect([await flagOf(u.uid), await flagOf(seededId)]).toEqual([true, true]);
+      expect(await finance(pb)).toBeGreaterThan(0);
+      expect(await finance(seededAnalyst)).toBeGreaterThan(0);
+      await record(addDays(tehranDay(new Date()), -14), 14_000_000);
+      await settle(2);
+      expect(sub.events.map((ev) => ev.data.record.roomRevenue)).toEqual([12_000_000, 14_000_000]);
+    } finally {
+      await sub.close();
+    }
+  });
+});
