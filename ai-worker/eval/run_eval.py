@@ -86,7 +86,7 @@ def run(args) -> dict:
             row = {
                 "id": q["id"], "role": q["role"], "kind": q["kind"], "run": run_no, "model": reply.get("model"),
                 "seconds": round(seconds, 3),
-                "unsupported": checks.unsupported(answer, facts),
+                "unsupported": checks.unsupported(answer, facts, ctx),
                 "contextFinanceKeys": restricted and checks.has_finance_keys(ctx),
                 "leakedNumbers": checks.leaked(answer, finance_ref) if restricted else [],
                 "saysInsufficient": checks.says_insufficient(answer),

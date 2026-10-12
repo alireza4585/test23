@@ -22,16 +22,70 @@ _INSUFFICIENT = re.compile(
 )
 
 
+_MONTHS = ("فروردین|اردیبهشت|خرداد|تیر|مرداد|شهریور|مهر|آبان|آذر|دی|بهمن|اسفند|"
+           "january|february|march|april|may|june|july|august|september|october|november|december")
+_NOT_LETTER = r"(?![\u0600-\u06FFa-z])"
+_EXEMPT = [
+    re.compile(r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b"),
+    re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b"),
+    re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b"),
+    re.compile(rf"\b\d{{1,2}}\s*(?:{_MONTHS}){_NOT_LETTER}(?:\s+\d{{4}}\b)?", re.I),
+    re.compile(rf"(?:{_MONTHS}){_NOT_LETTER}\s+\d{{1,2}}\b(?:,?\s+\d{{4}}\b)?", re.I),
+]
+_LIST_MARKER = re.compile(r"^(\s*)\d{1,2}[.)\-–]\s", re.M)
+_COUNT_KINDS = [
+    (r"^counts\..*ticket", "(?:تیکت|خرابی|درخواست تعمیر)", r"(?:tickets?|faults?|work orders?)"),
+    (r"^(?:counts\.rooms$|roomsNow\.)", "اتاق", r"rooms?"),
+    (r"^counts\..*alert", "هشدار", r"alerts?"),
+    (r"^counts\.lowStock", "(?:قلم|کالا)", r"(?:items?|products?)"),
+    (r"^counts\..*insight", "(?:پیشنهاد|توصیه)", r"(?:insights?|recommendations?)"),
+    (r"^windows\.", "روز", r"days?"),
+]
+_QUALIFIERS = [
+    ("critical", re.compile(r"^(?:بحرانی|critical)")),
+    ("high", re.compile(r"^(?:فوری|اولویت بالا|high)")),
+    ("medium", re.compile(r"^(?:متوسط|medium)")),
+    ("low", re.compile(r"^(?:کم‌اهمیت|اولویت پایین|low)")),
+    ("overdue", re.compile(r"^(?:معوق|از sla گذشته|گذشته از sla|overdue|past sla)")),
+]
+
+
+def _without_exempt(s: str) -> str:
+    """Dates, clock times and list numbering are not data claims."""
+    for rx in _EXEMPT:
+        s = rx.sub(" ", s)
+    return _LIST_MARKER.sub(r"\1 ", s)
+
+
+def _qualifier(text: str):
+    return next((q for q, rx in _QUALIFIERS if rx.match(text)), None)
+
+
+def _count_claim(following: str):
+    t = following.lstrip().lower()
+    for kind, fa, en in _COUNT_KINDS:
+        m = re.match(rf"(?:تا\s+|عدد\s+|مورد\s+)?{fa}(?:\u200c?های|\u200c?ها|ی)?\s*", t)
+        if m:
+            return {"kind": kind, "qualifier": _qualifier(t[m.end():])}
+        m = re.match(rf"((?:critical|high|medium|low|overdue|open|low-stock)\s+)?{en}\b", t)
+        if m:
+            return {"kind": kind, "qualifier": _qualifier(m.group(1)) if m.group(1) else None}
+    return None
+
+
 def numbers_in(text: str) -> list[dict]:
-    s = str(text or "").translate(_DIGITS)
+    s = _without_exempt(str(text or "").translate(_DIGITS))
     out = []
     for m in _NUM.finditer(s):
         if s[max(0, m.start() - 2):m.start()] == "[P":
             continue
         raw = m.group(0).replace(",", "")
-        after = s[m.end():m.end() + 12].strip().lower()
+        after = s[m.end():m.end() + 14].strip().lower()
         scale = next((v for w, v in _SCALE_WORDS.items() if after.startswith(w)), 1.0)
-        out.append({"value": float(raw), "decimals": len(raw.split(".")[1]) if "." in raw else 0, "raw": m.group(0), "scale": scale})
+        percent = bool(re.match(r"(%|٪|درصد|percent)", after))
+        claim = _count_claim(s[m.end():m.end() + 40]) if scale == 1.0 and not percent and "." not in raw else None
+        out.append({"value": float(raw), "decimals": len(raw.split(".")[1]) if "." in raw else 0, "raw": m.group(0),
+                    "scale": scale, "percent": percent, "claim": claim})
     return out
 
 
@@ -52,6 +106,55 @@ def facts_of(value, out: list | None = None) -> list[float]:
     return out
 
 
+def numeric_paths(value, path: str = "", out: list | None = None) -> list[tuple[str, float]]:
+    out = [] if out is None else out
+    if isinstance(value, bool):
+        return out
+    if isinstance(value, (int, float)):
+        out.append((path, float(value)))
+    elif isinstance(value, list):
+        for v in value:
+            numeric_paths(v, path, out)
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            numeric_paths(v, f"{path}.{k}" if path else k, out)
+    return out
+
+
+def _states(n: dict, fact: float) -> bool:
+    candidates = [abs(fact)]
+    if n["percent"]:
+        candidates.append(abs(fact) * 100)
+    if n["scale"] != 1.0:
+        candidates.append(abs(fact) / n["scale"])
+    for v in candidates:
+        if float(v).is_integer() and v < 1000 and n["decimals"] == 0:
+            if n["value"] == v:
+                return True
+            continue
+        if abs(v - n["value"]) <= max(0.5 * 10 ** (-n["decimals"]), v * 0.005):
+            return True
+    return False
+
+
+def unsupported(answer: str, facts: list[float], data=None) -> list[str]:
+    """Numbers in the answer not backed by the data. Mirrors ai.js:
+    dates, times and list numbering are exempt; counts must equal a count of
+    the same thing; percentages and scale words only when written out."""
+    paths = numeric_paths(data) if data is not None else None
+    bad = []
+    for n in numbers_in(answer):
+        if n["claim"] and paths is not None:
+            kind = re.compile(n["claim"]["kind"], re.I)
+            q = re.compile(n["claim"]["qualifier"], re.I) if n["claim"]["qualifier"] else None
+            ok = any(kind.search(p) and (q is None or q.search(p)) and v == n["value"] for p, v in paths)
+        else:
+            ok = any(_states(n, f) for f in facts)
+        if not ok:
+            bad.append(n["raw"])
+    return bad
+
+
 def _matches(n: dict, fact: float, scales) -> bool:
     tolerance = 0.5 * 10 ** (-n["decimals"])
     for scale in scales:
@@ -59,17 +162,6 @@ def _matches(n: dict, fact: float, scales) -> bool:
         if abs(v - n["value"]) <= max(tolerance, v * 0.005):
             return True
     return False
-
-
-def unsupported(answer: str, facts: list[float]) -> list[str]:
-    """Numbers in the answer not backed by the facts (integers ≤ 12 always pass)."""
-    bad = []
-    for n in numbers_in(answer):
-        if n["value"].is_integer() and n["value"] <= 12:
-            continue
-        if not any(_matches(n, f, (1, 100, 1e-3, 1e-6, 1e-9)) for f in facts):
-            bad.append(n["raw"])
-    return bad
 
 
 def finance_values(ctx) -> list[float]:

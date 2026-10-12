@@ -182,6 +182,48 @@ describe("AI assistant: numbers, cost and budget", () => {
     expect(reply.answer).toContain("کیلووات‌ساعت");
   });
 
+  it("rejects a wrong count: \"۳ تیکت بحرانی\" when there are 2", async () => {
+    const su = await superuser();
+    const gm = await login(NID.gm);
+    await script({ content: "پاسخ آزمایشی." });
+    await ask(gm, { question: "خرابی‌های بحرانی؟" });
+    const critical = dataOf(await lastPrompt()).counts.openTicketsByPriority.critical;
+    expect(critical).toBeLessThanOrEqual(2);
+    const extra = [];
+    for (let i = critical; i < 2; i++) {
+      extra.push(await gm.collection("maintenanceTickets").create({
+        hotel: hotelId(), title: `تست شمارش ${i}`, category: "electrical", priority: "critical", area: "Basement",
+      }));
+    }
+    try {
+      await llm("/__reset");
+      await script({ content: "۳ تیکت بحرانی باز است." }, { content: "۳ تیکت بحرانی باز است." });
+      const wrong = await ask(gm, { question: "چند تیکت بحرانی باز داریم؟" });
+      const [firstTry, retry] = await requests();
+      expect(dataOf(firstTry.body.messages.at(-1).content).counts.openTicketsByPriority.critical).toBe(2);
+      expect(retry.body.messages.at(-1).content).toContain("3"); // the retry names the rejected number
+      expect(wrong.model).toBe("rules");
+      expect(wrong.answer).not.toContain("۳ تیکت بحرانی");
+      const conv = await su.collection("aiConversations").getFirstListItem(`hotel = "${hotelId()}"`, { sort: "-created" });
+      expect(conv.status).toBe("fallback_unverified");
+
+      await llm("/__reset");
+      await script({ content: "۲ تیکت بحرانی باز است." });
+      expect((await ask(gm, { question: "چند تیکت بحرانی باز داریم؟" })).model).toBe("mock-model");
+    } finally {
+      for (const t of extra) await su.collection("maintenanceTickets").delete(t.id);
+    }
+  });
+
+  it("exempts only dates, clock times and list numbering; any other number must be in the data", async () => {
+    const gm = await login(NID.gm);
+    await script({ content: "۱. گزارش ۲۰ مهر ۱۴۰۵ ساعت ۰۶:۴۰ آماده شد.\n۲. داده‌های 2026-10-11 و ۱۴۰۵/۰۷/۱۹ بررسی شد." });
+    expect((await ask(gm, { question: "گزارش امروز؟" })).model).toBe("mock-model");
+    await llm("/__reset");
+    await script({ content: "۹۱۷ اتاق نیاز به بازدید دارند." }, { content: "۹۱۷ اتاق نیاز به بازدید دارند." });
+    expect((await ask(gm, { question: "چند اتاق بازدید لازم دارند؟" })).model).toBe("rules");
+  });
+
   it("asks for a sensible max_tokens on the configured model", async () => {
     await script({ content: "پاسخ آزمایشی." });
     await ask(await login(NID.gm), { question: "سلام" });

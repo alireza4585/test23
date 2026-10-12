@@ -33,7 +33,7 @@ function freePort() {
   });
 }
 
-export async function startTestServer({ keepData = false, webhookUrl = "", env = {} } = {}) {
+export async function startTestServer({ keepData = false, webhookUrl = "", env = {}, seedNow } = {}) {
   const bin = resolve(root, process.env.PB_BIN ?? "bin/pocketbase");
   if (!existsSync(bin)) {
     throw new Error(`PocketBase binary not found at ${bin}. Run scripts/get-pocketbase.sh or set PB_BIN.`);
@@ -69,7 +69,7 @@ export async function startTestServer({ keepData = false, webhookUrl = "", env =
   const settings = await su.settings.getAll();
   await su.settings.update({ rateLimits: { ...settings.rateLimits, excludedIPs: ["127.0.0.1"] } });
 
-  const { hotelId } = await seed({ url, ...SUPERUSER, log: () => {} });
+  const { hotelId } = await seed({ url, ...SUPERUSER, log: () => {}, now: seedNow });
 
   const stop = async () => {
     proc.kill();

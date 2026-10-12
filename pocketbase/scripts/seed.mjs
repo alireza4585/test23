@@ -58,8 +58,11 @@ function rng(seed) {
   };
 }
 
-/** `pb`: a client signed in as superuser (or `url` + `email` + `password`). */
-export async function seed({ pb: client, url, email, password, force = false, log = console.log }) {
+/**
+ * `pb`: a client signed in as superuser (or `url` + `email` + `password`).
+ * `now`: the moment the demo data is relative to (tests pin it, e.g. near Tehran midnight).
+ */
+export async function seed({ pb: client, url, email, password, force = false, log = console.log, now: at = new Date() }) {
   const pb = client ?? new PocketBase(url);
   if (!client) {
     pb.autoCancellation(false);
@@ -72,7 +75,7 @@ export async function seed({ pb: client, url, email, password, force = false, lo
   }
 
   const rand = rng(42);
-  const now = new Date();
+  const now = at;
   const today = dayKey(now);
 
   await pb.collection("hotels").create({

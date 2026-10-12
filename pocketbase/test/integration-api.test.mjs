@@ -88,7 +88,17 @@ describe("integration API v1 (n8n / IoT)", () => {
   it("runs the rule engine on demand and stores explainable insights", async () => {
     const { status, json } = await signed(v1("/insights/run"), { method: "POST", body: {} });
     expect(status, JSON.stringify(json)).toBe(200);
-    expect(json.created).toBeGreaterThan(0);
+    // The seed's electricity spike is relative to the Tehran day it was seeded on. If the run
+    // crossed Tehran midnight since then, the rule correctly no longer sees it (see
+    // tehran-midnight.test.mjs); re-run the engine at the seeding moment in that case.
+    const tehranDay = (d) => new Date(d.getTime() + 210 * 60e3).toISOString().slice(0, 10);
+    const seededAt = new Date(inject("seededAt"));
+    if (tehranDay(seededAt) !== tehranDay(new Date())) {
+      const su = await superuser();
+      await su.send(`/api/zarin/admin/hotels/${hotelId()}/analytics`, { method: "POST", body: { insights: true, now: seededAt.toISOString() } });
+    } else {
+      expect(json.created).toBeGreaterThan(0);
+    }
     const gm = await login(NID.gm);
     const insights = await gm.collection("aiInsights").getFullList();
     const energy = insights.find((i) => i.rule === "energyIntensity");
