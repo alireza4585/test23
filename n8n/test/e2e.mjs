@@ -254,16 +254,65 @@ try {
     check("01 runs succeed with no channel set up", !!(await until(async () => (await executions(WORKFLOWS[0], "success")).length >= 3)));
   }
 
+  // ------------------- AI phase 1: action events (01) and per-role briefings (02)
+  const hotelBefore = await su.collection("hotels").getOne(pbServer.hotelId);
+  await su.collection("hotels").update(pbServer.hotelId, {
+    settings: { ...hotelBefore.settings, features: { ...(hotelBefore.settings?.features || {}), morningBriefing: true, recommendationLoop: true } },
+  });
+  await su.send(`/api/zarin/admin/hotels/${pbServer.hotelId}/analytics`, { method: "POST", body: { insights: true, briefing: true } });
+  const stored = await su.collection("briefings").getFullList({ filter: su.filter("hotel = {:h}", { h: pbServer.hotelId }) });
+  const gmBriefing = stored.find((b) => b.role === "generalManager");
+  check("P1 briefings stored per role (rule-based)", !!gmBriefing?.items.length && stored.every((b) => b.source === "rules"), `${stored.length} roles`);
+  await flush(); // action.proposed of high-priority actions, briefing.ready (not routed: 02 sends at 07:15)
+  const signedEvent = async (body) => {
+    const raw = JSON.stringify(body);
+    const ts = Math.floor(Date.now() / 1000);
+    await fetch(`${N8N}/webhook/zarin-events`, {
+      method: "POST", body: raw,
+      headers: { "content-type": "application/json", "x-zarin-timestamp": String(ts), "x-zarin-signature": createHmac("sha256", SECRET).update(`${ts}.${raw}`).digest("hex") },
+    });
+  };
+  const runsBeforeActions = (await executions(WORKFLOWS[0], "success")).length;
+  const actionEvent = (type, department, actionId) => ({
+    id: `${type}:${pbServer.hotelId}:${actionId}`, type, hotelId: pbServer.hotelId, occurredAt: new Date().toISOString(),
+    data: { actionId, type: "createTicket", department, priority: "high", roles: ["generalManager"] },
+  });
+  await signedEvent(actionEvent("action.proposed", "energy", "e2eaction00001"));
+  await signedEvent(actionEvent("action.reminder", "housekeeping", "e2eaction00002"));
+  if (CHANNELS) {
+    check("01 action.proposed → Bale group of its department", !!(await until(() => toBale("nrg").some((m) => String(m.body.text).includes("e2eaction00001")))));
+    check("01 action.reminder (housekeeping) → Bale management group", !!(await until(() => toBale("mgmt").some((m) => String(m.body.text).includes("e2eaction00002") && String(m.body.text).includes("یادآوری")))));
+  } else {
+    check("01 action events succeed with no channel set up", !!(await until(async () => (await executions(WORKFLOWS[0], "success")).length >= runsBeforeActions + 2)));
+  }
+
   // ------------------------------------------------- 02 morning briefing
   const before02 = http.length;
   await run(2);
   if (CHANNELS) {
     const briefing = await until(() => mails.find((m) => m.to.includes("gm@example.ir")));
-    check("02 briefing e-mail to GM & owner (RTL)", !!briefing && /dir=(3D)?"rtl"/.test(briefing.raw));
+    // Mostly-Persian bodies are sent base64-encoded, the rest quoted-printable.
+    const body = (raw) => {
+      const split = raw.search(/\r?\n\r?\n/);
+      const text = raw.slice(split).trim();
+      return /Content-Transfer-Encoding: base64/i.test(raw.slice(0, split)) ? Buffer.from(text, "base64").toString("utf8") : text;
+    };
+    check("02 briefing e-mail to GM & owner (RTL)", !!briefing && /dir=(3D)?"rtl"/.test(body(briefing.raw)));
+    check("02 e-mail carries the GM's stored briefing", !!briefing && !!gmBriefing && body(briefing.raw).includes(gmBriefing.text.split("\n")[1].slice(0, 20)));
     check("02 briefing → Bale management group", !!(await until(() => http.slice(before02).some((r) => r.body?.chat_id === "mgmt"))));
+    check("02 management group gets the GM's stored briefing", !!(await until(() => http.slice(before02).some((r) => r.body?.chat_id === "mgmt" && r.body.text === gmBriefing?.text))));
+    // Department briefings with items and no finance go to their own group, word for word.
+    const groupOf = { energyManager: "nrg", maintenanceManager: "mnt" };
+    const due = stored.filter((b) => groupOf[b.role] && b.items.length && !b.containsFinance);
+    check("02 department briefings → their Bale groups", due.length > 0 &&
+      !!(await until(() => due.every((b) => http.slice(before02).some((r) => r.body?.chat_id === groupOf[b.role] && r.body.text === b.text)))),
+      due.map((b) => b.role).join(", "));
   } else {
     check("02 run succeeds with no channel set up", !!(await until(async () => (await executions(WORKFLOWS[1], "success")).length > 0)));
   }
+
+  await settled();
+  await su.collection("hotels").update(pbServer.hotelId, { settings: hotelBefore.settings });
 
   // ---------------------------------------------- 03 SLA escalation
   const before03 = http.length;
@@ -364,6 +413,7 @@ try {
   mock.close();
   smtp.close();
   writeFileSync(join(work, "http.json"), JSON.stringify(http, null, 1));
+  writeFileSync(join(work, "mails.json"), JSON.stringify(mails, null, 1));
   const failed = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - failed}/${results.length} checks passed (logs: ${work})`);
   process.exit(failed ? 1 : 0);

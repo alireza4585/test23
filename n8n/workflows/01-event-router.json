@@ -126,6 +126,29 @@
               },
               "renameOutput": true,
               "outputKey": "energy"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "6320406f-f68c-579d-9f4e-c91bf741f801",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    },
+                    "rightValue": "^action\\.(proposed|reminder)$"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "action"
             }
           ]
         },
@@ -575,6 +598,92 @@
         940,
         620
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AI phase 1 (F1): a high-priority action is waiting for a decision. The event carries no\n// staff-typed text and no numbers: department, type and a pointer to the Action Center only.\nconst e = $input.first().json;\nconst d = e.data || {};\nconst department = { energy: 'انرژی', maintenance: 'تأسیسات', housekeeping: 'خانه‌داری', inventory: 'انبار', operations: 'عملیات' }[d.department] || 'عملیات';\nconst type = { createTicket: 'ثبت تیکت تعمیر', createTask: 'ایجاد کار', notifyRole: 'اطلاع به نقش', adjustBaseline: 'کنار گذاشتن روز از مدل انرژی' }[d.type] || 'اقدام';\n// Each department's group; anything else (operations, revenue) goes to management.\nconst chat = { energy: $env.BALE_ENERGY_CHAT_ID, maintenance: $env.BALE_MAINTENANCE_CHAT_ID }[d.department] || $env.BALE_MANAGEMENT_CHAT_ID || '';\nconst head = e.type === 'action.reminder' ? '⏰ یادآوری: اقدام پیشنهادی هنوز منتظر تصمیم است' : '🟠 اقدام پیشنهادی با اولویت بالا منتظر تصمیم است';\nreturn [{ json: { ...e, chat, text: `${head}\\nبخش: ${department} · نوع: ${type}\\nبرای تأیید یا رد، در اپ به «مرکز اقدام» بروید. (شناسه: ${d.actionId || '—'})` } }];"
+      },
+      "id": "b716685e-7235-5294-8c5f-31fa79159656",
+      "name": "Format action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "1dfb0c8c-554c-5dfa-92d9-94063f8dab9e",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4784c0e6-a59b-539d-81da-d320b299fa09",
+              "leftValue": "={{ $json.chat || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "98b03155-128a-5dd7-b329-a8d2f28f43de",
+      "name": "Bale configured? · action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $json.chat, text: $json.text }) }}"
+      },
+      "id": "676ef39f-c0d6-55dc-a507-d18e8f325394",
+      "name": "Bale · action to its department",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        780
+      ]
     }
   ],
   "connections": {
@@ -626,6 +735,13 @@
         [
           {
             "node": "Bale configured? · energy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format action",
             "type": "main",
             "index": 0
           }
@@ -719,6 +835,28 @@
         [
           {
             "node": "Bale · energy group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format action": {
+      "main": [
+        [
+          {
+            "node": "Bale configured? · action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · action": {
+      "main": [
+        [
+          {
+            "node": "Bale · action to its department",
             "type": "main",
             "index": 0
           }

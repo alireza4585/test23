@@ -91,7 +91,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// RTL HTML e-mail + short Bale text from the summary payload.\nconst fa = (n) => (n == null ? '—' : Number(n).toLocaleString('fa-IR', { maximumFractionDigits: 1 }));\nreturn $input.all().map(({ json: s }) => {\n  const m = s.metrics;\n  const rows = [\n    ['نرخ اشغال', `${fa(m.occupancyRate)}٪`],\n    ['ADR (ریال)', fa(m.adr)],\n    ['RevPAR (ریال)', fa(m.revpar)],\n    ['درآمد کل (ریال)', fa(m.totalRevenue)],\n    ['برق (kWh)', `${fa(m.energy.electricity)} (${fa(m.electricityVsBaselinePct)}٪ نسبت به خط مبنا)`],\n    ['خرابی‌های باز / معوق', `${fa(m.maintenance.open)} / ${fa(m.maintenance.overdue)}`],\n    ['اقلام زیر نقطه سفارش', fa(m.inventory.lowStock)],\n  ].map(([k, v]) => `<tr><td style=\"padding:6px 12px;color:#555\">${k}</td><td style=\"padding:6px 12px\"><b>${v}</b></td></tr>`).join('');\n  const alerts = (s.alerts || []).map((a) => `<li>${a.title}</li>`).join('');\n  const insights = (s.insights || []).map((i) => `<li>${i.title} — ${i.recommendation}</li>`).join('');\n  const html = `<div dir=\"rtl\" style=\"font-family:Tahoma;max-width:640px\">\n    <h2 style=\"color:#94742F\">گزارش صبحگاهی ${s.hotel} — ${s.day}</h2>\n    ${s.narrative ? `<p style=\"white-space:pre-line;line-height:1.9\">${s.narrative}</p>` : ''}\n    <table style=\"border-collapse:collapse;border:1px solid #ddd\">${rows}</table>\n    ${alerts ? `<h3>هشدارهای باز</h3><ul>${alerts}</ul>` : ''}\n    ${insights ? `<h3>پیشنهادهای هوشمند</h3><ul>${insights}</ul>` : ''}\n    <p style=\"color:#888;font-size:12px\">زرین هوشمند — Smart Optimization Platform for Hospitality</p></div>`;\n  return { json: { hotelId: s.hotelId, subject: `گزارش صبحگاهی ${s.hotel} — ${s.day}`, html,\n    text: s.narrative || `اشغال ${fa(m.occupancyRate)}٪ · برق ${fa(m.energy.electricity)} kWh · خرابی باز ${fa(m.maintenance.open)}` } };\n});"
+        "jsCode": "// RTL HTML e-mail + short Bale text from the summary payload. With the morningBriefing flag the\n// summary also carries today's stored per-role briefings (AI phase 1, F4): the GM's goes to the\n// management e-mail and group in place of the short line.\nconst fa = (n) => (n == null ? '—' : Number(n).toLocaleString('fa-IR', { maximumFractionDigits: 1 }));\n// Titles and briefing lines contain text typed by staff: escape before putting them in HTML.\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c]);\nreturn $input.all().map(({ json: s }) => {\n  const m = s.metrics;\n  const rows = [\n    ['نرخ اشغال', `${fa(m.occupancyRate)}٪`],\n    ['ADR (ریال)', fa(m.adr)],\n    ['RevPAR (ریال)', fa(m.revpar)],\n    ['درآمد کل (ریال)', fa(m.totalRevenue)],\n    ['برق (kWh)', `${fa(m.energy.electricity)} (${fa(m.electricityVsBaselinePct)}٪ نسبت به خط مبنا)`],\n    ['خرابی‌های باز / معوق', `${fa(m.maintenance.open)} / ${fa(m.maintenance.overdue)}`],\n    ['اقلام زیر نقطه سفارش', fa(m.inventory.lowStock)],\n  ].map(([k, v]) => `<tr><td style=\"padding:6px 12px;color:#555\">${k}</td><td style=\"padding:6px 12px\"><b>${v}</b></td></tr>`).join('');\n  const alerts = (s.alerts || []).map((a) => `<li>${esc(a.title)}</li>`).join('');\n  const insights = (s.insights || []).map((i) => `<li>${esc(i.title)} — ${esc(i.recommendation)}</li>`).join('');\n  const gm = ((s.briefings && s.briefings.roles) || []).find((b) => b.role === 'generalManager' && b.items > 0);\n  const html = `<div dir=\"rtl\" style=\"font-family:Tahoma;max-width:640px\">\n    <h2 style=\"color:#94742F\">گزارش صبحگاهی ${esc(s.hotel)} — ${s.day}</h2>\n    ${gm ? `<p style=\"white-space:pre-line;line-height:1.9\">${esc(gm.text)}</p>` : ''}\n    ${s.narrative ? `<p style=\"white-space:pre-line;line-height:1.9\">${esc(s.narrative)}</p>` : ''}\n    <table style=\"border-collapse:collapse;border:1px solid #ddd\">${rows}</table>\n    ${alerts ? `<h3>هشدارهای باز</h3><ul>${alerts}</ul>` : ''}\n    ${insights ? `<h3>پیشنهادهای هوشمند</h3><ul>${insights}</ul>` : ''}\n    <p style=\"color:#888;font-size:12px\">زرین هوشمند — Smart Optimization Platform for Hospitality</p></div>`;\n  return { json: { hotelId: s.hotelId, subject: `گزارش صبحگاهی ${s.hotel} — ${s.day}`, html,\n    text: gm ? gm.text : s.narrative || `اشغال ${fa(m.occupancyRate)}٪ · برق ${fa(m.energy.electricity)} kWh · خرابی باز ${fa(m.maintenance.open)}` } };\n});"
       },
       "id": "9c7ee306-2ec1-5eac-a6b2-ab7184e12ce4",
       "name": "Build report",
@@ -238,6 +238,49 @@
         1340,
         380
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AI phase 1 (F4): the energy and maintenance managers' own briefings to their Bale groups.\n// Only briefings with items, never one that contains finance, and only when the group is set.\nconst groups = { energyManager: $env.BALE_ENERGY_CHAT_ID, maintenanceManager: $env.BALE_MAINTENANCE_CHAT_ID };\nif (!$env.BALE_BOT_TOKEN) return [];\nconst out = [];\nfor (const { json: s } of $input.all()) {\n  for (const b of (s.briefings && s.briefings.roles) || []) {\n    const chat = groups[b.role];\n    if (chat && b.items > 0 && !b.containsFinance) out.push({ json: { hotelId: s.hotelId, role: b.role, chat, text: b.text } });\n  }\n}\nreturn out;"
+      },
+      "id": "177775d3-272a-557c-aee8-39770dea820d",
+      "name": "Department briefings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $json.chat, text: $json.text }) }}"
+      },
+      "id": "f9e55f45-43ba-5254-91c5-89b58e51341a",
+      "name": "Bale · department groups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        540
+      ]
     }
   ],
   "connections": {
@@ -281,6 +324,11 @@
             "node": "Build report",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Department briefings",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -317,6 +365,17 @@
         [
           {
             "node": "Bale · management group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Department briefings": {
+      "main": [
+        [
+          {
+            "node": "Bale · department groups",
             "type": "main",
             "index": 0
           }
