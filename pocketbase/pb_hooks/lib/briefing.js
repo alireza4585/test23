@@ -19,6 +19,7 @@ const z = require(`${__hooks}/lib/zarin.js`);
 const core = z.core;
 
 const LLM_MAX_TOKENS = 900;
+const DEPARTMENT_ROLES = ["energyManager", "maintenanceManager", "housekeepingManager", "restaurantManager", "inventoryManager"];
 
 /** Everything buildBriefingItems needs, as of [now]. */
 function inputFor(app, hotelId, now) {
@@ -110,7 +111,9 @@ function generate(app, hotelId, now) {
   for (const role of core.rolesWith("ai.insights.view")) {
     const perms = permsOf(app, role, hotelId);
     if (!perms["ai.insights.view"]) continue;
-    const mine = core.briefingItemsForRole(items, perms);
+    // Department managers see staffing items of their own department only.
+    const department = DEPARTMENT_ROLES.indexOf(role) >= 0 ? z.departmentOf(role) : null;
+    const mine = core.briefingItemsForRole(items, perms, department);
     const facts = core.briefingFactsOf(mine, day);
     const ruleText = core.briefingText(mine, day);
     // The rule text is built from the facts; a mismatch would be a bug, so it is recorded, not hidden.

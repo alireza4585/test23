@@ -55,11 +55,21 @@ describe("morning briefing (F4)", () => {
     expect(energy.facts.counts.energy_electricity_openHvacTickets).toBe(1);
     const clean = items.find((i) => i.id === "housekeeping_clean")!;
     expect(clean.cause).toContain("غیبت 4 نفر");
-    const stock = items.find((i) => i.id === "insight_i1")!;
-    expect(stock).toMatchObject({ kind: "insight", category: "inventory", actionId: "a1" });
+    const stock = items.find((i) => i.id === "insights_stockout")!;
+    expect(stock).toMatchObject({ kind: "insight", category: "inventory", actionId: "a1", title: "خطر اتمام موجودی" });
     expect(stock.facts.windows).toEqual({ i1_0: 2 });
-    expect(items.find((i) => i.id === "insight_i3")!.facts.counts).toEqual({ i3_tickets_0: 5 });
+    expect(items.find((i) => i.id === "insights_repeatFailure")!.facts.counts).toEqual({ i3_tickets_0: 5 });
     expect(items.find((i) => i.id === "rooms_ooo")!.facts.roomsNow).toEqual({ outOfOrder: 1 });
+  });
+
+  it("groups many stock-outs into one item, most urgent first", () => {
+    const many = Array.from({ length: 7 }, (_, k) => ({ id: `s${k}`, rule: "stockout", category: "inventory", title: `پیش‌بینی اتمام «کالا ${k}» تا ${k + 1} روز آینده`, priority: k === 6 ? "high" : "medium" }));
+    const items = buildItems(input({ insights: many, actions: [] }));
+    const stock = items.filter((i) => i.category === "inventory");
+    expect(stock).toHaveLength(1);
+    expect(stock[0].finding.startsWith("پیش‌بینی اتمام «کالا 6»")).toBe(true);
+    expect(stock[0].finding).toContain("و 2 مورد دیگر");
+    expect(stock[0].facts.values.stockout_more).toBe(2);
   });
 
   it("uses the F2 model for a meter that has one, instead of the raw median", () => {
@@ -81,13 +91,31 @@ describe("morning briefing (F4)", () => {
 
   it("per role: only its categories; revenue only with finance.view; most severe first, at most 7", () => {
     const items = buildItems(input());
-    const hk = itemsForRole(items, perms("housekeepingManager"));
+    const hk = itemsForRole(items, perms("housekeepingManager"), "housekeeping");
     expect(new Set(hk.map((i) => i.category))).toEqual(new Set(["occupancy", "housekeeping", "inventory", "staffing"]));
     expect(itemsForRole(items, perms("operationsManager")).some((i) => i.finance)).toBe(false);
     expect(itemsForRole(items, perms("generalManager")).some((i) => i.finance)).toBe(true);
     const gm = itemsForRole(items, perms("generalManager"));
     expect(gm.length).toBeLessThanOrEqual(7);
     for (let i = 1; i < gm.length; i++) expect(gm[i - 1].severity).toBeGreaterThanOrEqual(gm[i].severity);
+  });
+
+  it("absences: days without shift data are not history; a manager sees only its department", () => {
+    const yesterday = shiftDay(TODAY, -1);
+    // Shifts only for the last 10 days: too little history for a staffing anomaly.
+    const short = input({ shifts: Array.from({ length: 10 }, (_, i) => shiftDay(TODAY, -(i + 1))).flatMap((d) => Array.from({ length: 10 }, (_, k) => ({ day: d, department: "housekeeping", status: d === yesterday && k < 6 ? "absent" : "completed" }))) });
+    expect(buildItems(short).some((i) => i.category === "staffing")).toBe(false);
+    const full = input({
+      shifts: Array.from({ length: 29 }, (_, i) => shiftDay(TODAY, -(i + 1))).flatMap((d) => [
+        ...Array.from({ length: 10 }, (_, k) => ({ day: d, department: "housekeeping", status: d === yesterday && k < 6 ? "absent" : k === 0 ? "absent" : "completed" })),
+        ...Array.from({ length: 8 }, (_, k) => ({ day: d, department: "foodAndBeverage", status: d === yesterday && k < 5 ? "absent" : "completed" })),
+      ]),
+    });
+    const items = buildItems(full);
+    const staffing = items.filter((i) => i.category === "staffing");
+    expect(staffing.map((i) => i.title).sort()).toEqual(["غیبت غیرعادی در خانه‌داری", "غیبت غیرعادی در غذا و نوشیدنی"]);
+    expect(itemsForRole(items, perms("housekeepingManager"), "housekeeping").filter((i) => i.category === "staffing").map((i) => i.department)).toEqual(["housekeeping"]);
+    expect(itemsForRole(items, perms("generalManager")).filter((i) => i.category === "staffing").length).toBe(2);
   });
 
   it("the text quotes only what is in the facts, and says so when there is nothing", () => {

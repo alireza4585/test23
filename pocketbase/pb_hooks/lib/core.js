@@ -1832,6 +1832,25 @@ var MIN_HISTORY_POINTS = 14;
 var ROBUST_Z = 3;
 var MAX_ITEMS = 7;
 var LABEL = { electricity: "\u0628\u0631\u0642", water: "\u0622\u0628", gas: "\u06AF\u0627\u0632" };
+var DEPARTMENT_LABEL = {
+  management: "\u0645\u062F\u06CC\u0631\u06CC\u062A",
+  frontOffice: "\u067E\u0630\u06CC\u0631\u0634",
+  housekeeping: "\u062E\u0627\u0646\u0647\u200C\u062F\u0627\u0631\u06CC",
+  maintenance: "\u062A\u0639\u0645\u06CC\u0631\u0627\u062A",
+  energy: "\u0627\u0646\u0631\u0698\u06CC",
+  foodAndBeverage: "\u063A\u0630\u0627 \u0648 \u0646\u0648\u0634\u06CC\u062F\u0646\u06CC",
+  inventory: "\u0627\u0646\u0628\u0627\u0631",
+  humanResources: "\u0645\u0646\u0627\u0628\u0639 \u0627\u0646\u0633\u0627\u0646\u06CC",
+  analytics: "\u062A\u062D\u0644\u06CC\u0644"
+};
+var INSIGHT_TITLE = {
+  repeatFailure: "\u062E\u0631\u0627\u0628\u06CC \u062A\u06A9\u0631\u0627\u0631\u06CC",
+  outOfOrderRooms: "\u0627\u062A\u0627\u0642\u200C\u0647\u0627\u06CC \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633",
+  stockout: "\u062E\u0637\u0631 \u0627\u062A\u0645\u0627\u0645 \u0645\u0648\u062C\u0648\u062F\u06CC",
+  outOfOrderRevenue: "\u062F\u0631\u0622\u0645\u062F \u0627\u0632 \u062F\u0633\u062A\u200C\u0631\u0641\u062A\u0647",
+  weekdayOccupancy: "\u0627\u0644\u06AF\u0648\u06CC \u0627\u0634\u063A\u0627\u0644",
+  hkEfficiency: "\u0628\u0647\u0631\u0647\u200C\u0648\u0631\u06CC \u0646\u0638\u0627\u0641\u062A"
+};
 var UNIT = { electricity: "kWh", water: "m\xB3", gas: "m\xB3" };
 var fmt2 = (v, d = 0) => {
   const fixed = Math.abs(v).toFixed(d);
@@ -1841,12 +1860,12 @@ var fmt2 = (v, d = 0) => {
 };
 var r1 = (v) => Math.round(v * 10) / 10;
 var emptyFacts = () => ({ values: {}, counts: {}, windows: {}, roomsNow: {}, labels: {} });
-function robustZ(x2, history) {
+function robustZ(x2, history, minScale = 1e-9) {
   const h = history.filter((v) => isFinite(v));
   if (h.length < MIN_HISTORY_POINTS) return null;
   const median = quantile(h, 0.5);
   const mad = quantile(h.map((v) => Math.abs(v - median)), 0.5);
-  const scale = Math.max(1.4826 * mad, 0.02 * Math.abs(median), 1e-9);
+  const scale = Math.max(1.4826 * mad, 0.02 * Math.abs(median), minScale);
   return { z: (x2 - median) / scale, median };
 }
 function titleFacts(id, title, f) {
@@ -1865,7 +1884,7 @@ function titleFacts(id, title, f) {
   }
 }
 function buildItems(input) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e, _f;
   const { today, addDays } = input;
   const yesterday = addDays(today, -1);
   const history = Array.from({ length: HISTORY_DAYS }, (_, i) => addDays(yesterday, -(i + 1)));
@@ -1874,7 +1893,11 @@ function buildItems(input) {
     var _a2, _b2;
     return (_b2 = (_a2 = input.actions.find((a) => a.insight === insightId)) == null ? void 0 : _a2.id) != null ? _b2 : null;
   };
-  const openHvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac");
+  const PRIORITY = { critical: 4, high: 3, medium: 2, low: 1 };
+  const openHvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac").sort((a, b) => {
+    var _a2, _b2, _c2, _d2, _e2, _f2;
+    return ((_a2 = PRIORITY[b.priority]) != null ? _a2 : 0) - ((_b2 = PRIORITY[a.priority]) != null ? _b2 : 0) || ((_d2 = (_c2 = b.createdAt) == null ? void 0 : _c2.getTime()) != null ? _d2 : 0) - ((_f2 = (_e2 = a.createdAt) == null ? void 0 : _e2.getTime()) != null ? _f2 : 0);
+  });
   const occ = (day) => {
     const o = input.operations.find((r) => r.day === day);
     return o && o.roomsAvailable > 0 ? o.roomsOccupied / o.roomsAvailable * 100 : null;
@@ -1981,6 +2004,7 @@ function buildItems(input) {
     return d.length ? d.reduce((a, b) => a + b, 0) / d.length : null;
   };
   const absent = (day, department) => input.shifts.filter((s) => s.day === day && s.department === department && s.status === "absent").length;
+  const staffedDays = (department) => history.filter((d) => input.shifts.some((s) => s.day === d && s.department === department));
   const cY = cleanMinutes(yesterday);
   if (cY !== null) {
     const rz = robustZ(cY, history.map(cleanMinutes).filter((v) => v !== null));
@@ -1991,9 +2015,10 @@ function buildItems(input) {
       f.values.checkoutCleanTarget = (_c = input.settings.targetCleanMinutes.checkoutClean) != null ? _c : 35;
       f.windows.historyDays = HISTORY_DAYS;
       const absY = absent(yesterday, "housekeeping");
-      const absMedian = quantile(history.map((d) => absent(d, "housekeeping")), 0.5);
+      const absDays = staffedDays("housekeeping");
+      const absMedian = absDays.length ? quantile(absDays.map((d) => absent(d, "housekeeping")), 0.5) : null;
       let cause = null;
-      if (absY > absMedian) {
+      if (absMedian !== null && absY > absMedian) {
         f.values.housekeepingAbsentYesterday = absY;
         f.values.housekeepingAbsentMedian = absMedian;
         cause = `\u0645\u0645\u06A9\u0646 \u0627\u0633\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0634\u062F \u0628\u0627 \u063A\u06CC\u0628\u062A ${fmt2(absY)} \u0646\u0641\u0631 \u0627\u0632 \u06A9\u0627\u0631\u06A9\u0646\u0627\u0646 \u062E\u0627\u0646\u0647\u200C\u062F\u0627\u0631\u06CC (\u0645\u0639\u0645\u0648\u0644\u0627\u064B ${fmt2(absMedian)} \u0646\u0641\u0631)`;
@@ -2015,20 +2040,22 @@ function buildItems(input) {
     }
   }
   for (const department of Array.from(new Set(input.shifts.map((s) => s.department))).sort()) {
+    if (!input.shifts.some((s) => s.day === yesterday && s.department === department)) continue;
     const aY = absent(yesterday, department);
-    const rz = robustZ(aY, history.map((d) => absent(d, department)));
+    const rz = robustZ(aY, staffedDays(department).map((d) => absent(d, department)), 1);
     if (!rz || rz.z < ROBUST_Z || aY < 2) continue;
+    const name = (_d = DEPARTMENT_LABEL[department]) != null ? _d : department;
     const f = emptyFacts();
     f.values[`absent_${department}`] = aY;
     f.values[`absentMedian_${department}`] = rz.median;
-    f.labels[`department_${department}`] = department;
     items.push({
       id: `staffing_${department}`,
       kind: "anomaly",
       category: "staffing",
-      title: `\u063A\u06CC\u0628\u062A \u063A\u06CC\u0631\u0639\u0627\u062F\u06CC \u062F\u0631 ${department}`,
-      finding: `\u062F\u06CC\u0631\u0648\u0632 ${fmt2(aY)} \u0646\u0641\u0631 \u062F\u0631 ${department} \u063A\u0627\u06CC\u0628 \u0628\u0648\u062F\u0646\u062F\u061B \u0645\u0639\u0645\u0648\u0644\u0627\u064B ${fmt2(rz.median)} \u0646\u0641\u0631.`,
+      title: `\u063A\u06CC\u0628\u062A \u063A\u06CC\u0631\u0639\u0627\u062F\u06CC \u062F\u0631 ${name}`,
+      finding: `\u062F\u06CC\u0631\u0648\u0632 ${fmt2(aY)} \u0646\u0641\u0631 \u062F\u0631 ${name} \u063A\u0627\u06CC\u0628 \u0628\u0648\u062F\u0646\u062F\u061B \u0645\u0639\u0645\u0648\u0644\u0627\u064B ${fmt2(rz.median)} \u0646\u0641\u0631.`,
       cause: null,
+      department,
       actionId: null,
       route: "/staff",
       severity: rz.z,
@@ -2038,7 +2065,7 @@ function buildItems(input) {
   }
   const created = (day) => input.tickets.filter((t) => t.createdAt && dayKeyLocal(t.createdAt) === day).length;
   const tY = created(yesterday);
-  const tz = robustZ(tY, history.map(created));
+  const tz = robustZ(tY, history.map(created), 1);
   const repeat = input.insights.filter((i) => i.rule === "repeatFailure");
   if (tz && tz.z >= ROBUST_Z && tY >= 3) {
     const f = emptyFacts();
@@ -2085,25 +2112,61 @@ function buildItems(input) {
     });
   }
   const CATEGORY = {
+    // outOfOrderRevenue repeats the out-of-order rooms line; its money figure stays in the insight.
     repeatFailure: "maintenance",
     outOfOrderRooms: "maintenance",
     stockout: "inventory",
-    outOfOrderRevenue: "revenue",
     weekdayOccupancy: "revenue",
     hkEfficiency: "housekeeping"
   };
+  const GROUPED = ["stockout", "repeatFailure"];
+  const rank = { high: 3, medium: 2, low: 1 };
+  for (const rule of GROUPED) {
+    const group = input.insights.filter((i) => i.rule === rule).sort((a, b) => {
+      var _a2, _b2;
+      return ((_a2 = rank[b.priority]) != null ? _a2 : 0) - ((_b2 = rank[a.priority]) != null ? _b2 : 0) || (a.title < b.title ? -1 : 1);
+    });
+    if (!group.length) continue;
+    const f = emptyFacts();
+    const shown = group.slice(0, 5);
+    shown.forEach((ins) => titleFacts(ins.id, ins.title, f));
+    let finding = shown.map((i) => i.title).join("\u061B ");
+    if (group.length > shown.length) {
+      f.values[`${rule}_more`] = group.length - shown.length;
+      finding += ` \u0648 ${fmt2(group.length - shown.length)} \u0645\u0648\u0631\u062F \u062F\u06CC\u06AF\u0631`;
+    }
+    if (rule === "repeatFailure" && items.some((i) => i.id === "maintenance_created")) finding += "\u061B \u062F\u0631 \u0627\u0641\u0632\u0627\u06CC\u0634 \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u062F\u06CC\u0631\u0648\u0632 \u0647\u0645 \u062F\u06CC\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F";
+    const actionId = (_e = group.map((i) => actionFor(i.id)).find((id) => !!id)) != null ? _e : null;
+    const top = Math.max(...group.map((i) => {
+      var _a2;
+      return (_a2 = rank[i.priority]) != null ? _a2 : 1;
+    }));
+    items.push({
+      id: `insights_${rule}`,
+      kind: "insight",
+      category: CATEGORY[rule],
+      title: INSIGHT_TITLE[rule],
+      finding: `${finding}.`,
+      cause: null,
+      actionId,
+      route: rule === "stockout" ? "/inventory" : "/maintenance",
+      severity: top + 0.1 + Math.min(0.5, 0.1 * (group.length - 1)),
+      finance: false,
+      facts: f
+    });
+  }
   for (const ins of input.insights) {
     const category = CATEGORY[ins.rule];
-    if (!category) continue;
+    if (!category || GROUPED.indexOf(ins.rule) >= 0) continue;
     if (ins.rule === "hkEfficiency" && items.some((i) => i.id === "housekeeping_clean")) continue;
     const f = emptyFacts();
     titleFacts(ins.id, ins.title, f);
-    const linked = ins.rule === "repeatFailure" && items.some((i) => i.id === "maintenance_created") ? "\u061B \u062F\u0631 \u0627\u0641\u0632\u0627\u06CC\u0634 \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u062F\u06CC\u0631\u0648\u0632 \u0647\u0645 \u062F\u06CC\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F" : "";
+    const linked = "";
     items.push({
       id: `insight_${ins.id}`,
       kind: "insight",
       category,
-      title: ins.title,
+      title: (_f = INSIGHT_TITLE[ins.rule]) != null ? _f : "\u06CC\u0627\u0641\u062A\u0647",
       finding: `${ins.title}${linked}.`,
       cause: null,
       actionId: actionFor(ins.id),
@@ -2167,9 +2230,9 @@ function categoriesFor(perms) {
   if (perms["finance.view"]) out.add("revenue");
   return out;
 }
-function itemsForRole(items, perms) {
+function itemsForRole(items, perms, department = null) {
   const cats = categoriesFor(perms);
-  const allowed = items.filter((i) => cats.has(i.category) && (!i.finance || perms["finance.view"] === true));
+  const allowed = items.filter((i) => cats.has(i.category) && (!i.finance || perms["finance.view"] === true) && (!department || !i.department || i.department === department));
   return allowed.sort((a, b) => b.severity - a.severity || (a.id < b.id ? -1 : 1)).slice(0, MAX_ITEMS);
 }
 function factsOf(items, day) {

@@ -65,6 +65,8 @@ export interface BriefingItem {
   finding: string;
   /** Hedged ("ممکن است مرتبط باشد"), or null. */
   cause: string | null;
+  /** Staff department the item is about (staffing items), or null. */
+  department?: string | null;
   actionId: string | null;
   route: string;
   severity: number;
@@ -73,6 +75,15 @@ export interface BriefingItem {
 }
 
 const LABEL: Record<string, string> = { electricity: "برق", water: "آب", gas: "گاز" };
+/** Persian names of the staff departments (shifts.department). */
+export const DEPARTMENT_LABEL: Record<string, string> = {
+  management: "مدیریت", frontOffice: "پذیرش", housekeeping: "خانه‌داری", maintenance: "تعمیرات", energy: "انرژی",
+  foodAndBeverage: "غذا و نوشیدنی", inventory: "انبار", humanResources: "منابع انسانی", analytics: "تحلیل",
+};
+const INSIGHT_TITLE: Record<string, string> = {
+  repeatFailure: "خرابی تکراری", outOfOrderRooms: "اتاق‌های خارج از سرویس", stockout: "خطر اتمام موجودی",
+  outOfOrderRevenue: "درآمد از دست‌رفته", weekdayOccupancy: "الگوی اشغال", hkEfficiency: "بهره‌وری نظافت",
+};
 const UNIT: Record<string, string> = { electricity: "kWh", water: "m³", gas: "m³" };
 
 const fmt = (v: number, d = 0) => {
@@ -84,13 +95,17 @@ const fmt = (v: number, d = 0) => {
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const emptyFacts = (): ItemFacts => ({ values: {}, counts: {}, windows: {}, roomsNow: {}, labels: {} });
 
-/** Robust z of [x] against [history] (median, 1.4826·MAD, floored at 2 % of the median). */
-export function robustZ(x: number, history: number[]): { z: number; median: number } | null {
+/**
+ * Robust z of [x] against [history]: median and 1.4826·MAD, floored at 2 % of
+ * the median and at [minScale] (1 for counts of people or tickets, so a quiet
+ * history of zeros does not turn one absence into an extreme z).
+ */
+export function robustZ(x: number, history: number[], minScale = 1e-9): { z: number; median: number } | null {
   const h = history.filter((v) => isFinite(v));
   if (h.length < MIN_HISTORY_POINTS) return null;
   const median = quantile(h, 0.5);
   const mad = quantile(h.map((v) => Math.abs(v - median)), 0.5);
-  const scale = Math.max(1.4826 * mad, 0.02 * Math.abs(median), 1e-9);
+  const scale = Math.max(1.4826 * mad, 0.02 * Math.abs(median), minScale);
   return { z: (x - median) / scale, median };
 }
 
@@ -118,7 +133,10 @@ export function buildItems(input: BriefingInput): BriefingItem[] {
   const history = Array.from({ length: HISTORY_DAYS }, (_, i) => addDays(yesterday, -(i + 1)));
   const items: BriefingItem[] = [];
   const actionFor = (insightId: string) => input.actions.find((a) => a.insight === insightId)?.id ?? null;
-  const openHvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac");
+  const PRIORITY: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+  // Most urgent first, then newest: the ticket a cause line quotes.
+  const openHvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac")
+    .sort((a, b) => (PRIORITY[b.priority] ?? 0) - (PRIORITY[a.priority] ?? 0) || (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
 
   // ------------------------------------------------------------ occupancy
   const occ = (day: string) => {
@@ -220,6 +238,8 @@ export function buildItems(input: BriefingInput): BriefingItem[] {
     return d.length ? d.reduce((a, b) => a + b, 0) / d.length : null;
   };
   const absent = (day: string, department: string) => input.shifts.filter((s) => s.day === day && s.department === department && s.status === "absent").length;
+  // Only days on which the department has shifts at all count as history (no shift data is not "nobody absent").
+  const staffedDays = (department: string) => history.filter((d) => input.shifts.some((s) => s.day === d && s.department === department));
   const cY = cleanMinutes(yesterday);
   if (cY !== null) {
     const rz = robustZ(cY, history.map(cleanMinutes).filter((v): v is number => v !== null));
@@ -230,9 +250,10 @@ export function buildItems(input: BriefingInput): BriefingItem[] {
       f.values.checkoutCleanTarget = input.settings.targetCleanMinutes.checkoutClean ?? 35;
       f.windows.historyDays = HISTORY_DAYS;
       const absY = absent(yesterday, "housekeeping");
-      const absMedian = quantile(history.map((d) => absent(d, "housekeeping")), 0.5);
+      const absDays = staffedDays("housekeeping");
+      const absMedian = absDays.length ? quantile(absDays.map((d) => absent(d, "housekeeping")), 0.5) : null;
       let cause: string | null = null;
-      if (absY > absMedian) {
+      if (absMedian !== null && absY > absMedian) {
         f.values.housekeepingAbsentYesterday = absY;
         f.values.housekeepingAbsentMedian = absMedian;
         cause = `ممکن است مرتبط باشد با غیبت ${fmt(absY)} نفر از کارکنان خانه‌داری (معمولاً ${fmt(absMedian)} نفر)`;
@@ -248,24 +269,25 @@ export function buildItems(input: BriefingInput): BriefingItem[] {
 
   // ------------------------------------------------------------- staffing
   for (const department of Array.from(new Set(input.shifts.map((s) => s.department))).sort()) {
+    if (!input.shifts.some((s) => s.day === yesterday && s.department === department)) continue;
     const aY = absent(yesterday, department);
-    const rz = robustZ(aY, history.map((d) => absent(d, department)));
+    const rz = robustZ(aY, staffedDays(department).map((d) => absent(d, department)), 1);
     if (!rz || rz.z < ROBUST_Z || aY < 2) continue;
+    const name = DEPARTMENT_LABEL[department] ?? department;
     const f = emptyFacts();
     f.values[`absent_${department}`] = aY;
     f.values[`absentMedian_${department}`] = rz.median;
-    f.labels[`department_${department}`] = department;
     items.push({
-      id: `staffing_${department}`, kind: "anomaly", category: "staffing", title: `غیبت غیرعادی در ${department}`,
-      finding: `دیروز ${fmt(aY)} نفر در ${department} غایب بودند؛ معمولاً ${fmt(rz.median)} نفر.`,
-      cause: null, actionId: null, route: "/staff", severity: rz.z, finance: false, facts: f,
+      id: `staffing_${department}`, kind: "anomaly", category: "staffing", title: `غیبت غیرعادی در ${name}`,
+      finding: `دیروز ${fmt(aY)} نفر در ${name} غایب بودند؛ معمولاً ${fmt(rz.median)} نفر.`,
+      cause: null, department, actionId: null, route: "/staff", severity: rz.z, finance: false, facts: f,
     });
   }
 
   // ---------------------------------------------------------- maintenance
   const created = (day: string) => input.tickets.filter((t) => t.createdAt && dayKeyLocal(t.createdAt) === day).length;
   const tY = created(yesterday);
-  const tz = robustZ(tY, history.map(created));
+  const tz = robustZ(tY, history.map(created), 1);
   const repeat = input.insights.filter((i) => i.rule === "repeatFailure");
   if (tz && tz.z >= ROBUST_Z && tY >= 3) {
     const f = emptyFacts();
@@ -298,18 +320,42 @@ export function buildItems(input: BriefingInput): BriefingItem[] {
 
   // -------------------------------------------------- insights (live findings)
   const CATEGORY: Record<string, BriefingCategory> = {
+    // outOfOrderRevenue repeats the out-of-order rooms line; its money figure stays in the insight.
     repeatFailure: "maintenance", outOfOrderRooms: "maintenance", stockout: "inventory",
-    outOfOrderRevenue: "revenue", weekdayOccupancy: "revenue", hkEfficiency: "housekeeping",
+    weekdayOccupancy: "revenue", hkEfficiency: "housekeeping",
   };
+  // Several stock-outs or repeat-failure locations are one item each (most urgent first), not one per insight.
+  const GROUPED = ["stockout", "repeatFailure"];
+  const rank: Record<string, number> = { high: 3, medium: 2, low: 1 };
+  for (const rule of GROUPED) {
+    const group = input.insights.filter((i) => i.rule === rule).sort((a, b) => (rank[b.priority] ?? 0) - (rank[a.priority] ?? 0) || (a.title < b.title ? -1 : 1));
+    if (!group.length) continue;
+    const f = emptyFacts();
+    const shown = group.slice(0, 5);
+    shown.forEach((ins) => titleFacts(ins.id, ins.title, f));
+    let finding = shown.map((i) => i.title).join("؛ ");
+    if (group.length > shown.length) {
+      f.values[`${rule}_more`] = group.length - shown.length;
+      finding += ` و ${fmt(group.length - shown.length)} مورد دیگر`;
+    }
+    if (rule === "repeatFailure" && items.some((i) => i.id === "maintenance_created")) finding += "؛ در افزایش تیکت‌های دیروز هم دیده می‌شود";
+    const actionId = group.map((i) => actionFor(i.id)).find((id) => !!id) ?? null;
+    const top = Math.max(...group.map((i) => rank[i.priority] ?? 1));
+    items.push({
+      id: `insights_${rule}`, kind: "insight", category: CATEGORY[rule], title: INSIGHT_TITLE[rule], finding: `${finding}.`,
+      cause: null, actionId, route: rule === "stockout" ? "/inventory" : "/maintenance",
+      severity: top + 0.1 + Math.min(0.5, 0.1 * (group.length - 1)), finance: false, facts: f,
+    });
+  }
   for (const ins of input.insights) {
     const category = CATEGORY[ins.rule];
-    if (!category) continue; // energy insights are covered by the energy items
+    if (!category || GROUPED.indexOf(ins.rule) >= 0) continue; // energy insights are covered by the energy items
     if (ins.rule === "hkEfficiency" && items.some((i) => i.id === "housekeeping_clean")) continue;
     const f = emptyFacts();
     titleFacts(ins.id, ins.title, f);
-    const linked = ins.rule === "repeatFailure" && items.some((i) => i.id === "maintenance_created") ? "؛ در افزایش تیکت‌های دیروز هم دیده می‌شود" : "";
+    const linked = "";
     items.push({
-      id: `insight_${ins.id}`, kind: "insight", category, title: ins.title, finding: `${ins.title}${linked}.`,
+      id: `insight_${ins.id}`, kind: "insight", category, title: INSIGHT_TITLE[ins.rule] ?? "یافته", finding: `${ins.title}${linked}.`,
       cause: null, actionId: actionFor(ins.id), route: category === "inventory" ? "/inventory" : category === "revenue" ? "/insights" : "/maintenance",
       severity: (ins.priority === "high" ? 3 : ins.priority === "medium" ? 2 : 1) + 0.1,
       finance: category === "revenue", facts: f,
@@ -362,10 +408,15 @@ export function categoriesFor(perms: Record<string, boolean>): Set<BriefingCateg
   return out;
 }
 
-/** The role's items: its categories only, most severe first, at most MAX_ITEMS. */
-export function itemsForRole(items: BriefingItem[], perms: Record<string, boolean>): BriefingItem[] {
+/**
+ * The role's items: its categories only, most severe first, at most
+ * MAX_ITEMS. A department manager ([department] set) sees staffing items of
+ * its own department only; hotel-wide roles pass null.
+ */
+export function itemsForRole(items: BriefingItem[], perms: Record<string, boolean>, department: string | null = null): BriefingItem[] {
   const cats = categoriesFor(perms);
-  const allowed = items.filter((i) => cats.has(i.category) && (!i.finance || perms["finance.view"] === true));
+  const allowed = items.filter((i) => cats.has(i.category) && (!i.finance || perms["finance.view"] === true)
+    && (!department || !i.department || i.department === department));
   return allowed.sort((a, b) => b.severity - a.severity || (a.id < b.id ? -1 : 1)).slice(0, MAX_ITEMS);
 }
 
