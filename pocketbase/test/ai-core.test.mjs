@@ -118,7 +118,11 @@ describe("energy", () => {
     expect(list).toHaveLength(1);
     expect(list[0].data.method).toBe("baseline");
     expect(Math.abs(list[0].data.expected - 2490)).toBeLessThan(30);
-    expect(list[0].severity).toBe("critical"); // about +36 %: more than twice the 15 % threshold
+    // About +36 %, more than twice the 15 % threshold, but a 60-day baseline is young (phase 1.5):
+    // a low-confidence warning that stays in the app — no alert.raised or energy.anomaly for n8n.
+    expect(list[0]).toMatchObject({ severity: "warning", data: { lowConfidence: true } });
+    const events = (await su.collection("outbox").getFullList({ filter: `hotel = "${h.id}"` })).map((o) => o.type);
+    expect(events.filter((t) => t === "alert.raised" || t === "energy.anomaly")).toEqual([]);
     // No occupancy for d3 → static baseline rule.
     await su.collection("energyReadings").create({ hotel: h.id, type: "electricity", day: d3, consumption: 2700 });
     list = await alerts();

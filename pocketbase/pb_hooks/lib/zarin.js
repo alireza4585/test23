@@ -290,7 +290,8 @@ function diff(before, after) {
 // --------------------------------------------------------- notifications
 /**
  * In-app inbox for every active member with one of [roles] (plus explicit
- * [userIds]), a delivery log record, and an optional push request for n8n.
+ * [userIds]), a delivery log record, and an optional push request for n8n
+ * (never with [n.inAppOnly]).
  */
 function notify(app, n) {
   const ids = {};
@@ -327,7 +328,7 @@ function notify(app, n) {
     createdBy: n.createdBy || "system",
     dedupeKey: n.dedupeKey || "",
   }));
-  if (recipients.length && $os.getenv("ZH_PUSH_VIA_N8N") === "1") {
+  if (recipients.length && !n.inAppOnly && $os.getenv("ZH_PUSH_VIA_N8N") === "1") {
     emit(app, "push.requested", n.hotelId, { userIds: recipients, title: n.title, body: n.body || "", route: n.route || "", severity: n.severity || "info" });
   }
   return recipients.length;
@@ -336,6 +337,8 @@ function notify(app, n) {
 /**
  * Raises (or re-opens) a deduplicated alert. Executives always see alerts.
  * Returns false when an open/acknowledged alert with the same key exists.
+ * With [a.inAppOnly] (e.g. a low-confidence energy alarm) nothing goes to the
+ * outbox: no alert.raised event for n8n (Bale, SMS) and no push request.
  */
 function raiseAlert(app, a) {
   const audience = unique((a.audienceRoles || []).concat(["generalManager", "hotelOwner"]));
@@ -362,8 +365,9 @@ function raiseAlert(app, a) {
   app.save(rec);
   notify(app, {
     hotelId: a.hotelId, roles: audience, title: a.title, body: a.message, category: "alert",
-    severity: a.severity, route: a.route, createdBy: "system",
+    severity: a.severity, route: a.route, createdBy: "system", inAppOnly: !!a.inAppOnly,
   });
+  if (a.inAppOnly) return true;
   emit(app, "alert.raised", a.hotelId, Object.assign({
     alertId: a.dedupeKey, type: a.type, severity: a.severity, title: a.title, message: a.message, audienceRoles: audience,
   }, a.data || {}));

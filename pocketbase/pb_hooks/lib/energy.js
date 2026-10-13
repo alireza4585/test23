@@ -10,7 +10,13 @@
  *      the excluded days in its window changed (adjustBaseline);
  *   3. score each day with a reading since the last scored day into
  *      energyExpected (expected, band, residual, z, CUSUM, flags);
- *   4. a spike or drift on one of the last 3 days raises an energy alert.
+ *   4. a spike or drift on one of the last 3 days raises an energy alert, at
+ *      most one per meter per ALERT_EPISODE_DAYS (later flagged days of the
+ *      episode are stored and shown, not alerted). A low-confidence alarm (a
+ *      season the model has not seen, or a young model) stays inside the app:
+ *      no outbox event, so no Bale, SMS or push. A data error (zero or an
+ *      impossible reading) is labelled as such, never a fault, with an
+ *      in-app notice to check the entry.
  * A new reading (afterEnergyWritten) is scored at once against the stored
  * model; without a valid stored model the Batch 1 on-the-fly baseline and
  * then the static baseline take over, as before.
@@ -25,6 +31,13 @@ const LABEL = { electricity: "برق", water: "آب", gas: "گاز" };
 const TRAIN_DAYS = 365;
 const SCORE_BACK_DAYS = 35;
 const ALERT_RECENT_DAYS = 3;
+/** CUSUM carries over a gap of up to this many days without a reading. */
+const CUSUM_GAP_DAYS = 7;
+const DATA_ERROR_TEXT = {
+  zero: "صفر یا منفی",
+  implausibleHigh: `بیش از ${core.DATA_ERROR_HIGH_RATIO} برابر مقدار موردانتظار`,
+  implausibleLow: `کمتر از ${Math.round(core.DATA_ERROR_LOW_RATIO * 100)}٪ مقدار موردانتظار`,
+};
 
 /** First record by [sort] (z.findFirst has no ordering). */
 function first(app, collection, filter, params, sort) {
@@ -152,43 +165,81 @@ function raise(app, hotelId, type, s) {
   const label = LABEL[type] || type;
   const unit = UNIT[type];
   const drift = s.drift;
+  const low = !!s.lowConfidence;
   z.raiseAlert(app, {
-    // A season the model has not seen yet never escalates to critical.
-    hotelId, type: "energySpike", severity: s.deviationPct > 30 && s.seasonCovered ? "critical" : "warning",
+    // A low-confidence alarm never escalates to critical and never leaves the app.
+    hotelId, type: "energySpike", severity: s.deviationPct > 30 && !low ? "critical" : "warning", inAppOnly: low,
     title: drift ? `انحراف پایدار مصرف ${label} از مقدار موردانتظار` : `مصرف ${label} بالاتر از مقدار موردانتظار`,
     message: `${Math.round(s.actual)} ${unit} در ${s.day}؛ ${Math.round(s.deviationPct)}٪ بیش از ${Math.round(s.expected)} ${unit} موردانتظار` +
       (s.usedWeather ? " (با دما و اشغال)" : " (با اشغال، بدون دادهٔ دما)") +
-      (s.seasonCovered ? "" : "؛ اطمینان پایین: مدل هنوز دادهٔ این ماه از سال را ندیده است"),
+      (s.seasonCovered ? "" : "؛ اطمینان پایین: مدل هنوز دادهٔ این ماه از سال را ندیده است") +
+      (s.seasonCovered && low ? `؛ اطمینان پایین: مدل هنوز کمتر از ${core.MATURE_MODEL_DAYS} روز داده دارد` : ""),
     route: "/energy", audienceRoles: ["energyManager", "operationsManager", "hotelOwner"],
     dedupeKey: drift ? `energy_drift_${type}_${s.day}` : `energy_${s.day}_${type}`,
     data: {
       day: s.day, type, consumption: s.actual, expected: s.expected, lower: s.lower, upper: s.upper, deviation: s.deviationPct,
       z: s.z, cusum: s.cusum, kind: drift ? "drift" : "spike", method: "model", usedWeather: s.usedWeather, seasonCovered: s.seasonCovered,
+      lowConfidence: low,
     },
   });
-  z.emit(app, "energy.anomaly", hotelId, { day: s.day, type, kind: drift ? "drift" : "spike", deviation: s.deviationPct });
+  if (!low) z.emit(app, "energy.anomaly", hotelId, { day: s.day, type, kind: drift ? "drift" : "spike", deviation: s.deviationPct });
+}
+
+/** In-app notice that a reading looks like an entry error (never leaves the app). */
+function raiseDataError(app, hotelId, type, day, actual, expected, kind) {
+  const label = LABEL[type] || type;
+  const unit = UNIT[type];
+  z.raiseAlert(app, {
+    // "system": the alerts.type select has no data-quality value; data.dataError says what it is.
+    hotelId, type: "system", severity: "info", inAppOnly: true,
+    title: `قرائت ${label} ${day} احتمالاً اشتباه ثبت شده است`,
+    message: `${Math.round(actual)} ${unit} (${DATA_ERROR_TEXT[kind] || kind}؛ موردانتظار حدود ${Math.round(expected)} ${unit}). ` +
+      "این روز خرابی حساب نمی‌شود و در مدل به کار نمی‌رود؛ قرائت را بررسی و در صورت نیاز اصلاح کنید.",
+    route: "/energy", audienceRoles: ["energyManager"],
+    dedupeKey: `energy_data_${type}_${day}`,
+    data: { day, type, consumption: actual, expected, dataError: kind },
+  });
+}
+
+/** Whether an alert was raised for [type] within ALERT_EPISODE_DAYS before [day]. */
+function inEpisode(app, hotelId, type, day) {
+  for (const r of z.findMany(app, "energyExpected", "hotel = {:h} && type = {:t} && day >= {:f} && day < {:d}",
+    { h: hotelId, t: type, f: z.addDays(day, -core.ALERT_EPISODE_DAYS), d: day })) {
+    if ((z.jsonOf(r, "flags") || {}).alerted === true) return true;
+  }
+  return false;
 }
 
 /**
  * Scores one day against [model] and stores it; CUSUM continues from the
- * previous day's row. Raises an alert for a flagged day when [alert].
+ * latest scored day up to CUSUM_GAP_DAYS before it. When [alert]: a data
+ * error raises an in-app notice; a spike or drift raises an energy alert
+ * unless one was raised for this meter within ALERT_EPISODE_DAYS.
  */
 function scoreAndStore(app, hotelId, type, row, model, modelId, thresholdPct, alert) {
-  const prev = expectedRow(app, hotelId, type, z.addDays(row.day, -1));
+  const prev = first(app, "energyExpected", "hotel = {:h} && type = {:t} && day < {:d} && day >= {:f}",
+    { h: hotelId, t: type, d: row.day, f: z.addDays(row.day, -CUSUM_GAP_DAYS) }, "-day");
   const s = core.scoreDay(model, row, prev ? prev.getFloat("cusum") : 0, thresholdPct);
   if (!s) return null;
   const excluded = !!z.findFirst(app, "energyExclusions", "hotel = {:h} && type = {:t} && day = {:d}", { h: hotelId, t: type, d: row.day });
   let rec = expectedRow(app, hotelId, type, row.day);
+  const before = rec ? z.jsonOf(rec, "flags") || {} : {};
   if (!rec) rec = new Record(z.col(app, "energyExpected"), { hotel: hotelId, type, day: row.day });
+  const flagged = s.spike || s.drift;
+  const alerted = before.alerted === true || (alert && flagged && !inEpisode(app, hotelId, type, row.day));
   rec.load({
     model: modelId, expected: s.expected, lower: s.lower, upper: s.upper, hasActual: true, actual: s.actual,
     residual: s.residual, z: s.z, cusum: s.cusum, occupied: row.occupied,
     tMean: row.tMean === null || row.tMean === undefined ? 0 : row.tMean, hasWeather: s.usedWeather,
     // An excluded day is still scored and flagged: exclusion only keeps it out of the fit.
-    flags: { spike: s.spike, drift: s.drift, excluded, valid: s.valid, seasonCovered: s.seasonCovered },
+    flags: {
+      spike: s.spike, drift: s.drift, excluded, valid: s.valid, seasonCovered: s.seasonCovered,
+      dataError: s.dataError, lowConfidence: s.lowConfidence, alerted, suppressed: !!alert && flagged && !alerted,
+    },
   });
   app.save(rec);
-  if (alert && (s.spike || s.drift)) raise(app, hotelId, type, s);
+  if (alert && s.dataError) raiseDataError(app, hotelId, type, row.day, s.actual, s.expected, s.dataError);
+  else if (alert && flagged && alerted && before.alerted !== true) raise(app, hotelId, type, s);
   return s;
 }
 
@@ -274,4 +325,4 @@ function stateForRules(app, hotelId, today) {
   return out;
 }
 
-module.exports = { TYPES, UNIT, modelDays, exclusions, modelRecord, modelOf, fitAndStore, needsRefit, scoreAndStore, checkReading, run, stateForRules };
+module.exports = { TYPES, UNIT, raiseDataError, modelDays, exclusions, modelRecord, modelOf, fitAndStore, needsRefit, scoreAndStore, checkReading, run, stateForRules };

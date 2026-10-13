@@ -471,14 +471,24 @@ function afterEnergyWritten(e) {
     }
   }
   if (check) {
+    // Flag-gated path (energyBaseline without a valid F2 model): an impossible
+    // reading is an entry error, not a fault; a young baseline stays in the app.
+    const dataError = core.dataErrorOf(consumption, check.expected);
+    if (dataError) {
+      require(`${__hooks}/lib/energy.js`).raiseDataError(app, hotelId, type, day, consumption, check.expected, dataError);
+      return;
+    }
     if (!check.anomaly) return;
+    const young = (check.model.n || 0) < core.MATURE_MODEL_DAYS;
     alert = {
-      severity: check.critical ? "critical" : "warning",
+      inAppOnly: young,
+      severity: check.critical && !young ? "critical" : "warning",
       title: `مصرف ${label} بالاتر از مقدار مورد انتظار`,
-      message: `${Math.round(consumption)} ${unit} در ${day}؛ ${Math.round(check.deviationPct)}٪ بیش از ${Math.round(check.expected)} ${unit} مورد انتظار با ${check.occupied} اتاق اشغال`,
+      message: `${Math.round(consumption)} ${unit} در ${day}؛ ${Math.round(check.deviationPct)}٪ بیش از ${Math.round(check.expected)} ${unit} مورد انتظار با ${check.occupied} اتاق اشغال` +
+        (young ? `؛ اطمینان پایین: خط مبنا هنوز کمتر از ${core.MATURE_MODEL_DAYS} روز داده دارد` : ""),
       data: {
         day, type, consumption, expected: check.expected, deviation: check.deviationPct, z: check.z, occupied: check.occupied,
-        method: "baseline", cvrmse: check.model.cvrmse, baselineFrom: check.model.from, baselineTo: check.model.to,
+        method: "baseline", cvrmse: check.model.cvrmse, baselineFrom: check.model.from, baselineTo: check.model.to, lowConfidence: young,
       },
     };
   } else {
@@ -496,9 +506,9 @@ function afterEnergyWritten(e) {
   const raised = z.raiseAlert(app, {
     hotelId, type: "energySpike", severity: alert.severity, title: alert.title, message: alert.message,
     route: "/energy", audienceRoles: ["energyManager", "operationsManager", "hotelOwner"],
-    dedupeKey: `energy_${day}_${type}`, data: alert.data,
+    dedupeKey: `energy_${day}_${type}`, data: alert.data, inAppOnly: !!alert.inAppOnly,
   });
-  if (raised) z.emit(app, "energy.anomaly", hotelId, alert.data);
+  if (raised && !alert.inAppOnly) z.emit(app, "energy.anomaly", hotelId, alert.data);
 }
 
 // -------------------------------------------------------- daily operations

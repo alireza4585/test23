@@ -90,6 +90,8 @@ export default async function setup({ provide }) {
     env: {
       ZH_AI_PROVIDER: "openai_compatible", ZH_AI_BASE_URL: llm.url, ZH_AI_MODEL: "mock-model",
       ZH_WEATHER_PROVIDER: "open_meteo", ZH_WEATHER_BASE_URL: weather.url,
+      // Push requests go through the outbox too, so the in-app-only tests can see that none is queued.
+      ZH_PUSH_VIA_N8N: "1",
     },
   });
   provide("pbUrl", pb.url);

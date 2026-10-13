@@ -1,7 +1,9 @@
 // AI phase 1, F2: weather-normalised energy models on the server — weather
 // back-fill through the adapter, fit and quality gate, scoring into
 // energyExpected, alerts, the insight, the signed weather route and the
-// "insufficient data" path. All data is synthetic, in trial hotels.
+// "insufficient data" path; Phase 1.5: one alert per episode, low-confidence
+// alarms kept inside the app (nothing in the outbox, so no Bale, SMS or push)
+// and entry errors labelled as data errors. All data is synthetic, in trial hotels.
 import { describe, expect, it } from "vitest";
 
 import { NID, errorOf, hotelId, login, signed, superuser } from "./helpers.mjs";
@@ -22,24 +24,24 @@ function wobble(day, salt) {
 }
 
 /** Synthetic day: occupancy, and electricity driven by occupancy and the fixture temperature. */
-function synthetic(day) {
+function synthetic(day, fault = true) {
   const occupied = Math.round(300 + 40 * wobble(day, 1));
   const t = temperature(day);
   const cool = Math.max(0, t - 18);
   const heat = Math.max(0, 12 - t);
   let kwh = (9000 + 18 * occupied + 260 * cool + 180 * cool * (occupied / 340) + 220 * heat) * (1 + 0.015 * wobble(day, 2));
-  if (day >= FAULT_FROM) kwh *= 1.25;
+  if (fault && day >= FAULT_FROM) kwh *= 1.25;
   return { occupied, kwh: Math.round(kwh) };
 }
 
-async function trialHotel(su, name, { days, location = { lat: 35.75, lon: 51.33 }, flag = true } = {}) {
+async function trialHotel(su, name, { days, location = { lat: 35.75, lon: 51.33 }, flag = true, fault = true } = {}) {
   const hotel = await su.collection("hotels").create({
     name, status: "trial", settings: { location, features: { energyBaseline: flag } },
   });
   const ops = [];
   const energy = [];
   for (let d = addDays(TODAY, -days); d < TODAY; d = addDays(d, 1)) {
-    const s = synthetic(d);
+    const s = synthetic(d, fault);
     ops.push({ fields: { day: d, roomsAvailable: 400, roomsOccupied: s.occupied, guests: s.occupied + 50, source: "import" } });
     energy.push({ fields: { type: "electricity", day: d, consumption: s.kwh, unit: "kWh", source: "smartMeter" } });
   }
@@ -83,10 +85,17 @@ describe("F2 energy model (server)", () => {
     expect(flagged.every((d) => d >= FAULT_FROM)).toBe(true);
     expect(elec.flagged.map((f) => f.day)).toEqual(flagged);
 
-    // Alerts only for the last 3 days (no flood when back-filling), and the F2 insight.
+    // Alerts only for the last 3 days (no flood when back-filling), one per episode, and the F2 insight.
     const alerts = await su.collection("alerts").getFullList({ filter: `hotel = "${H}" && type = "energySpike"` });
-    expect(alerts.length).toBeGreaterThan(0);
+    expect(alerts.length).toBe(1);
     expect(alerts.every((a) => a.data.day >= addDays(TODAY, -3) && a.data.method === "model")).toBe(true);
+    // A mature model in a season it has seen: the alert leaves the app (n8n → Bale / SMS).
+    expect(alerts[0].data.lowConfidence).toBe(false);
+    const events = (await su.collection("outbox").getFullList({ filter: `hotel = "${H}"` })).map((o) => o.type);
+    expect(events).toEqual(expect.arrayContaining(["alert.raised", "energy.anomaly"]));
+    const later = rows.filter((r) => r.day > alerts[0].data.day && (r.flags.spike || r.flags.drift));
+    expect(later.length).toBeGreaterThan(0);
+    expect(later.every((r) => r.flags.suppressed && !r.flags.alerted)).toBe(true);
     const insight = await su.collection("aiInsights").getFirstListItem(`hotel = "${H}" && key = "energyModel_electricity"`);
     expect(insight.priority).toBe("high");
     expect(insight.summary).toContain("با در نظر گرفتن دما و اشغال");
@@ -101,11 +110,57 @@ describe("F2 energy model (server)", () => {
     expect(live.status).toBe(200);
     const scored = await su.collection("energyExpected").getFirstListItem(`hotel = "${H}" && day = "${TODAY}"`);
     expect(scored.flags.spike || scored.flags.drift).toBe(true);
-    const alert = await su.collection("alerts").getFirstListItem(`hotel = "${H}" && (dedupeKey = "energy_${TODAY}_electricity" || dedupeKey = "energy_drift_electricity_${TODAY}")`);
-    expect(alert.data.method).toBe("model");
-    // Today's temperature is not fetched yet: the no-weather fallback scored it, and says so.
+    // Same episode as the alert a few days ago: stored and shown, not alerted again.
+    expect(scored.flags).toMatchObject({ suppressed: true, alerted: false });
+    expect((await su.collection("alerts").getList(1, 1, { filter: `hotel = "${H}" && type = "energySpike" && data.day = "${TODAY}"` })).totalItems).toBe(0);
+    // Today's temperature is not fetched yet: the no-weather fallback scored it.
     expect(scored.hasWeather).toBe(false);
-    expect(alert.message).toContain("بدون دادهٔ دما");
+  });
+
+  it("low-confidence alarms (young model) stay inside the app: no outbox event, no Bale, SMS or push", async () => {
+    const su = await superuser();
+    const H = await trialHotel(su, "F2 young", { days: 150 });
+    const res = await analytics(su, H, { energy: true, now: NOW });
+    expect(res.energy.types.electricity.refit.valid).toBe(true);
+    expect(res.energy.types.electricity.refit.stats.n).toBeLessThan(180);
+    const alerts = await su.collection("alerts").getFullList({ filter: `hotel = "${H}" && type = "energySpike"` });
+    expect(alerts.length).toBe(1);
+    expect(alerts[0]).toMatchObject({ severity: "warning", data: { lowConfidence: true } });
+    expect(alerts[0].message).toContain("اطمینان پایین");
+    // It is still delivered in the app (the in-app notification log).
+    const sent = await su.collection("notifications").getFullList({ filter: `hotel = "${H}"` });
+    expect(sent.some((n) => n.title === alerts[0].title)).toBe(true);
+    // Nothing for n8n: no alert.raised, energy.anomaly or push.requested.
+    expect((await su.collection("outbox").getFullList({ filter: `hotel = "${H}"` })).map((o) => o.type)).toEqual([]);
+  });
+
+  it("zero and impossible readings are labelled data errors, never a fault, and stay in the app", async () => {
+    const su = await superuser();
+    const days = Math.round((Date.parse(`${TODAY}T00:00:00Z`) - Date.parse(`${FIRST}T00:00:00Z`)) / 864e5);
+    const H = await trialHotel(su, "F2 entry errors", { days, fault: false });
+    await analytics(su, H, { energy: true, now: NOW });
+    const today = synthetic(TODAY, false);
+    await importRecords(su, { hotel: H, collection: "dailyOperations", records: [{ fields: { day: TODAY, roomsAvailable: 400, roomsOccupied: today.occupied, source: "import" } }] });
+    const outboxBefore = (await su.collection("outbox").getFullList({ filter: `hotel = "${H}"` })).length;
+    const post = (consumption) => signed(`/v1/hotels/${H}/energy/readings`, { method: "POST", body: { type: "electricity", day: TODAY, consumption, source: "smartMeter" } });
+    const row = () => su.collection("energyExpected").getFirstListItem(`hotel = "${H}" && day = "${TODAY}"`);
+
+    const zero = await post(0);
+    expect(zero.status, JSON.stringify(zero.json)).toBe(200);
+    expect((await row()).flags).toMatchObject({ dataError: "zero", spike: false, drift: false });
+    expect((await post(today.kwh * 3)).status).toBe(200);
+    const triple = await row();
+    expect(triple.flags).toMatchObject({ dataError: "implausibleHigh", spike: false, drift: false });
+    expect(triple.cusum).toBe(0);
+    // A notice to check the entry, not an energy alert, and nothing for n8n.
+    const alerts = await su.collection("alerts").getFullList({ filter: `hotel = "${H}"` });
+    expect(alerts.map((a) => [a.type, a.dedupeKey])).toEqual([["system", `energy_data_electricity_${TODAY}`]]);
+    expect(alerts[0]).toMatchObject({ severity: "info", data: { dataError: "zero" } });
+    expect((await su.collection("outbox").getFullList({ filter: `hotel = "${H}"` })).length).toBe(outboxBefore);
+    // The next fit leaves the entry error out.
+    await analytics(su, H, { energy: true, now: "2026-11-08T06:00:00Z" });
+    const model = await su.collection("energyModels").getFirstListItem(`hotel = "${H}" && status = "active"`);
+    expect(model.stats.model.dataErrors).toBe(1);
   });
 
   it("under 90 days: a rejected model that says how much data is missing, and no scores", async () => {
