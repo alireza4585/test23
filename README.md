@@ -87,7 +87,7 @@ n8n setup is covered in [n8n/README.md](n8n/README.md).
 
 | Command | Covers |
 |---|---|
-| `cd app && flutter analyze && flutter test` | Lints, plus 58 unit and widget tests (the 11 adapter tests are skipped without a server): RBAC, router guard, domain policies, login → one-tap cleaning flow, write-only revenue, Action Center, morning briefing, excluded energy days |
+| `cd app && flutter analyze && flutter test` | Lints, plus 58 unit and widget tests (the 12 adapter tests are skipped without a server): RBAC, router guard, domain policies, login → one-tap cleaning flow, write-only revenue, Action Center, morning briefing, excluded energy days |
 | `cd pocketbase && npm test` | 166 tests against a live PocketBase: tenant isolation, role rules, transactional workflows, user admin, audit, HMAC API and scoped keys, rule engine, finance access, AI assistant security, energy models, Action Center, morning briefing, outbox delivery, demo reset, test-dataset import, admin-script input rules |
 | `ZH_PB_TEST_URL=… flutter test test/pocketbase` | 12 Flutter adapter tests against a live PocketBase (`npm run test-server`) |
 | `cd firebase/functions && npm run typecheck && npm test` | TypeScript, plus 39 unit tests: RBAC drift guard against the Dart policy and the rules, analytics, rule engine, energy model, actions, briefing |
