@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../actions/presentation/actions_tab.dart';
 import '../../hotel/application/hotel_providers.dart';
 import '../../hotel/domain/hotel.dart';
 import '../application/ai_providers.dart';
@@ -27,7 +28,7 @@ class InsightsPage extends ConsumerWidget {
     final fmt = context.fmt;
     final ledger = ref.watch(recommendationLedgerProvider);
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.recommendationCenterTitle),
@@ -37,6 +38,7 @@ class InsightsPage extends ConsumerWidget {
               Tab(key: const Key('recs.tab.open'), text: l10n.tabOpen),
               Tab(key: const Key('recs.tab.decided'), text: l10n.tabDecided),
               Tab(key: const Key('recs.tab.closed'), text: l10n.tabClosed),
+              Tab(key: const Key('recs.tab.actions'), text: l10n.tabActions),
             ],
           ),
         ),
@@ -89,7 +91,7 @@ class InsightsPage extends ConsumerWidget {
               ],
             );
             return TabBarView(
-              children: [list(open, header: true), list(decided, header: false), list(closed, header: false)],
+              children: [list(open, header: true), list(decided, header: false), list(closed, header: false), const ActionsTab()],
             );
           },
         ),

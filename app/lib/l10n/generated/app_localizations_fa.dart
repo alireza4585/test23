@@ -1817,4 +1817,200 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get editValues => 'ویرایش';
+
+  @override
+  String get tabActions => 'اقدام‌ها';
+
+  @override
+  String get actionsSubtitle =>
+      'اقدام‌های تایپ‌دار هر پیشنهاد. هیچ اقدامی بدون تأیید مدیر همان بخش اجرا نمی‌شود و اثر هر اقدام پس از بازهٔ سنجش ثبت می‌شود.';
+
+  @override
+  String get noActions => 'اقدامی ثبت نشده است.';
+
+  @override
+  String get actionApprove => 'تأیید و اجرا';
+
+  @override
+  String get actionReject => 'رد';
+
+  @override
+  String get actionRejectNote => 'دلیل رد (اجباری)';
+
+  @override
+  String get actionApproved => 'اقدام تأیید و اجرا شد.';
+
+  @override
+  String get actionRejected => 'اقدام رد شد.';
+
+  @override
+  String get actionNotYours => 'تصمیم دربارهٔ این اقدام با مدیر بخش مربوط است.';
+
+  @override
+  String get actionOutcomeInconclusive => 'اثر از نوسان عادی قابل تشخیص نبود.';
+
+  @override
+  String get actionOutcomeNotMeasurable => 'دادهٔ کافی برای سنجش اثر نیست.';
+
+  @override
+  String get actionOutcomePending => 'سنجش اثر پس از پایان بازه انجام می‌شود.';
+
+  @override
+  String get actionOutcomeLabel => 'مقایسهٔ قبل و بعد؛ مشاهده‌ای، نه علّی.';
+
+  @override
+  String get briefingTitle => 'گزارش صبحگاهی';
+
+  @override
+  String get briefingSourceRules => 'قاعده‌محور';
+
+  @override
+  String get briefingSourceLlm => 'بازنویسی با هوش مصنوعی، عددها کنترل‌شده';
+
+  @override
+  String get briefingNone => 'گزارش امروز هنوز آماده نشده است.';
+
+  @override
+  String get briefingUseful => 'مفید بود';
+
+  @override
+  String get briefingNotUseful => 'مفید نبود';
+
+  @override
+  String get briefingThanks => 'ممنون از بازخورد.';
+
+  @override
+  String get energyModelSection => 'مدل انرژی';
+
+  @override
+  String get energyModelExplain =>
+      'مقدار موردانتظار هر روز با در نظر گرفتن اشغال و دما؛ هشدار فقط وقتی مصرف از بازهٔ موردانتظار بیرون بزند.';
+
+  @override
+  String get energyModelNone => 'هنوز مدلی برای این کنتور ساخته نشده است.';
+
+  @override
+  String get energyModelWeather => 'با دما و اشغال';
+
+  @override
+  String get energyModelNoWeather => 'با اشغال، بدون دادهٔ دما';
+
+  @override
+  String get flagSpike => 'جهش';
+
+  @override
+  String get flagDrift => 'انحراف پایدار';
+
+  @override
+  String get flagExcluded => 'کنارگذاشته';
+
+  @override
+  String get energyExclusionsTitle => 'روزهای کنارگذاشته‌شده از مدل';
+
+  @override
+  String get energyNoExclusions => 'هیچ روزی کنار گذاشته نشده است.';
+
+  @override
+  String get energyExcludeDays => 'کنار گذاشتن روزها';
+
+  @override
+  String get energyExcludeHint =>
+      'فقط برای رویدادهای شناخته‌شده (مثل نمایشگاه یا تعمیرات برنامه‌ریزی‌شده). حداکثر ۵ روز در هر ماه؛ این روزها فقط از ساخت مدل کنار می‌روند و همچنان بررسی و در صورت ناهنجاری هشدار داده می‌شوند. اجرا پس از تأیید در «اقدام‌ها».';
+
+  @override
+  String get energyExcludeReason => 'دلیل (اجباری، حداقل ۱۰ کاراکتر)';
+
+  @override
+  String get energyExcludeSubmit => 'ارسال برای تأیید';
+
+  @override
+  String get energyExcludeSent =>
+      'درخواست ثبت شد و در «اقدام‌ها» منتظر تأیید است.';
+
+  @override
+  String actionStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'proposed': 'در انتظار تصمیم',
+      'executed': 'اجرا شد',
+      'failed': 'ناموفق',
+      'rejected': 'رد شد',
+      'expired': 'منقضی',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionType(String type) {
+    String _temp0 = intl.Intl.selectLogic(type, {
+      'createTicket': 'ثبت تیکت تعمیر',
+      'createTask': 'تسک خانه‌داری',
+      'notifyRole': 'اطلاع‌رسانی',
+      'adjustBaseline': 'کنار گذاشتن روز از مدل انرژی',
+      'other': '$type',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionDepartment(String department) {
+    String _temp0 = intl.Intl.selectLogic(department, {
+      'energy': 'انرژی',
+      'maintenance': 'تعمیرات',
+      'housekeeping': 'خانه‌داری',
+      'inventory': 'انبار',
+      'restaurant': 'رستوران',
+      'operations': 'عملیات',
+      'other': '$department',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionDecidedBy(String name, String when) {
+    return 'تصمیم: $name، $when';
+  }
+
+  @override
+  String actionFailedReason(String code) {
+    return 'اجرا ناموفق بود: $code';
+  }
+
+  @override
+  String actionOutcomeMeasured(String value, String low, String high) {
+    return 'اثر اندازه‌گیری‌شده: $value (بازهٔ اطمینان ۹۵٪: $low تا $high)';
+  }
+
+  @override
+  String energyModelValid(String kind, String cv) {
+    return 'مدل معتبر $kind؛ CV(RMSE) ماهانه $cv٪ (کمتر از ۱۵٪).';
+  }
+
+  @override
+  String energyModelInvalid(String reason) {
+    return 'مدل هنوز قابل اتکا نیست ($reason)؛ هشدارها با خط مبنای قبلی داده می‌شوند.';
+  }
+
+  @override
+  String energyModelInsufficient(String reason) {
+    return 'دادهٔ کافی نیست ($reason)؛ دست‌کم ۹۰ روز مصرف و اشغال لازم است.';
+  }
+
+  @override
+  String energyModelWeatherSource(String source) {
+    return 'منبع دما: $source';
+  }
+
+  @override
+  String energyExpectedRange(String expected, String low, String high) {
+    return 'موردانتظار $expected (بازه $low تا $high)';
+  }
+
+  @override
+  String get showLess => 'نمایش کمتر';
+
+  @override
+  String showAll(int count) {
+    return 'نمایش هر $count مورد';
+  }
 }

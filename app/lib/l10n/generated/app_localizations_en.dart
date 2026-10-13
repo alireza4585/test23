@@ -1820,4 +1820,203 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editValues => 'Edit';
+
+  @override
+  String get tabActions => 'Actions';
+
+  @override
+  String get actionsSubtitle =>
+      'Typed actions for each recommendation. Nothing runs without the approval of that department\'s manager; each action\'s effect is measured after its window.';
+
+  @override
+  String get noActions => 'No actions yet.';
+
+  @override
+  String get actionApprove => 'Approve and run';
+
+  @override
+  String get actionReject => 'Reject';
+
+  @override
+  String get actionRejectNote => 'Reason (required)';
+
+  @override
+  String get actionApproved => 'Action approved and run.';
+
+  @override
+  String get actionRejected => 'Action rejected.';
+
+  @override
+  String get actionNotYours =>
+      'This action is for the manager of its department to decide.';
+
+  @override
+  String get actionOutcomeInconclusive =>
+      'The effect could not be told apart from normal variation.';
+
+  @override
+  String get actionOutcomeNotMeasurable =>
+      'Not enough data to measure the effect.';
+
+  @override
+  String get actionOutcomePending => 'The effect is measured after its window.';
+
+  @override
+  String get actionOutcomeLabel =>
+      'Before/after comparison: observational, not causal.';
+
+  @override
+  String get briefingTitle => 'Morning briefing';
+
+  @override
+  String get briefingSourceRules => 'Rule-based';
+
+  @override
+  String get briefingSourceLlm => 'AI-worded, numbers checked';
+
+  @override
+  String get briefingNone => 'Today\'s briefing is not ready yet.';
+
+  @override
+  String get briefingUseful => 'Useful';
+
+  @override
+  String get briefingNotUseful => 'Not useful';
+
+  @override
+  String get briefingThanks => 'Thanks for the feedback.';
+
+  @override
+  String get energyModelSection => 'Energy model';
+
+  @override
+  String get energyModelExplain =>
+      'Each day\'s expected use given occupancy and temperature; alerts only when use leaves the expected band.';
+
+  @override
+  String get energyModelNone => 'No model for this meter yet.';
+
+  @override
+  String get energyModelWeather => 'with temperature and occupancy';
+
+  @override
+  String get energyModelNoWeather => 'with occupancy, without temperature data';
+
+  @override
+  String get flagSpike => 'Spike';
+
+  @override
+  String get flagDrift => 'Drift';
+
+  @override
+  String get flagExcluded => 'Excluded';
+
+  @override
+  String get energyExclusionsTitle => 'Days kept out of the model';
+
+  @override
+  String get energyNoExclusions => 'No days are kept out.';
+
+  @override
+  String get energyExcludeDays => 'Keep days out';
+
+  @override
+  String get energyExcludeHint =>
+      'Only for known events (an exhibition, planned works). At most 5 days a month; the days only leave the model fit and are still checked and alerted on. Runs after approval in Actions.';
+
+  @override
+  String get energyExcludeReason => 'Reason (required, at least 10 characters)';
+
+  @override
+  String get energyExcludeSubmit => 'Send for approval';
+
+  @override
+  String get energyExcludeSent => 'Sent: it waits for approval in Actions.';
+
+  @override
+  String actionStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'proposed': 'Pending',
+      'executed': 'Executed',
+      'failed': 'Failed',
+      'rejected': 'Rejected',
+      'expired': 'Expired',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionType(String type) {
+    String _temp0 = intl.Intl.selectLogic(type, {
+      'createTicket': 'Maintenance ticket',
+      'createTask': 'Housekeeping task',
+      'notifyRole': 'Notification',
+      'adjustBaseline': 'Keep days out of the energy model',
+      'other': '$type',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionDepartment(String department) {
+    String _temp0 = intl.Intl.selectLogic(department, {
+      'energy': 'Energy',
+      'maintenance': 'Maintenance',
+      'housekeeping': 'Housekeeping',
+      'inventory': 'Inventory',
+      'restaurant': 'Restaurant',
+      'operations': 'Operations',
+      'other': '$department',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String actionDecidedBy(String name, String when) {
+    return 'Decided by $name, $when';
+  }
+
+  @override
+  String actionFailedReason(String code) {
+    return 'Execution failed: $code';
+  }
+
+  @override
+  String actionOutcomeMeasured(String value, String low, String high) {
+    return 'Measured effect: $value (95% interval $low to $high)';
+  }
+
+  @override
+  String energyModelValid(String kind, String cv) {
+    return 'Valid model $kind; monthly CV(RMSE) $cv% (below 15%).';
+  }
+
+  @override
+  String energyModelInvalid(String reason) {
+    return 'The model is not reliable yet ($reason); alerts use the previous baseline.';
+  }
+
+  @override
+  String energyModelInsufficient(String reason) {
+    return 'Not enough data ($reason); at least 90 days of use and occupancy are needed.';
+  }
+
+  @override
+  String energyModelWeatherSource(String source) {
+    return 'Temperature source: $source';
+  }
+
+  @override
+  String energyExpectedRange(String expected, String low, String high) {
+    return 'Expected $expected (band $low to $high)';
+  }
+
+  @override
+  String get showLess => 'Show less';
+
+  @override
+  String showAll(int count) {
+    return 'Show all $count';
+  }
 }

@@ -24,6 +24,8 @@ import 'package:zarin_hooshmand/data/pocketbase/pb_auth_repository.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_engagement_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_operations_repositories.dart';
+import 'package:zarin_hooshmand/data/pocketbase/pb_phase1_repositories.dart';
+import 'package:zarin_hooshmand/features/actions/domain/ai_action.dart';
 import 'package:zarin_hooshmand/features/admin/domain/user_admin.dart';
 import 'package:zarin_hooshmand/features/ai/domain/ai_models.dart';
 import 'package:zarin_hooshmand/features/auth/domain/app_user.dart';
@@ -278,6 +280,59 @@ void main() {
 
     final housekeeper = await _Session.signIn('0102345678');
     await expectLater(PocketBaseForecastRepository(housekeeper.pb).refresh(hotelId), throwsA(isA<PermissionDeniedFailure>()));
+  }, skip: skip);
+
+  test('AI phase 1: excluded days are proposed by the energy manager, refused to housekeeping, approved by the GM', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final hotelId = gm.user.hotelId;
+    final hotel = await gm.pb.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    await gm.pb.collection('hotels').update(hotelId, body: {
+      'settings': {...settings, 'features': {'energyBaseline': true, 'recommendationLoop': true}},
+    });
+    addTearDown(() => gm.pb.collection('hotels').update(hotelId, body: {'settings': settings}));
+
+    final today = DayKey.hotelToday(DateTime.now());
+    final days = [for (final back in [5, 6]) DayKey.of(today.subtract(Duration(days: back)))];
+    const reason = 'نمایشگاه بین‌المللی و بار اضافهٔ سالن‌ها';
+    final energy = await _Session.signIn(nid(AppRole.energyManager));
+    await expectLater(
+      PocketBaseActionsRepository(energy.pb).proposeBaselineAdjustment(hotelId, meterType: 'electricity', days: days, reason: 'کوتاه'),
+      throwsA(isA<ValidationFailure>()),
+    );
+    await PocketBaseActionsRepository(energy.pb).proposeBaselineAdjustment(hotelId, meterType: 'electricity', days: days, reason: reason);
+
+    final mine = await firstWhere(
+      PocketBaseActionsRepository(gm.pb).watchActions(hotelId),
+      (l) => l.any((a) => a.type == ActionType.adjustBaseline && a.status == ActionStatus.proposed),
+    );
+    final proposal = mine.firstWhere((a) => a.type == ActionType.adjustBaseline);
+    expect(proposal.department, ActionDepartment.energy);
+    expect((proposal.params['days'] as List).cast<String>().toSet(), days.toSet());
+
+    final housekeeping = await _Session.signIn(nid(AppRole.housekeepingManager));
+    await expectLater(
+      PocketBaseActionsRepository(housekeeping.pb).decide(proposal.id, approve: true),
+      throwsA(isA<PermissionDeniedFailure>()),
+    );
+
+    await PocketBaseActionsRepository(gm.pb).decide(proposal.id, approve: true);
+    final decided = await firstWhere(
+      PocketBaseActionsRepository(gm.pb).watchActions(hotelId),
+      (l) => l.any((a) => a.id == proposal.id && a.status == ActionStatus.executed),
+    );
+    expect(decided.firstWhere((a) => a.id == proposal.id).decidedByName, isNotEmpty);
+
+    final view = await firstWhere(
+      PocketBaseEnergyModelRepository(energy.pb).watchModel(hotelId, EnergyType.electricity),
+      (v) => v.exclusions.length == 2,
+    );
+    expect(view.exclusions.map((x) => DayKey.of(x.day)).toSet(), days.toSet());
+    expect(view.exclusions.every((x) => x.reason == reason), isTrue);
+
+    // No briefing is stored until the morning run: the stream says so instead of failing.
+    expect(await PocketBaseBriefingRepository(gm.pb).watchToday(hotelId, DayKey.of(today)).first, isNull);
   }, skip: skip);
 
   test('a provisioned user must change the temporary password and stays signed in', () async {

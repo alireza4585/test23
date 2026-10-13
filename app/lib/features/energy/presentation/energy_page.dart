@@ -19,6 +19,7 @@ import '../application/energy_providers.dart';
 import '../domain/energy_analysis.dart';
 import '../domain/energy_analytics.dart';
 import '../domain/energy_reading.dart';
+import 'energy_model_section.dart';
 
 class EnergyPage extends ConsumerStatefulWidget {
   const EnergyPage({super.key});
@@ -124,7 +125,10 @@ class _EnergyPageState extends ConsumerState<EnergyPage> {
                   const SizedBox(height: Insets.md),
                   AssistantCta(label: l10n.energyInsightCta),
                 ],
-                if (ref.watch(hotelSettingsProvider).has(HotelFeature.energyBaseline)) _BaselineSection(type: _type),
+                if (ref.watch(hotelSettingsProvider).has(HotelFeature.energyBaseline)) ...[
+                  _BaselineSection(type: _type),
+                  EnergyModelSection(type: _type),
+                ],
                 SectionHeader(title: l10n.recentReadings),
                 ZCard(
                   padding: EdgeInsets.zero,

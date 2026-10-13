@@ -31,8 +31,12 @@ enum HotelFeature {
   /// Nightly forecasts, the forecasts page and the calendar of events.
   forecasts,
 
-  /// Automatic close and impact evaluation of recommendations.
+  /// Automatic close and impact evaluation of recommendations, and the
+  /// Action Center (typed actions, approval, measured outcome).
   recommendationLoop,
+
+  /// Daily cross-department briefing per role (AI phase 1, F4).
+  morningBriefing,
 }
 
 /// Per-hotel operating parameters used by analytics and automations.

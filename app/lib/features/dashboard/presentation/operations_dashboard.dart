@@ -13,6 +13,7 @@ import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../briefing/presentation/briefing_card.dart';
 import '../../housekeeping/application/housekeeping_providers.dart';
 import '../../housekeeping/presentation/task_tile.dart';
 import '../../inventory/application/inventory_providers.dart';
@@ -65,6 +66,7 @@ class OperationsDashboard extends ConsumerWidget {
         value: metrics,
         data: (m) => PageBody(
           children: [
+            const BriefingCard(),
             KpiGrid(metrics: m, user: user),
             if (actions.isNotEmpty) ...[
               SectionHeader(title: l10n.quickActions),

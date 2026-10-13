@@ -718,5 +718,155 @@
   },
   "revenueTotal": "Total",
   "confirmAndSave": "Confirm and save",
-  "editValues": "Edit"
+  "editValues": "Edit",
+  "tabActions": "Actions",
+  "actionsSubtitle": "Typed actions for each recommendation. Nothing runs without the approval of that department's manager; each action's effect is measured after its window.",
+  "noActions": "No actions yet.",
+  "actionApprove": "Approve and run",
+  "actionReject": "Reject",
+  "actionRejectNote": "Reason (required)",
+  "actionApproved": "Action approved and run.",
+  "actionRejected": "Action rejected.",
+  "actionNotYours": "This action is for the manager of its department to decide.",
+  "actionOutcomeInconclusive": "The effect could not be told apart from normal variation.",
+  "actionOutcomeNotMeasurable": "Not enough data to measure the effect.",
+  "actionOutcomePending": "The effect is measured after its window.",
+  "actionOutcomeLabel": "Before/after comparison: observational, not causal.",
+  "briefingTitle": "Morning briefing",
+  "briefingSourceRules": "Rule-based",
+  "briefingSourceLlm": "AI-worded, numbers checked",
+  "briefingNone": "Today's briefing is not ready yet.",
+  "briefingUseful": "Useful",
+  "briefingNotUseful": "Not useful",
+  "briefingThanks": "Thanks for the feedback.",
+  "energyModelSection": "Energy model",
+  "energyModelExplain": "Each day's expected use given occupancy and temperature; alerts only when use leaves the expected band.",
+  "energyModelNone": "No model for this meter yet.",
+  "energyModelWeather": "with temperature and occupancy",
+  "energyModelNoWeather": "with occupancy, without temperature data",
+  "flagSpike": "Spike",
+  "flagDrift": "Drift",
+  "flagExcluded": "Excluded",
+  "energyExclusionsTitle": "Days kept out of the model",
+  "energyNoExclusions": "No days are kept out.",
+  "energyExcludeDays": "Keep days out",
+  "energyExcludeHint": "Only for known events (an exhibition, planned works). At most 5 days a month; the days only leave the model fit and are still checked and alerted on. Runs after approval in Actions.",
+  "energyExcludeReason": "Reason (required, at least 10 characters)",
+  "energyExcludeSubmit": "Send for approval",
+  "energyExcludeSent": "Sent: it waits for approval in Actions.",
+  "actionStatus": "{status, select, proposed{Pending} executed{Executed} failed{Failed} rejected{Rejected} expired{Expired} other{{status}}}",
+  "@actionStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "actionType": "{type, select, createTicket{Maintenance ticket} createTask{Housekeeping task} notifyRole{Notification} adjustBaseline{Keep days out of the energy model} other{{type}}}",
+  "@actionType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "actionDepartment": "{department, select, energy{Energy} maintenance{Maintenance} housekeeping{Housekeeping} inventory{Inventory} restaurant{Restaurant} operations{Operations} other{{department}}}",
+  "@actionDepartment": {
+    "placeholders": {
+      "department": {
+        "type": "String"
+      }
+    }
+  },
+  "actionDecidedBy": "Decided by {name}, {when}",
+  "@actionDecidedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "actionFailedReason": "Execution failed: {code}",
+  "@actionFailedReason": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "actionOutcomeMeasured": "Measured effect: {value} (95% interval {low} to {high})",
+  "@actionOutcomeMeasured": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      },
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelValid": "Valid model {kind}; monthly CV(RMSE) {cv}% (below 15%).",
+  "@energyModelValid": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "cv": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelInvalid": "The model is not reliable yet ({reason}); alerts use the previous baseline.",
+  "@energyModelInvalid": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelInsufficient": "Not enough data ({reason}); at least 90 days of use and occupancy are needed.",
+  "@energyModelInsufficient": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelWeatherSource": "Temperature source: {source}",
+  "@energyModelWeatherSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "energyExpectedRange": "Expected {expected} (band {low} to {high})",
+  "@energyExpectedRange": {
+    "placeholders": {
+      "expected": {
+        "type": "String"
+      },
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "showLess": "Show less",
+  "showAll": "Show all {count}",
+  "@showAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

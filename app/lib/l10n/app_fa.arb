@@ -1044,5 +1044,155 @@
   },
   "revenueTotal": "جمع",
   "confirmAndSave": "تأیید و ثبت",
-  "editValues": "ویرایش"
+  "editValues": "ویرایش",
+  "tabActions": "اقدام‌ها",
+  "actionsSubtitle": "اقدام‌های تایپ‌دار هر پیشنهاد. هیچ اقدامی بدون تأیید مدیر همان بخش اجرا نمی‌شود و اثر هر اقدام پس از بازهٔ سنجش ثبت می‌شود.",
+  "noActions": "اقدامی ثبت نشده است.",
+  "actionApprove": "تأیید و اجرا",
+  "actionReject": "رد",
+  "actionRejectNote": "دلیل رد (اجباری)",
+  "actionApproved": "اقدام تأیید و اجرا شد.",
+  "actionRejected": "اقدام رد شد.",
+  "actionNotYours": "تصمیم دربارهٔ این اقدام با مدیر بخش مربوط است.",
+  "actionOutcomeInconclusive": "اثر از نوسان عادی قابل تشخیص نبود.",
+  "actionOutcomeNotMeasurable": "دادهٔ کافی برای سنجش اثر نیست.",
+  "actionOutcomePending": "سنجش اثر پس از پایان بازه انجام می‌شود.",
+  "actionOutcomeLabel": "مقایسهٔ قبل و بعد؛ مشاهده‌ای، نه علّی.",
+  "briefingTitle": "گزارش صبحگاهی",
+  "briefingSourceRules": "قاعده‌محور",
+  "briefingSourceLlm": "بازنویسی با هوش مصنوعی، عددها کنترل‌شده",
+  "briefingNone": "گزارش امروز هنوز آماده نشده است.",
+  "briefingUseful": "مفید بود",
+  "briefingNotUseful": "مفید نبود",
+  "briefingThanks": "ممنون از بازخورد.",
+  "energyModelSection": "مدل انرژی",
+  "energyModelExplain": "مقدار موردانتظار هر روز با در نظر گرفتن اشغال و دما؛ هشدار فقط وقتی مصرف از بازهٔ موردانتظار بیرون بزند.",
+  "energyModelNone": "هنوز مدلی برای این کنتور ساخته نشده است.",
+  "energyModelWeather": "با دما و اشغال",
+  "energyModelNoWeather": "با اشغال، بدون دادهٔ دما",
+  "flagSpike": "جهش",
+  "flagDrift": "انحراف پایدار",
+  "flagExcluded": "کنارگذاشته",
+  "energyExclusionsTitle": "روزهای کنارگذاشته‌شده از مدل",
+  "energyNoExclusions": "هیچ روزی کنار گذاشته نشده است.",
+  "energyExcludeDays": "کنار گذاشتن روزها",
+  "energyExcludeHint": "فقط برای رویدادهای شناخته‌شده (مثل نمایشگاه یا تعمیرات برنامه‌ریزی‌شده). حداکثر ۵ روز در هر ماه؛ این روزها فقط از ساخت مدل کنار می‌روند و همچنان بررسی و در صورت ناهنجاری هشدار داده می‌شوند. اجرا پس از تأیید در «اقدام‌ها».",
+  "energyExcludeReason": "دلیل (اجباری، حداقل ۱۰ کاراکتر)",
+  "energyExcludeSubmit": "ارسال برای تأیید",
+  "energyExcludeSent": "درخواست ثبت شد و در «اقدام‌ها» منتظر تأیید است.",
+  "actionStatus": "{status, select, proposed{در انتظار تصمیم} executed{اجرا شد} failed{ناموفق} rejected{رد شد} expired{منقضی} other{{status}}}",
+  "@actionStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "actionType": "{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} other{{type}}}",
+  "@actionType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "actionDepartment": "{department, select, energy{انرژی} maintenance{تعمیرات} housekeeping{خانه‌داری} inventory{انبار} restaurant{رستوران} operations{عملیات} other{{department}}}",
+  "@actionDepartment": {
+    "placeholders": {
+      "department": {
+        "type": "String"
+      }
+    }
+  },
+  "actionDecidedBy": "تصمیم: {name}، {when}",
+  "@actionDecidedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "actionFailedReason": "اجرا ناموفق بود: {code}",
+  "@actionFailedReason": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "actionOutcomeMeasured": "اثر اندازه‌گیری‌شده: {value} (بازهٔ اطمینان ۹۵٪: {low} تا {high})",
+  "@actionOutcomeMeasured": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      },
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelValid": "مدل معتبر {kind}؛ CV(RMSE) ماهانه {cv}٪ (کمتر از ۱۵٪).",
+  "@energyModelValid": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "cv": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelInvalid": "مدل هنوز قابل اتکا نیست ({reason})؛ هشدارها با خط مبنای قبلی داده می‌شوند.",
+  "@energyModelInvalid": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelInsufficient": "دادهٔ کافی نیست ({reason})؛ دست‌کم ۹۰ روز مصرف و اشغال لازم است.",
+  "@energyModelInsufficient": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "energyModelWeatherSource": "منبع دما: {source}",
+  "@energyModelWeatherSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "energyExpectedRange": "موردانتظار {expected} (بازه {low} تا {high})",
+  "@energyExpectedRange": {
+    "placeholders": {
+      "expected": {
+        "type": "String"
+      },
+      "low": {
+        "type": "String"
+      },
+      "high": {
+        "type": "String"
+      }
+    }
+  },
+  "showLess": "نمایش کمتر",
+  "showAll": "نمایش هر {count} مورد",
+  "@showAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

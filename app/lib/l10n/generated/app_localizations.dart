@@ -3397,6 +3397,294 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'ویرایش'**
   String get editValues;
+
+  /// No description provided for @tabActions.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدام‌ها'**
+  String get tabActions;
+
+  /// No description provided for @actionsSubtitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدام‌های تایپ‌دار هر پیشنهاد. هیچ اقدامی بدون تأیید مدیر همان بخش اجرا نمی‌شود و اثر هر اقدام پس از بازهٔ سنجش ثبت می‌شود.'**
+  String get actionsSubtitle;
+
+  /// No description provided for @noActions.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدامی ثبت نشده است.'**
+  String get noActions;
+
+  /// No description provided for @actionApprove.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید و اجرا'**
+  String get actionApprove;
+
+  /// No description provided for @actionReject.
+  ///
+  /// In fa, this message translates to:
+  /// **'رد'**
+  String get actionReject;
+
+  /// No description provided for @actionRejectNote.
+  ///
+  /// In fa, this message translates to:
+  /// **'دلیل رد (اجباری)'**
+  String get actionRejectNote;
+
+  /// No description provided for @actionApproved.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدام تأیید و اجرا شد.'**
+  String get actionApproved;
+
+  /// No description provided for @actionRejected.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدام رد شد.'**
+  String get actionRejected;
+
+  /// No description provided for @actionNotYours.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم دربارهٔ این اقدام با مدیر بخش مربوط است.'**
+  String get actionNotYours;
+
+  /// No description provided for @actionOutcomeInconclusive.
+  ///
+  /// In fa, this message translates to:
+  /// **'اثر از نوسان عادی قابل تشخیص نبود.'**
+  String get actionOutcomeInconclusive;
+
+  /// No description provided for @actionOutcomeNotMeasurable.
+  ///
+  /// In fa, this message translates to:
+  /// **'دادهٔ کافی برای سنجش اثر نیست.'**
+  String get actionOutcomeNotMeasurable;
+
+  /// No description provided for @actionOutcomePending.
+  ///
+  /// In fa, this message translates to:
+  /// **'سنجش اثر پس از پایان بازه انجام می‌شود.'**
+  String get actionOutcomePending;
+
+  /// No description provided for @actionOutcomeLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'مقایسهٔ قبل و بعد؛ مشاهده‌ای، نه علّی.'**
+  String get actionOutcomeLabel;
+
+  /// No description provided for @briefingTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'گزارش صبحگاهی'**
+  String get briefingTitle;
+
+  /// No description provided for @briefingSourceRules.
+  ///
+  /// In fa, this message translates to:
+  /// **'قاعده‌محور'**
+  String get briefingSourceRules;
+
+  /// No description provided for @briefingSourceLlm.
+  ///
+  /// In fa, this message translates to:
+  /// **'بازنویسی با هوش مصنوعی، عددها کنترل‌شده'**
+  String get briefingSourceLlm;
+
+  /// No description provided for @briefingNone.
+  ///
+  /// In fa, this message translates to:
+  /// **'گزارش امروز هنوز آماده نشده است.'**
+  String get briefingNone;
+
+  /// No description provided for @briefingUseful.
+  ///
+  /// In fa, this message translates to:
+  /// **'مفید بود'**
+  String get briefingUseful;
+
+  /// No description provided for @briefingNotUseful.
+  ///
+  /// In fa, this message translates to:
+  /// **'مفید نبود'**
+  String get briefingNotUseful;
+
+  /// No description provided for @briefingThanks.
+  ///
+  /// In fa, this message translates to:
+  /// **'ممنون از بازخورد.'**
+  String get briefingThanks;
+
+  /// No description provided for @energyModelSection.
+  ///
+  /// In fa, this message translates to:
+  /// **'مدل انرژی'**
+  String get energyModelSection;
+
+  /// No description provided for @energyModelExplain.
+  ///
+  /// In fa, this message translates to:
+  /// **'مقدار موردانتظار هر روز با در نظر گرفتن اشغال و دما؛ هشدار فقط وقتی مصرف از بازهٔ موردانتظار بیرون بزند.'**
+  String get energyModelExplain;
+
+  /// No description provided for @energyModelNone.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز مدلی برای این کنتور ساخته نشده است.'**
+  String get energyModelNone;
+
+  /// No description provided for @energyModelWeather.
+  ///
+  /// In fa, this message translates to:
+  /// **'با دما و اشغال'**
+  String get energyModelWeather;
+
+  /// No description provided for @energyModelNoWeather.
+  ///
+  /// In fa, this message translates to:
+  /// **'با اشغال، بدون دادهٔ دما'**
+  String get energyModelNoWeather;
+
+  /// No description provided for @flagSpike.
+  ///
+  /// In fa, this message translates to:
+  /// **'جهش'**
+  String get flagSpike;
+
+  /// No description provided for @flagDrift.
+  ///
+  /// In fa, this message translates to:
+  /// **'انحراف پایدار'**
+  String get flagDrift;
+
+  /// No description provided for @flagExcluded.
+  ///
+  /// In fa, this message translates to:
+  /// **'کنارگذاشته'**
+  String get flagExcluded;
+
+  /// No description provided for @energyExclusionsTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'روزهای کنارگذاشته‌شده از مدل'**
+  String get energyExclusionsTitle;
+
+  /// No description provided for @energyNoExclusions.
+  ///
+  /// In fa, this message translates to:
+  /// **'هیچ روزی کنار گذاشته نشده است.'**
+  String get energyNoExclusions;
+
+  /// No description provided for @energyExcludeDays.
+  ///
+  /// In fa, this message translates to:
+  /// **'کنار گذاشتن روزها'**
+  String get energyExcludeDays;
+
+  /// No description provided for @energyExcludeHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'فقط برای رویدادهای شناخته‌شده (مثل نمایشگاه یا تعمیرات برنامه‌ریزی‌شده). حداکثر ۵ روز در هر ماه؛ این روزها فقط از ساخت مدل کنار می‌روند و همچنان بررسی و در صورت ناهنجاری هشدار داده می‌شوند. اجرا پس از تأیید در «اقدام‌ها».'**
+  String get energyExcludeHint;
+
+  /// No description provided for @energyExcludeReason.
+  ///
+  /// In fa, this message translates to:
+  /// **'دلیل (اجباری، حداقل ۱۰ کاراکتر)'**
+  String get energyExcludeReason;
+
+  /// No description provided for @energyExcludeSubmit.
+  ///
+  /// In fa, this message translates to:
+  /// **'ارسال برای تأیید'**
+  String get energyExcludeSubmit;
+
+  /// No description provided for @energyExcludeSent.
+  ///
+  /// In fa, this message translates to:
+  /// **'درخواست ثبت شد و در «اقدام‌ها» منتظر تأیید است.'**
+  String get energyExcludeSent;
+
+  /// No description provided for @actionStatus.
+  ///
+  /// In fa, this message translates to:
+  /// **'{status, select, proposed{در انتظار تصمیم} executed{اجرا شد} failed{ناموفق} rejected{رد شد} expired{منقضی} other{{status}}}'**
+  String actionStatus(String status);
+
+  /// No description provided for @actionType.
+  ///
+  /// In fa, this message translates to:
+  /// **'{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} other{{type}}}'**
+  String actionType(String type);
+
+  /// No description provided for @actionDepartment.
+  ///
+  /// In fa, this message translates to:
+  /// **'{department, select, energy{انرژی} maintenance{تعمیرات} housekeeping{خانه‌داری} inventory{انبار} restaurant{رستوران} operations{عملیات} other{{department}}}'**
+  String actionDepartment(String department);
+
+  /// No description provided for @actionDecidedBy.
+  ///
+  /// In fa, this message translates to:
+  /// **'تصمیم: {name}، {when}'**
+  String actionDecidedBy(String name, String when);
+
+  /// No description provided for @actionFailedReason.
+  ///
+  /// In fa, this message translates to:
+  /// **'اجرا ناموفق بود: {code}'**
+  String actionFailedReason(String code);
+
+  /// No description provided for @actionOutcomeMeasured.
+  ///
+  /// In fa, this message translates to:
+  /// **'اثر اندازه‌گیری‌شده: {value} (بازهٔ اطمینان ۹۵٪: {low} تا {high})'**
+  String actionOutcomeMeasured(String value, String low, String high);
+
+  /// No description provided for @energyModelValid.
+  ///
+  /// In fa, this message translates to:
+  /// **'مدل معتبر {kind}؛ CV(RMSE) ماهانه {cv}٪ (کمتر از ۱۵٪).'**
+  String energyModelValid(String kind, String cv);
+
+  /// No description provided for @energyModelInvalid.
+  ///
+  /// In fa, this message translates to:
+  /// **'مدل هنوز قابل اتکا نیست ({reason})؛ هشدارها با خط مبنای قبلی داده می‌شوند.'**
+  String energyModelInvalid(String reason);
+
+  /// No description provided for @energyModelInsufficient.
+  ///
+  /// In fa, this message translates to:
+  /// **'دادهٔ کافی نیست ({reason})؛ دست‌کم ۹۰ روز مصرف و اشغال لازم است.'**
+  String energyModelInsufficient(String reason);
+
+  /// No description provided for @energyModelWeatherSource.
+  ///
+  /// In fa, this message translates to:
+  /// **'منبع دما: {source}'**
+  String energyModelWeatherSource(String source);
+
+  /// No description provided for @energyExpectedRange.
+  ///
+  /// In fa, this message translates to:
+  /// **'موردانتظار {expected} (بازه {low} تا {high})'**
+  String energyExpectedRange(String expected, String low, String high);
+
+  /// No description provided for @showLess.
+  ///
+  /// In fa, this message translates to:
+  /// **'نمایش کمتر'**
+  String get showLess;
+
+  /// No description provided for @showAll.
+  ///
+  /// In fa, this message translates to:
+  /// **'نمایش هر {count} مورد'**
+  String showAll(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/di/core_providers.dart';
+import '../features/actions/domain/ai_action.dart';
 import '../features/admin/domain/user_admin.dart';
 import '../features/ai/domain/ai_models.dart';
 import '../features/auth/domain/auth_repository.dart';
+import '../features/briefing/domain/briefing.dart';
 import '../features/calendar/domain/calendar_event.dart';
 import '../features/energy/domain/energy_analysis.dart';
+import '../features/energy/domain/energy_model.dart';
 import '../features/energy/domain/energy_reading.dart';
 import '../features/forecast/domain/forecast.dart';
 import '../features/hotel/domain/hotel.dart';
@@ -21,6 +24,7 @@ import 'backend.dart';
 import 'demo/demo_ai_assistant.dart';
 import 'demo/demo_auth_repository.dart';
 import 'demo/demo_intelligence_repositories.dart';
+import 'demo/demo_phase1_repositories.dart';
 import 'demo/demo_repositories.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_engagement_repositories.dart';
@@ -29,6 +33,7 @@ import 'pocketbase/pb_auth_repository.dart';
 import 'pocketbase/pb_engagement_repositories.dart';
 import 'pocketbase/pb_intelligence_repositories.dart';
 import 'pocketbase/pb_operations_repositories.dart';
+import 'pocketbase/pb_phase1_repositories.dart';
 import 'unsupported_repositories.dart';
 
 /// Composition root for the data layer.
@@ -179,5 +184,31 @@ final calendarRepositoryProvider = Provider<CalendarRepository>(
     final PocketBaseBackend b => PocketBaseCalendarRepository(b.client),
     FirebaseBackend() => const UnsupportedCalendarRepository(),
     final DemoBackend b => DemoCalendarRepository(b.store),
+  },
+);
+
+// ------------------------------------------- AI phase 1 (PocketBase + demo)
+
+final actionsRepositoryProvider = Provider<ActionsRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseActionsRepository(b.client),
+    FirebaseBackend() => const UnsupportedActionsRepository(),
+    final DemoBackend b => DemoActionsRepository(b.store),
+  },
+);
+
+final briefingRepositoryProvider = Provider<BriefingRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseBriefingRepository(b.client),
+    FirebaseBackend() => const UnsupportedBriefingRepository(),
+    final DemoBackend b => DemoBriefingRepository(b.store),
+  },
+);
+
+final energyModelRepositoryProvider = Provider<EnergyModelRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseEnergyModelRepository(b.client),
+    FirebaseBackend() => const UnsupportedEnergyModelRepository(),
+    final DemoBackend b => DemoEnergyModelRepository(b.store),
   },
 );

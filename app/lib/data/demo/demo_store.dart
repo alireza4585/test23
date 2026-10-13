@@ -3,10 +3,12 @@ import 'dart:async';
 import '../../core/security/app_role.dart';
 import '../../core/utils/clock.dart';
 import '../../core/utils/day_key.dart';
+import '../../features/actions/domain/ai_action.dart';
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/auth/domain/app_user.dart';
 import '../../features/auth/domain/user_session.dart';
 import '../../features/calendar/domain/calendar_event.dart';
+import '../../features/energy/domain/energy_model.dart';
 import '../../features/energy/domain/energy_reading.dart';
 import '../../features/hotel/domain/hotel.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
@@ -91,6 +93,10 @@ class DemoStore {
   final reports = DemoCollection<ReportRecord>((r) => r.id);
   final sessions = DemoCollection<Scoped<UserSession>>((s) => s.id);
   final calendarEvents = DemoCollection<CalendarEvent>((e) => e.id);
+  final actions = DemoCollection<AiAction>((a) => a.id);
+  final energyExclusions = DemoCollection<({String type, EnergyExclusion exclusion})>(
+    (x) => '${x.type}_${DayKey.of(x.exclusion.day)}',
+  );
 
   /// Append-only audit trail (mirrors `hotels/{id}/auditLogs`).
   final List<String> auditLog = [];

@@ -10,6 +10,7 @@ import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/domain/app_user.dart';
+import '../../briefing/presentation/briefing_card.dart';
 import '../../forecast/presentation/forecasts_page.dart';
 import '../../notifications/presentation/alert_card.dart';
 import '../application/dashboard_providers.dart';
@@ -39,7 +40,7 @@ class ExecutiveDashboard extends ConsumerWidget {
             final secondary = _secondary(context, user, m);
             if (constraints.maxWidth < 1000) {
               // Phone order: KPIs → alerts → AI insights → operations → trends.
-              return PageBody(children: [primary.first, ...secondary, ...primary.skip(1)]);
+              return PageBody(children: [const BriefingCard(), primary.first, ...secondary, ...primary.skip(1)]);
             }
             return Align(
               alignment: AlignmentDirectional.topCenter,
@@ -48,7 +49,7 @@ class ExecutiveDashboard extends ConsumerWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: PageBody(children: primary)),
+                    Expanded(flex: 3, child: PageBody(children: [const BriefingCard(), ...primary])),
                     Expanded(flex: 2, child: PageBody(children: secondary)),
                   ],
                 ),
