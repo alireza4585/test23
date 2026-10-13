@@ -181,10 +181,15 @@ class DemoBriefingRepository implements BriefingRepository {
 
 /// The demo energy model: the occupancy baseline of Batch 1 over the last 35
 /// days (the server fits the weather model; the demo has no weather data).
+/// Data errors use the server's band (core energy-model.ts): outside 0.2–2 ×
+/// expected; the demo baseline is always young, so its alarms are low-confidence.
 class DemoEnergyModelRepository implements EnergyModelRepository {
   DemoEnergyModelRepository(this._store);
 
   final DemoStore _store;
+
+  static const _dataErrorLow = 0.2;
+  static const _dataErrorHigh = 2.0;
 
   @override
   Stream<EnergyModelView> watchModel(String hotelId, EnergyType type) {
@@ -226,15 +231,20 @@ class DemoEnergyModelRepository implements EnergyModelRepository {
         model: EnergyModelInfo(kind: 'occupancy', valid: b.valid, reason: b.valid ? null : 'cvrmse ${b.cvrmse.toStringAsFixed(1)}%', trainFrom: DayKey.of(b.from), trainTo: DayKey.of(b.to)),
         days: [
           for (final d in analysis.days)
-            ExpectedDay(
-              day: d.day,
-              expected: d.expected,
-              lower: d.expected * (1 - 1.96 * cv),
-              upper: d.expected * (1 + 1.96 * cv),
-              actual: d.actual,
-              spike: b.valid && d.actual > d.expected * (1 + 1.96 * cv),
-              excluded: excludedDays.contains(DayKey.of(d.day)),
-            ),
+            () {
+              final error = d.actual <= _dataErrorLow * d.expected || d.actual >= _dataErrorHigh * d.expected;
+              return ExpectedDay(
+                day: d.day,
+                expected: d.expected,
+                lower: d.expected * (1 - 1.96 * cv),
+                upper: d.expected * (1 + 1.96 * cv),
+                actual: d.actual,
+                spike: b.valid && !error && d.actual > d.expected * (1 + 1.96 * cv),
+                excluded: excludedDays.contains(DayKey.of(d.day)),
+                dataError: error,
+                lowConfidence: true,
+              );
+            }(),
         ],
         exclusions: exclusions,
       );

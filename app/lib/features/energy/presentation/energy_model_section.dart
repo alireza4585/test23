@@ -65,8 +65,10 @@ class EnergyModelSection extends ConsumerWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (d.drift) StatusPill(label: l10n.flagDrift, color: status.danger)
+                      if (d.dataError) StatusPill(key: Key('energy.dataError.${DayKey.of(d.day)}'), label: l10n.flagDataError, color: theme.colorScheme.outline)
+                      else if (d.drift) StatusPill(label: l10n.flagDrift, color: status.danger)
                       else if (d.spike) StatusPill(label: l10n.flagSpike, color: status.warning),
+                      if (d.flagged && d.lowConfidence) ...[const SizedBox(width: 4), StatusPill(label: l10n.flagLowConfidence, color: theme.colorScheme.outline)],
                       if (d.excluded) ...[const SizedBox(width: 4), StatusPill(label: l10n.flagExcluded, color: theme.colorScheme.outline)],
                       const SizedBox(width: Insets.sm),
                       Text('${n(d.actual!)} ${type.unit}', style: const TextStyle(fontWeight: FontWeight.w600)),

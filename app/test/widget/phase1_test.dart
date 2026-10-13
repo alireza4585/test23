@@ -7,7 +7,9 @@ import 'package:zarin_hooshmand/core/utils/day_key.dart';
 import 'package:zarin_hooshmand/data/demo/demo_seed.dart';
 import 'package:zarin_hooshmand/data/repository_providers.dart';
 import 'package:zarin_hooshmand/features/actions/domain/ai_action.dart';
+import 'package:zarin_hooshmand/features/energy/domain/energy_reading.dart';
 import 'package:zarin_hooshmand/features/hotel/domain/hotel.dart';
+import 'package:zarin_hooshmand/features/operations/domain/daily_operations.dart';
 
 import '../helpers/test_app.dart';
 
@@ -141,5 +143,41 @@ void main() {
     await _open(tester, Routes.energy);
     await _show(tester, find.byKey(const Key('energy.exclusions')));
     expect(find.byKey(const Key('energy.excludeDays')), findsNothing);
+  });
+
+  testWidgets('energy model: an impossible reading is labelled a data error, not a spike', (tester) async {
+    final store = seededStore();
+    final yesterday = DayKey.hotelToday(store.clock.now()).subtract(const Duration(days: 1));
+    // The demo baseline needs history before its 35-day window: copies of the seeded days, 35 and 70 days back.
+    final ops = store.operations.all.toList();
+    final elec = store.energy.all.where((e) => e.type == EnergyType.electricity).toList();
+    for (final back in [35, 70]) {
+      for (final o in ops) {
+        store.operations.put(DailyOperations(
+          day: o.day.subtract(Duration(days: back)), roomsAvailable: o.roomsAvailable, roomsOccupied: o.roomsOccupied,
+          guests: o.guests, roomRevenue: o.roomRevenue,
+        ));
+      }
+      for (final e in elec) {
+        final day = e.day.subtract(Duration(days: back));
+        store.energy.put(EnergyReading(
+          id: '${DayKey.of(day)}_${e.type.name}', type: e.type, day: day, consumption: e.consumption, source: e.source,
+          recordedByName: e.recordedByName, createdAt: e.createdAt,
+        ));
+      }
+    }
+    // A keyboard slip: yesterday's electricity entered three times too high.
+    final r = elec.firstWhere((e) => DayKey.of(e.day) == DayKey.of(yesterday));
+    store.energy.put(EnergyReading(
+      id: r.id, type: r.type, day: r.day, consumption: r.consumption * 3, source: r.source,
+      recordedByName: r.recordedByName, createdAt: r.createdAt,
+    ));
+    await pumpZarinApp(tester, store: store);
+    await signIn(tester, _nid(AppRole.energyManager));
+    await _open(tester, Routes.energy);
+    final pill = find.byKey(Key('energy.dataError.${DayKey.of(yesterday)}'));
+    await _show(tester, pill);
+    expect(pill, findsOneWidget);
+    expect(find.text('خطای داده'), findsOneWidget);
   });
 }

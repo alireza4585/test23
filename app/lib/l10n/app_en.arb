@@ -746,6 +746,8 @@
   "energyModelNoWeather": "with occupancy, without temperature data",
   "flagSpike": "Spike",
   "flagDrift": "Drift",
+  "flagDataError": "Data error",
+  "flagLowConfidence": "Low confidence",
   "flagExcluded": "Excluded",
   "energyExclusionsTitle": "Days kept out of the model",
   "energyNoExclusions": "No days are kept out.",

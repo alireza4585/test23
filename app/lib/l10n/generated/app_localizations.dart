@@ -3560,6 +3560,18 @@ abstract class AppLocalizations {
   /// **'انحراف پایدار'**
   String get flagDrift;
 
+  /// No description provided for @flagDataError.
+  ///
+  /// In fa, this message translates to:
+  /// **'خطای داده'**
+  String get flagDataError;
+
+  /// No description provided for @flagLowConfidence.
+  ///
+  /// In fa, this message translates to:
+  /// **'اطمینان کم'**
+  String get flagLowConfidence;
+
   /// No description provided for @flagExcluded.
   ///
   /// In fa, this message translates to:

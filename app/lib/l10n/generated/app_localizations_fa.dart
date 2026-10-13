@@ -1902,6 +1902,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get flagDrift => 'انحراف پایدار';
 
   @override
+  String get flagDataError => 'خطای داده';
+
+  @override
+  String get flagLowConfidence => 'اطمینان کم';
+
+  @override
   String get flagExcluded => 'کنارگذاشته';
 
   @override

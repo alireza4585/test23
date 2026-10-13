@@ -1909,6 +1909,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flagDrift => 'Drift';
 
   @override
+  String get flagDataError => 'Data error';
+
+  @override
+  String get flagLowConfidence => 'Low confidence';
+
+  @override
   String get flagExcluded => 'Excluded';
 
   @override

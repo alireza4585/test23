@@ -1072,6 +1072,8 @@
   "energyModelNoWeather": "با اشغال، بدون دادهٔ دما",
   "flagSpike": "جهش",
   "flagDrift": "انحراف پایدار",
+  "flagDataError": "خطای داده",
+  "flagLowConfidence": "اطمینان کم",
   "flagExcluded": "کنارگذاشته",
   "energyExclusionsTitle": "روزهای کنارگذاشته‌شده از مدل",
   "energyNoExclusions": "هیچ روزی کنار گذاشته نشده است.",

@@ -42,6 +42,8 @@ class ExpectedDay {
     this.drift = false,
     this.excluded = false,
     this.usedWeather = false,
+    this.dataError = false,
+    this.lowConfidence = false,
   });
 
   final DateTime day;
@@ -53,6 +55,12 @@ class ExpectedDay {
   final bool drift;
   final bool excluded;
   final bool usedWeather;
+
+  /// The reading looks like an entry error (zero or impossible): never a fault.
+  final bool dataError;
+
+  /// A season the model has not seen, or a young model: the alert stays in the app.
+  final bool lowConfidence;
 
   bool get flagged => spike || drift;
 }

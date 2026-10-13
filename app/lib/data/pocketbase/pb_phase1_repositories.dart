@@ -187,6 +187,8 @@ class PocketBaseEnergyModelRepository implements EnergyModelRepository {
                 spike: r.obj('flags')['spike'] == true,
                 drift: r.obj('flags')['drift'] == true,
                 excluded: r.obj('flags')['excluded'] == true,
+                dataError: r.obj('flags')['dataError'] is String,
+                lowConfidence: r.obj('flags')['lowConfidence'] == true,
                 usedWeather: r.boolean('hasWeather'),
               ),
           ],
