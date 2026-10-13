@@ -6,7 +6,7 @@
  * savings.
  */
 import { BaselineModel, EnergyDay, measure } from "./energy-baseline";
-import { mean, round, welchT } from "./stats";
+import { bootstrapMeanDiff, mean, round, welchT } from "./stats";
 
 export type EvaluationStatus = "pending" | "evaluated" | "inconclusive" | "insufficientData" | "notSupported";
 
@@ -21,6 +21,8 @@ export interface Evaluation {
   monthlyIrr?: number | null;
   confidence?: "low" | "medium" | "high";
   detail?: string;
+  /** 95 % interval of [delta] (energy: model band; means: bootstrap; counts: Poisson). */
+  ci95?: [number, number] | null;
   limitations: string[];
   window?: { beforeFrom?: string; beforeTo?: string; afterFrom: string; afterTo: string };
 }
@@ -55,6 +57,7 @@ export function evaluateEnergy(model: BaselineModel | null, after: EnergyDay[], 
     delta: m.savings,
     improved: m.significant ? m.savings > 0 : null,
     monthlyIrr: m.significant ? Math.round(perDay * 30 * tariff) : null,
+    ci95: [round(m.savings - m.uncertainty, 0) as number, round(m.savings + m.uncertainty, 0) as number],
     confidence: m.significant ? (Math.abs(m.savings) > 2 * m.uncertainty ? "high" : "medium") : "low",
     detail: `savings ${round(m.savings, 0)} kWh ± ${round(m.uncertainty, 0)} kWh (95%) over ${after.length} days; baseline CV(RMSE) ${model.cvrmse}%`,
     limitations: [...limitations, "Uncertainty assumes independent daily errors, so it may be optimistic."],
@@ -81,6 +84,7 @@ export function evaluateMean(method: string, unit: string, before: number[], aft
     actual: round(a, 2),
     delta: round(delta, 2),
     improved: significant ? (lowerIsBetter ? delta < 0 : delta > 0) : null,
+    ci95: bootstrapMeanDiff(before, after),
     confidence: significant ? (Math.abs(t!) >= 3 ? "high" : "medium") : "low",
     detail: `n=${before.length}/${after.length}, Welch t=${round(t, 2)}`,
     limitations,
@@ -101,6 +105,7 @@ export function evaluateCount(method: string, unit: string, before: number, afte
     actual: after,
     delta: after - before,
     improved: significant ? after < before : null,
+    ci95: [round(after - before - 1.96 * se, 1) as number, round(after - before + 1.96 * se, 1) as number],
     confidence: significant ? "medium" : "low",
     detail: `${before} before vs ${after} after`,
     limitations: ["Counts are small; a change may be chance.", "Other changes in the same period are not controlled for."],

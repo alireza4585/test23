@@ -208,6 +208,8 @@ migrate((app) => {
       // {status, method, window, measuredAt, value, unit, ci95, expected, actual, label, limitations}
       { name: "outcome", type: "json", maxSize: 20000 },
       { name: "source", type: "text", max: 40 },
+      // When the 24-hour reminder for a pending high-priority action went out.
+      { name: "remindedAt", type: "date" },
     ].concat(stamps()),
     indexes: [
       "CREATE UNIQUE INDEX idx_ai_actions_key ON aiActions (hotel, idempotencyKey)",
@@ -217,6 +219,10 @@ migrate((app) => {
     viewRule: `${can("ai.insights.view")} && (category != 'revenue' || ${FIN})`,
   });
   app.save(actions);
+
+  // When the insight's current cycle began (actions are proposed once per cycle).
+  insights.fields.add(new DateField({ name: "activatedAt" }));
+  app.save(insights);
 
   app.save(new Collection({
     type: "base",
@@ -256,6 +262,11 @@ migrate((app) => {
     viewRule: `${member} && @request.auth.role = role && (containsFinance = false || ${FIN})`,
   }));
 }, (app) => {
+  try {
+    const insights = app.findCollectionByNameOrId("aiInsights");
+    insights.fields.removeByName("activatedAt");
+    app.save(insights);
+  } catch (_) {}
   for (const name of ["briefings", "energyExclusions", "aiActions", "energyExpected", "energyModels", "weatherDaily"]) {
     try {
       app.delete(app.findCollectionByNameOrId(name));

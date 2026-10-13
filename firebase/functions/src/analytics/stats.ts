@@ -76,3 +76,28 @@ export function welchT(a: number[], b: number[]): number | null {
   const se = Math.sqrt(variance(a) / a.length + variance(b) / b.length);
   return se === 0 ? null : (mean(b) - mean(a)) / se;
 }
+
+/**
+ * 95 % bootstrap interval of mean(after) − mean(before), resampling each group
+ * with replacement. Seeded (mulberry32) so the same data gives the same
+ * interval on every run. Null when a group has fewer than 2 values.
+ */
+export function bootstrapMeanDiff(before: number[], after: number[], iterations = 2000, seed = 20261013): [number, number] | null {
+  if (before.length < 2 || after.length < 2) return null;
+  let a = seed >>> 0;
+  const rnd = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const resampleMean = (xs: number[]) => {
+    let s = 0;
+    for (let i = 0; i < xs.length; i++) s += xs[Math.floor(rnd() * xs.length)];
+    return s / xs.length;
+  };
+  const diffs: number[] = [];
+  for (let i = 0; i < iterations; i++) diffs.push(resampleMean(after) - resampleMean(before));
+  return [round(quantile(diffs, 0.025), 2) as number, round(quantile(diffs, 0.975), 2) as number];
+}

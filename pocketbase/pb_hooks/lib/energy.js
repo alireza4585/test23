@@ -72,9 +72,9 @@ function modelRecord(app, hotelId, type) {
     || first(app, "energyModels", "hotel = {:h} && type = {:t} && status = 'rejected'", { h: hotelId, t: type }, "-fittedAt,-created");
 }
 
-/** core EnergyModel from a stored record; null for a rejected record. */
-function modelOf(rec) {
-  if (!rec || rec.getString("status") !== "active") return null;
+/** core EnergyModel from a stored record; null for a rejected (or, unless [anyStatus], superseded) record. */
+function modelOf(rec, anyStatus) {
+  if (!rec || rec.getString("status") === "rejected" || (!anyStatus && rec.getString("status") !== "active")) return null;
   const spec = z.jsonOf(rec, "spec") || {};
   const stats = z.jsonOf(rec, "stats") || {};
   return {

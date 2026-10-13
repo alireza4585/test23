@@ -20,10 +20,14 @@ var __toCommonJS = (mod2) => __copyProps(__defProp({}, "__esModule", { value: tr
 // core/index.ts
 var index_exports = {};
 __export(index_exports, {
+  ACTION_DEPARTMENTS: () => ACTION_DEPARTMENTS,
+  ACTION_TYPES: () => ACTION_TYPES,
   ACTIVE_TICKET_STATUSES: () => ACTIVE_TICKET_STATUSES,
   ASSIGNABLE_ROLES: () => ASSIGNABLE_ROLES,
+  BASELINE_ADJUST_ROLES: () => BASELINE_ADJUST_ROLES,
   CUSUM_H: () => CUSUM_H,
   DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
+  EDITABLE_PARAMS: () => EDITABLE_PARAMS,
   EVALUATION_WINDOW_DAYS: () => EVALUATION_WINDOW_DAYS,
   MAX_CVRMSE: () => MAX_CVRMSE,
   MAX_CVRMSE_MONTHLY: () => MAX_CVRMSE_MONTHLY,
@@ -34,11 +38,14 @@ __export(index_exports, {
   PERMISSIONS: () => PERMISSIONS,
   REFIT_DAYS: () => REFIT_DAYS,
   ROLES: () => ROLES,
+  ROLE_ACTION_DEPARTMENTS: () => ROLE_ACTION_DEPARTMENTS,
   ROLE_PERMISSIONS: () => ROLE_PERMISSIONS,
   ROLE_TIER: () => ROLE_TIER,
   ROOM_TRANSITIONS: () => ROOM_TRANSITIONS,
+  bootstrapMeanDiff: () => bootstrapMeanDiff,
   can: () => can,
   canAssign: () => canAssign,
+  canDecideDepartment: () => canDecideDepartment,
   checkReading: () => checkReading,
   computeDailyMetrics: () => computeDailyMetrics,
   daySet: () => daySet,
@@ -66,6 +73,7 @@ __export(index_exports, {
   measureWithModel: () => measureWithModel,
   normalizeNationalId: () => normalizeNationalId,
   predictDay: () => predictDay,
+  proposeActions: () => proposeActions,
   rolesWith: () => rolesWith,
   scoreDay: () => scoreDay,
   shiftDay: () => shiftDay,
@@ -318,6 +326,22 @@ var ROLE_PERMISSIONS = {
     "ai.assistant.use"
   ]
 };
+var ACTION_DEPARTMENTS = ["energy", "maintenance", "housekeeping", "inventory", "restaurant", "operations"];
+var ROLE_ACTION_DEPARTMENTS = {
+  superAdmin: ACTION_DEPARTMENTS,
+  generalManager: ACTION_DEPARTMENTS,
+  operationsManager: ACTION_DEPARTMENTS,
+  energyManager: ["energy"],
+  maintenanceManager: ["maintenance"],
+  housekeepingManager: ["housekeeping"],
+  inventoryManager: ["inventory"],
+  restaurantManager: ["restaurant"]
+};
+var BASELINE_ADJUST_ROLES = ["generalManager", "energyManager"];
+function canDecideDepartment(role, department) {
+  var _a;
+  return ((_a = ROLE_ACTION_DEPARTMENTS[role]) != null ? _a : []).includes(department);
+}
 var ASSIGNABLE_ROLES = {
   superAdmin: ROLES,
   hotelOwner: ROLES.filter((r) => r !== "superAdmin" && r !== "hotelOwner"),
@@ -982,6 +1006,25 @@ function welchT(a, b) {
   const se = Math.sqrt(variance(a) / a.length + variance(b) / b.length);
   return se === 0 ? null : (mean(b) - mean(a)) / se;
 }
+function bootstrapMeanDiff(before, after, iterations = 2e3, seed = 20261013) {
+  if (before.length < 2 || after.length < 2) return null;
+  let a = seed >>> 0;
+  const rnd = () => {
+    a = a + 1831565813 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+  const resampleMean = (xs) => {
+    let s = 0;
+    for (let i = 0; i < xs.length; i++) s += xs[Math.floor(rnd() * xs.length)];
+    return s / xs.length;
+  };
+  const diffs = [];
+  for (let i = 0; i < iterations; i++) diffs.push(resampleMean(after) - resampleMean(before));
+  return [round2(quantile(diffs, 0.025), 2), round2(quantile(diffs, 0.975), 2)];
+}
 
 // ../firebase/functions/src/analytics/forecast.ts
 var MIN_HISTORY_DAYS = 35;
@@ -1338,6 +1381,7 @@ function evaluateEnergy(model, after, tariff, window) {
     delta: m.savings,
     improved: m.significant ? m.savings > 0 : null,
     monthlyIrr: m.significant ? Math.round(perDay * 30 * tariff) : null,
+    ci95: [round2(m.savings - m.uncertainty, 0), round2(m.savings + m.uncertainty, 0)],
     confidence: m.significant ? Math.abs(m.savings) > 2 * m.uncertainty ? "high" : "medium" : "low",
     detail: `savings ${round2(m.savings, 0)} kWh \xB1 ${round2(m.uncertainty, 0)} kWh (95%) over ${after.length} days; baseline CV(RMSE) ${model.cvrmse}%`,
     limitations: [...limitations, "Uncertainty assumes independent daily errors, so it may be optimistic."],
@@ -1362,6 +1406,7 @@ function evaluateMean(method, unit, before, after, window, lowerIsBetter = true)
     actual: round2(a, 2),
     delta: round2(delta, 2),
     improved: significant ? lowerIsBetter ? delta < 0 : delta > 0 : null,
+    ci95: bootstrapMeanDiff(before, after),
     confidence: significant ? Math.abs(t) >= 3 ? "high" : "medium" : "low",
     detail: `n=${before.length}/${after.length}, Welch t=${round2(t, 2)}`,
     limitations,
@@ -1379,6 +1424,7 @@ function evaluateCount(method, unit, before, after, window) {
     actual: after,
     delta: after - before,
     improved: significant ? after < before : null,
+    ci95: [round2(after - before - 1.96 * se, 1), round2(after - before + 1.96 * se, 1)],
     confidence: significant ? "medium" : "low",
     detail: `${before} before vs ${after} after`,
     limitations: ["Counts are small; a change may be chance.", "Other changes in the same period are not controlled for."],
@@ -1690,3 +1736,87 @@ function measureWithModel(model, period) {
 }
 var exclusionMonth = jalaliMonth;
 var MAX_EXCLUDED_DAYS_PER_MONTH = 5;
+
+// ../firebase/functions/src/analytics/actions.ts
+var ACTION_TYPES = ["createTicket", "createTask", "notifyRole", "adjustBaseline"];
+var TICKET_CATEGORIES = ["hvac", "electrical", "plumbing", "furniture", "appliance", "itNetwork", "structural", "other"];
+var EDITABLE_PARAMS = {
+  createTicket: ["title", "priority", "category"],
+  createTask: ["priority", "notes"],
+  notifyRole: ["body"],
+  adjustBaseline: []
+};
+var cut = (s, n) => s.length > n ? `${s.slice(0, n - 1)}\u2026` : s;
+function proposeActions(insight) {
+  var _a, _b, _c, _d;
+  const impact = (_a = insight.expectedImpact) != null ? _a : void 0;
+  const subject = (_b = impact == null ? void 0 : impact.subject) != null ? _b : {};
+  const high = insight.priority === "high";
+  switch (insight.rule) {
+    case "energyModel":
+    case "energyIntensity":
+      return [{
+        type: "createTicket",
+        department: "energy",
+        title: cut(`\u062A\u06CC\u06A9\u062A \u0628\u0627\u0632\u062F\u06CC\u062F \u062A\u0623\u0633\u06CC\u0633\u0627\u062A: ${insight.title}`, 200),
+        priority: insight.priority,
+        params: {
+          title: cut(`\u0628\u0627\u0632\u062F\u06CC\u062F \u062A\u062C\u0647\u06CC\u0632\u0627\u062A \u067E\u0631\u0645\u0635\u0631\u0641 (${insight.title})`, 200),
+          category: "hvac",
+          priority: high ? "high" : "medium",
+          description: cut(insight.recommendation, 2e3)
+        },
+        expectedImpact: impact
+      }];
+    case "repeatFailure": {
+      const category = String((_c = subject.category) != null ? _c : "other");
+      const where = String((_d = subject.where) != null ? _d : "");
+      return [{
+        type: "createTicket",
+        department: "maintenance",
+        title: cut(`\u062A\u06CC\u06A9\u062A \u0628\u0631\u0631\u0633\u06CC \u0631\u06CC\u0634\u0647\u200C\u0627\u06CC: ${insight.title}`, 200),
+        priority: insight.priority,
+        params: {
+          title: cut(`\u0628\u0631\u0631\u0633\u06CC \u0631\u06CC\u0634\u0647\u200C\u0627\u06CC \u062E\u0631\u0627\u0628\u06CC \u062A\u06A9\u0631\u0627\u0631\u06CC (${where.replace("room-", "\u0627\u062A\u0627\u0642 ")})`, 200),
+          category: TICKET_CATEGORIES.indexOf(category) >= 0 ? category : "other",
+          priority: high ? "high" : "medium",
+          roomNumber: where.startsWith("room-") ? where.slice(5) : "",
+          area: where.startsWith("room-") ? "" : where,
+          description: cut(insight.recommendation, 2e3)
+        },
+        expectedImpact: impact
+      }];
+    }
+    case "outOfOrderRooms": {
+      const rooms = Array.isArray(subject.rooms) ? subject.rooms.map(String).slice(0, 20) : [];
+      if (!rooms.length) return [];
+      return [{
+        type: "createTask",
+        department: "housekeeping",
+        title: cut(`\u0628\u0627\u0632\u062F\u06CC\u062F \u0622\u0645\u0627\u062F\u0647\u200C\u0633\u0627\u0632\u06CC ${rooms.length} \u0627\u062A\u0627\u0642 \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633`, 200),
+        priority: insight.priority,
+        params: { taskType: "inspection", rooms, priority: high ? "high" : "normal", notes: "\u0628\u0627\u0632\u062F\u06CC\u062F \u067E\u0633 \u0627\u0632 \u062A\u0639\u0645\u06CC\u0631 \u0648 \u0622\u0645\u0627\u062F\u0647\u200C\u0633\u0627\u0632\u06CC \u0628\u0631\u0627\u06CC \u0628\u0627\u0632\u06AF\u0634\u062A \u0628\u0647 \u0641\u0631\u0648\u0634" },
+        expectedImpact: impact
+      }];
+    }
+    case "hkEfficiency":
+      return [notify("housekeeping", ["housekeepingManager"], insight, impact)];
+    case "stockout":
+      return [notify("inventory", ["inventoryManager"], insight, impact)];
+    case "outOfOrderRevenue":
+    case "weekdayOccupancy":
+      return [notify("operations", ["generalManager"], insight, impact)];
+    default:
+      return [];
+  }
+}
+function notify(department, roles, insight, impact) {
+  return {
+    type: "notifyRole",
+    department,
+    title: cut(`\u0627\u0637\u0644\u0627\u0639 \u0628\u0647 ${roles.join("\u060C ")}: ${insight.title}`, 200),
+    priority: insight.priority,
+    params: { roles, title: cut(insight.title, 120), body: cut(insight.recommendation, 500) },
+    expectedImpact: impact
+  };
+}

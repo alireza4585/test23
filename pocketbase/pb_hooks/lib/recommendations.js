@@ -83,6 +83,8 @@ function decide(e) {
     const now = new Date();
     if (b.ticket && decision !== "dismissed" && !rec.getString("linkedTicket")) {
       rec.set("linkedTicket", createTicket(tx, c, rec, b.ticket).id);
+      // The ticket is also an executed action in the Action Center ledger.
+      require(`${__hooks}/lib/actions.js`).recordInsightTicket(tx, c, rec, rec.getString("linkedTicket"), now);
     }
     rec.set("status", decision);
     rec.set("decisionNote", note);
@@ -142,10 +144,17 @@ function ticketsAt(app, hotelId, category, where, from, to) {
 }
 
 function evaluateOne(app, rec, now) {
-  const hotelId = rec.getString("hotel");
-  const impact = z.jsonOf(rec, "expectedImpact") || {};
+  return evaluateImpact(app, rec.getString("hotel"), z.jsonOf(rec, "expectedImpact") || {}, z.parseDate(rec.getString("decidedAt")));
+}
+
+/**
+ * Before/after evaluation of [impact] around [decidedAt] (shared by insight
+ * decisions and Action Center outcomes). For energy, a stored F2 model id in
+ * impact.modelId (the model active at the decision) is preferred; otherwise
+ * the Batch 1 baseline fitted on the year before the decision is used.
+ */
+function evaluateImpact(app, hotelId, impact, decidedAt) {
   const subject = impact.subject || {};
-  const decidedAt = z.parseDate(rec.getString("decidedAt"));
   const D = z.dayKey(decidedAt);
   const days = core.EVALUATION_WINDOW_DAYS[impact.method];
   const win = { beforeFrom: z.addDays(D, -days), beforeTo: z.addDays(D, -1), afterFrom: z.addDays(D, 1), afterTo: z.addDays(D, days) };
@@ -153,6 +162,27 @@ function evaluateOne(app, rec, now) {
     case "energyBaseline": {
       const forecasting = require(`${__hooks}/lib/forecasting.js`);
       const type = subject.type || "electricity";
+      if (impact.modelId) {
+        const energy = require(`${__hooks}/lib/energy.js`);
+        const rec = z.findFirst(app, "energyModels", "id = {:id} && hotel = {:h}", { id: impact.modelId, h: hotelId });
+        const model = rec ? energy.modelOf(rec, true) : null;
+        if (model && model.valid) {
+          const after = energy.modelDays(app, hotelId, type, win.afterFrom, win.afterTo);
+          const limitations = ["Model with temperature and occupancy (F2), fitted before the decision.", "Uncertainty assumes independent daily errors, so it may be optimistic."];
+          if (after.length < 10) return { status: "insufficientData", method: "energyBaseline", limitations: limitations.concat([`Only ${after.length} days measured after the decision (need 10).`]), window: win };
+          const m = core.measureWithModel(model, after);
+          const tariff = z.hotelSettings(app, hotelId).energyTariff[type] || 0;
+          return {
+            status: m.significant ? "evaluated" : "inconclusive", method: "energyBaseline", unit: energy.UNIT[type],
+            baseline: m.totalExpected, actual: m.totalActual, delta: m.savings, improved: m.significant ? m.savings > 0 : null,
+            monthlyIrr: m.significant ? Math.round((m.savings / m.days) * 30 * tariff) : null,
+            ci95: [Math.round(m.savings - m.uncertainty), Math.round(m.savings + m.uncertainty)],
+            confidence: m.significant ? (Math.abs(m.savings) > 2 * m.uncertainty ? "high" : "medium") : "low",
+            detail: `savings ${Math.round(m.savings)} ± ${Math.round(m.uncertainty)} over ${m.days} days; model ${rec.getString("kind")}`,
+            limitations, window: { beforeFrom: rec.getString("trainFrom"), beforeTo: rec.getString("trainTo"), afterFrom: win.afterFrom, afterTo: win.afterTo },
+          };
+        }
+      }
       const model = forecasting.energyModel(app, hotelId, type, D);
       const after = forecasting.energyRows(app, hotelId, type, win.afterFrom, win.afterTo);
       const tariff = z.hotelSettings(app, hotelId).energyTariff[type] || 0;
@@ -204,4 +234,4 @@ function evaluateDue(app, hotelId, now) {
   return done;
 }
 
-module.exports = { decide, closeCleared, evaluateDue, canDecide };
+module.exports = { decide, closeCleared, evaluateDue, evaluateImpact, canDecide };

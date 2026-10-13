@@ -4,14 +4,18 @@
  * Pure functions only: no Node, Firebase or Intl APIs (ES2019 for goja).
  */
 export {
+  ACTION_DEPARTMENTS,
   ASSIGNABLE_ROLES,
+  BASELINE_ADJUST_ROLES,
   PERMISSIONS,
+  ROLE_ACTION_DEPARTMENTS,
   ROLE_PERMISSIONS,
   ROLE_TIER,
   ROLES,
   ROOM_TRANSITIONS,
   can,
   canAssign,
+  canDecideDepartment,
   isRole,
   rolesWith,
 } from "../../firebase/functions/src/domain/rbac";
@@ -65,3 +69,5 @@ export {
   predictDay,
   scoreDay,
 } from "../../firebase/functions/src/analytics/energy-model";
+export { ACTION_TYPES, EDITABLE_PARAMS, proposeActions } from "../../firebase/functions/src/analytics/actions";
+export { bootstrapMeanDiff } from "../../firebase/functions/src/analytics/stats";

@@ -18,7 +18,9 @@
  *   POST /api/zarin/inventory/{id}/movements  item + ledger, one transaction
  *   POST /api/zarin/operations/daily          occupancy + write-only revenue (finance.record) → dailyFinance
  *   POST /api/zarin/ai/ask                    assistant (permission-filtered, server-side threads)
- *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket)
+ *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket) [recommendationLoop]
+ *   POST /api/zarin/actions/{id}/decide       Action Center: approve (execute) / reject a typed action [recommendationLoop]
+ *   POST /api/zarin/actions                   propose adjustBaseline (GM / energy manager) [recommendationLoop, energyBaseline]
  *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon [energyBaseline]
  *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now [forecasts]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
@@ -53,6 +55,8 @@ routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).as
 
 // ------------------------------------------- AI core: forecasts, energy, recommendations
 routerAdd("POST", "/api/zarin/insights/{id}/decide", (e) => require(`${__hooks}/lib/recommendations.js`).decide(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/actions", (e) => require(`${__hooks}/lib/actions.js`).create(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/actions/{id}/decide", (e) => require(`${__hooks}/lib/actions.js`).decide(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/zarin/energy/analysis", (e) => require(`${__hooks}/lib/intelligence.js`).energyAnalysis(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/hotels/{id}/forecasts/run", (e) => require(`${__hooks}/lib/intelligence.js`).runForecastsNow(e), $apis.requireAuth("users"));
 

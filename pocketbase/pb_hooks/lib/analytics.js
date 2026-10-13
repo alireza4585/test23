@@ -115,7 +115,7 @@ function upsertInsight(app, hotelId, draft, now) {
   // A new cycle: the previous decision and evaluation stay in the audit log.
   rec.load(Object.assign(fields, {
     status: "active", source: "rules", model: "", closedReason: "", decisionNote: "", decidedBy: "", decidedByName: "",
-    decidedAt: "", evaluation: null, linkedTicket: "", linkedTask: "",
+    decidedAt: "", evaluation: null, linkedTicket: "", linkedTask: "", activatedAt: z.pbDate(now),
   }));
   app.save(rec);
   if (draft.priority === "high") {
@@ -155,6 +155,8 @@ function runInsights(app, hotelId, now) {
     const recommendations = require(`${__hooks}/lib/recommendations.js`);
     recommendations.closeCleared(app, hotelId, drafts, now);
     recommendations.evaluateDue(app, hotelId, now);
+    // Action Center: typed actions for active insights, expiry, reminders, outcomes.
+    require(`${__hooks}/lib/actions.js`).nightly(app, hotelId, now);
   }
   return created;
 }
