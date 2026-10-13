@@ -257,6 +257,8 @@ describe("revenue is invisible without finance.view (realtime)", () => {
 
 // users.financeView is what the finance API rules test, so it must only ever be
 // derived by the server (role template ∩ hotel override), never set by a client.
+// These tests write daily operations far in the past (> 300 days) so they do not
+// change the recent occupancy pattern other files' insight rules read.
 describe("users.financeView cannot be set by a client", () => {
   const nationalId = (nine) => {
     const sum = [...nine].reduce((s, d, i) => s + Number(d) * (10 - i), 0) % 11;
@@ -317,7 +319,7 @@ describe("users.financeView cannot be set by a client", () => {
     created.push(uid);
     expect(await flagOf(uid)).toBe(false);
     const user = await login(nid, pw);
-    const day = addDays(tehranDay(new Date()), -9);
+    const day = addDays(tehranDay(new Date()), -309);
     const calls = [
       [user, "/api/zarin/sessions", { deviceId: "finance-view-device-1", platform: "android", financeView: true }],
       [user, "/api/zarin/operations/daily", { hotelId: hotelId(), day, roomsAvailable: 58, roomsOccupied: 40, financeView: true }],
@@ -424,7 +426,7 @@ describe("users.financeView follows role and override changes, both ways, at onc
       expect(await finance(pb)).toBe(0);
       expect(await finance(seededAnalyst)).toBe(0);
       expect((await pb.send("/api/zarin/me", {})).permissions).not.toContain("finance.view");
-      await record(addDays(tehranDay(new Date()), -11), 11_000_000);
+      await record(addDays(tehranDay(new Date()), -311), 11_000_000);
       await settle(1);
       expect(sub.events).toHaveLength(0);
 
@@ -432,7 +434,7 @@ describe("users.financeView follows role and override changes, both ways, at onc
       await su.collection("roleOverrides").update(o.id, { permissions: template.permissions });
       expect(await flagOf(u.uid)).toBe(true);
       expect(await finance(pb)).toBeGreaterThan(0);
-      await record(addDays(tehranDay(new Date()), -12), 12_000_000);
+      await record(addDays(tehranDay(new Date()), -312), 12_000_000);
       await settle(1);
       expect(sub.events.map((ev) => ev.data.record.roomRevenue)).toEqual([12_000_000]);
 
@@ -440,7 +442,7 @@ describe("users.financeView follows role and override changes, both ways, at onc
       await su.collection("roleOverrides").update(o.id, { permissions: without });
       expect(await flagOf(u.uid)).toBe(false);
       expect(await finance(pb)).toBe(0);
-      await record(addDays(tehranDay(new Date()), -13), 13_000_000);
+      await record(addDays(tehranDay(new Date()), -313), 13_000_000);
       await settle(2);
       expect(sub.events).toHaveLength(1);
 
@@ -448,7 +450,7 @@ describe("users.financeView follows role and override changes, both ways, at onc
       expect([await flagOf(u.uid), await flagOf(seededId)]).toEqual([true, true]);
       expect(await finance(pb)).toBeGreaterThan(0);
       expect(await finance(seededAnalyst)).toBeGreaterThan(0);
-      await record(addDays(tehranDay(new Date()), -14), 14_000_000);
+      await record(addDays(tehranDay(new Date()), -314), 14_000_000);
       await settle(2);
       expect(sub.events.map((ev) => ev.data.record.roomRevenue)).toEqual([12_000_000, 14_000_000]);
     } finally {

@@ -440,9 +440,10 @@ function onEnergyWrite(e) {
 
 /**
  * Model hook: reading well above what occupancy and season predict → energy
- * anomaly alert (feature flag energyBaseline). Falls back to the static
- * per-hotel baseline when the flag is off or the hotel has no usable model
- * yet (under 28 days with occupancy, or CV(RMSE) > 25 %).
+ * anomaly alert (feature flag energyBaseline). With a valid stored F2 model
+ * (lib/energy.js: weather and occupancy, monthly CV(RMSE) < 15 %) the reading
+ * is scored and stored against it; otherwise the Batch 1 on-the-fly baseline
+ * (≥ 28 days, CV(RMSE) ≤ 25 %) and then the static per-hotel baseline apply.
  */
 function afterEnergyWritten(e) {
   if (z.isImported(e.record)) return; // history from the importer
@@ -458,6 +459,11 @@ function afterEnergyWritten(e) {
   let alert = null;
   let check = null;
   if (z.feature(app, hotelId, "energyBaseline")) {
+    try {
+      if (require(`${__hooks}/lib/energy.js`).checkReading(app, hotelId, type, day, s.energyAlertThresholdPct)) return;
+    } catch (err) {
+      console.log("energy model check failed", hotelId, type, String(err));
+    }
     try {
       check = require(`${__hooks}/lib/forecasting.js`).modelCheck(app, hotelId, type, day, consumption, s.energyAlertThresholdPct);
     } catch (err) {

@@ -1,0 +1,19 @@
+{
+  "note": "Injected faults for the F2 backtest (docs/15-ai-plan.md, F2 item 17). Applied in memory to a copy of the dataset; never written to a hotel. Multiplier = 1 + pct/100 on every day of the window.",
+  "faults": [
+    { "id": "winter-10", "type": "electricity", "start": "2026-02-01", "days": 14, "pct": 10 },
+    { "id": "winter-20", "type": "electricity", "start": "2026-02-01", "days": 14, "pct": 20 },
+    { "id": "winter-30", "type": "electricity", "start": "2026-02-01", "days": 14, "pct": 30 },
+    { "id": "spring-10", "type": "electricity", "start": "2026-04-20", "days": 14, "pct": 10 },
+    { "id": "spring-20", "type": "electricity", "start": "2026-04-20", "days": 14, "pct": 20 },
+    { "id": "spring-30", "type": "electricity", "start": "2026-04-20", "days": 14, "pct": 30 },
+    { "id": "summer-10", "type": "electricity", "start": "2026-06-15", "days": 14, "pct": 10 },
+    { "id": "summer-20", "type": "electricity", "start": "2026-06-15", "days": 14, "pct": 20 },
+    { "id": "summer-30", "type": "electricity", "start": "2026-06-15", "days": 14, "pct": 30 },
+    { "id": "autumn-10", "type": "electricity", "start": "2026-09-01", "days": 14, "pct": 10 },
+    { "id": "autumn-20", "type": "electricity", "start": "2026-09-01", "days": 14, "pct": 20 },
+    { "id": "autumn-30", "type": "electricity", "start": "2026-09-01", "days": 14, "pct": 30 },
+    { "id": "gas-winter-20", "type": "gas", "start": "2026-02-01", "days": 14, "pct": 20 },
+    { "id": "water-autumn-20", "type": "water", "start": "2026-09-01", "days": 14, "pct": 20 }
+  ]
+}

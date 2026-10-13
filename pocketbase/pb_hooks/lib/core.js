@@ -22,12 +22,17 @@ var index_exports = {};
 __export(index_exports, {
   ACTIVE_TICKET_STATUSES: () => ACTIVE_TICKET_STATUSES,
   ASSIGNABLE_ROLES: () => ASSIGNABLE_ROLES,
+  CUSUM_H: () => CUSUM_H,
   DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
   EVALUATION_WINDOW_DAYS: () => EVALUATION_WINDOW_DAYS,
   MAX_CVRMSE: () => MAX_CVRMSE,
+  MAX_CVRMSE_MONTHLY: () => MAX_CVRMSE_MONTHLY,
+  MAX_EXCLUDED_DAYS_PER_MONTH: () => MAX_EXCLUDED_DAYS_PER_MONTH,
   MIN_BASELINE_DAYS: () => MIN_BASELINE_DAYS,
   MIN_HISTORY_DAYS: () => MIN_HISTORY_DAYS,
+  MIN_MODEL_DAYS: () => MIN_MODEL_DAYS,
   PERMISSIONS: () => PERMISSIONS,
+  REFIT_DAYS: () => REFIT_DAYS,
   ROLES: () => ROLES,
   ROLE_PERMISSIONS: () => ROLE_PERMISSIONS,
   ROLE_TIER: () => ROLE_TIER,
@@ -40,12 +45,15 @@ __export(index_exports, {
   dayToJalali: () => dayToJalali,
   dayToUtcMs: () => dayToUtcMs,
   daysBetween: () => daysBetween,
+  energyModelRule: () => energyModelRule,
   evaluateCount: () => evaluateCount,
   evaluateEnergy: () => evaluateEnergy,
   evaluateMean: () => evaluateMean,
   evaluateOutcome: () => evaluateOutcome,
+  exclusionMonth: () => exclusionMonth,
   expectedEnergy: () => expected,
   fitBaseline: () => fitBaseline,
+  fitEnergyModel: () => fitEnergyModel,
   forecastSeries: () => forecastSeries,
   generateInsights: () => generateInsights,
   iranFixedHolidays: () => iranFixedHolidays,
@@ -55,8 +63,11 @@ __export(index_exports, {
   jalaliToDay: () => jalaliToDay,
   maskNationalId: () => maskNationalId,
   measureEnergy: () => measure,
+  measureWithModel: () => measureWithModel,
   normalizeNationalId: () => normalizeNationalId,
+  predictDay: () => predictDay,
   rolesWith: () => rolesWith,
+  scoreDay: () => scoreDay,
   shiftDay: () => shiftDay,
   weekdayOf: () => weekdayOf
 });
@@ -477,8 +488,11 @@ var fmt = (v, d = 0) => {
   return sign + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac ? `.${frac}` : "");
 };
 function generateInsights(input) {
+  var _a;
+  const modelled = ((_a = input.energyModel) != null ? _a : []).some((m) => m.type === "electricity" && m.valid);
   return [
-    ...energyIntensityRule(input),
+    ...modelled ? [] : energyIntensityRule(input),
+    ...energyModelRule(input),
     ...stockoutForecastRule(input),
     ...housekeepingEfficiencyRule(input),
     ...repeatFailureRule(input),
@@ -548,6 +562,59 @@ function energyIntensityRule(input) {
       }
     }
   ];
+}
+var ENERGY_LABEL = { electricity: "\u0628\u0631\u0642", water: "\u0622\u0628", gas: "\u06AF\u0627\u0632" };
+function energyModelRule(input) {
+  var _a, _b, _c;
+  const out = [];
+  for (const m of (_a = input.energyModel) != null ? _a : []) {
+    if (!m.valid || m.days.length === 0) continue;
+    const recent = m.days.slice(-3);
+    const flagged = recent.filter((d) => d.spike || d.drift);
+    if (flagged.length === 0) continue;
+    const lastFlag = m.days.map((d) => d.spike || d.drift).lastIndexOf(true);
+    let start = lastFlag;
+    while (start > 0 && m.days[start - 1].actual > m.days[start - 1].expected) start--;
+    const run = m.days.slice(start, lastFlag + 1);
+    const actual = sumBy(run, (d) => d.actual);
+    const expected2 = sumBy(run, (d) => d.expected);
+    const pct = expected2 > 0 ? (actual - expected2) / expected2 * 100 : 0;
+    if (pct <= 0) continue;
+    const label = (_b = ENERGY_LABEL[m.type]) != null ? _b : m.type;
+    const hvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac");
+    const tariff = (_c = input.settings.energyTariff[m.type]) != null ? _c : 0;
+    const extraPerDay = (actual - expected2) / run.length;
+    const drift = flagged.some((d) => d.drift);
+    const unseen = run.some((d) => d.seasonCovered === false);
+    out.push({
+      id: `energyModel_${m.type}`,
+      rule: "energyModel",
+      category: "energy",
+      title: drift ? `\u0645\u0635\u0631\u0641 ${label} \u0628\u0647\u200C\u0637\u0648\u0631 \u067E\u0627\u06CC\u062F\u0627\u0631 ${fmt(pct)}\u066A \u0628\u0627\u0644\u0627\u062A\u0631 \u0627\u0632 \u0645\u0642\u062F\u0627\u0631 \u0645\u0648\u0631\u062F\u0627\u0646\u062A\u0638\u0627\u0631` : `\u062C\u0647\u0634 \u0645\u0635\u0631\u0641 ${label}: ${fmt(pct)}\u066A \u0628\u0627\u0644\u0627\u062A\u0631 \u0627\u0632 \u0645\u0642\u062F\u0627\u0631 \u0645\u0648\u0631\u062F\u0627\u0646\u062A\u0638\u0627\u0631`,
+      summary: `\u0645\u0635\u0631\u0641 ${label} \u062F\u0631 ${fmt(run.length)} \u0631\u0648\u0632 (${run[0].day} \u062A\u0627 ${run[run.length - 1].day}) ${fmt(actual)} ${m.unit} \u0628\u0648\u062F\u060C \u062F\u0631 \u0628\u0631\u0627\u0628\u0631 ${fmt(expected2)} ${m.unit} \u0645\u0648\u0631\u062F\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u062F\u0644` + (run.every((d) => d.usedWeather) ? " \u0628\u0627 \u062F\u0631 \u0646\u0638\u0631 \u06AF\u0631\u0641\u062A\u0646 \u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644." : " \u0628\u0627 \u062F\u0631 \u0646\u0638\u0631 \u06AF\u0631\u0641\u062A\u0646 \u0627\u0634\u063A\u0627\u0644 (\u0628\u062F\u0648\u0646 \u062F\u0627\u062F\u0647\u0654 \u062F\u0645\u0627).") + (hvac.length > 0 ? ` \u0627\u062D\u062A\u0645\u0627\u0644\u0627\u064B \u0645\u0631\u062A\u0628\u0637: ${fmt(hvac.length)} \u062A\u06CC\u06A9\u062A \u0628\u0627\u0632 HVAC.` : "") + (unseen ? " \u0627\u0637\u0645\u06CC\u0646\u0627\u0646 \u067E\u0627\u06CC\u06CC\u0646: \u0645\u062F\u0644 \u0647\u0646\u0648\u0632 \u062F\u0627\u062F\u0647\u0654 \u0627\u06CC\u0646 \u0645\u0627\u0647 \u0627\u0632 \u0633\u0627\u0644 \u0631\u0627 \u0646\u062F\u06CC\u062F\u0647 \u0627\u0633\u062A." : ""),
+      recommendation: hvac.length > 0 ? "\u0628\u0627\u0632\u062F\u06CC\u062F \u062A\u062C\u0647\u06CC\u0632\u0627\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u0627 \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u0628\u0627\u0632 HVAC \u0648 \u0628\u0631\u0631\u0633\u06CC \u0632\u0645\u0627\u0646\u200C\u0628\u0646\u062F\u06CC BMS (\u06A9\u0627\u0631\u06A9\u0631\u062F \u062F\u0631 \u0633\u0627\u0639\u0627\u062A \u0648 \u0641\u0636\u0627\u0647\u0627\u06CC \u062E\u0627\u0644\u06CC)." : "\u0628\u0627\u0632\u0631\u0633\u06CC \u0645\u0635\u0631\u0641\u200C\u06A9\u0646\u0646\u062F\u0647\u200C\u0647\u0627\u06CC \u0628\u0632\u0631\u06AF (\u0686\u06CC\u0644\u0631\u060C \u0628\u0648\u06CC\u0644\u0631\u060C \u067E\u0645\u067E\u200C\u0647\u0627) \u0648 \u0632\u0645\u0627\u0646\u200C\u0628\u0646\u062F\u06CC BMS\u061B \u0627\u06AF\u0631 \u0631\u0648\u06CC\u062F\u0627\u062F \u0634\u0646\u0627\u062E\u062A\u0647\u200C\u0634\u062F\u0647\u200C\u0627\u06CC \u0639\u0644\u062A \u0627\u0633\u062A\u060C \u0622\u0646 \u0631\u0627 \u062B\u0628\u062A \u06A9\u0646\u06CC\u062F.",
+      confidence: unseen ? 0.45 : drift ? 0.8 : 0.7,
+      priority: (pct > 20 || drift) && !unseen ? "high" : "medium",
+      estimatedMonthlySaving: Math.round(extraPerDay * 30 * tariff),
+      evidence: [
+        `\u0645\u062F\u0644: ${m.kind === "weather" ? "\u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644" : "\u0627\u0634\u063A\u0627\u0644 \u0648 \u0641\u0635\u0644"}${m.cvrmseMonthly !== null ? `\u060C CV(RMSE) \u0645\u0627\u0647\u0627\u0646\u0647 ${fmt(m.cvrmseMonthly, 1)}\u066A` : ""}`,
+        ...run.map((d) => `${d.day}: ${fmt(d.actual)} \u062F\u0631 \u0628\u0631\u0627\u0628\u0631 ${fmt(d.expected)} ${m.unit}${d.drift ? " (\u0627\u0646\u062D\u0631\u0627\u0641 \u067E\u0627\u06CC\u062F\u0627\u0631)" : d.spike ? " (\u062C\u0647\u0634)" : ""}`),
+        ...hvac.length > 0 ? [`\u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u0628\u0627\u0632 HVAC: ${fmt(hvac.length)}`] : []
+      ],
+      route: "/energy",
+      audienceRoles: ["generalManager", "energyManager", "maintenanceManager"],
+      expectedImpact: {
+        metric: `${m.type}VsModel`,
+        unit: m.unit,
+        baseline: Math.round(actual / run.length),
+        expected: Math.round(expected2 / run.length),
+        monthlyIrr: Math.round(extraPerDay * 30 * tariff),
+        method: "energyBaseline",
+        subject: { type: m.type }
+      }
+    });
+  }
+  return out;
 }
 function stockoutForecastRule(input) {
   var _a;
@@ -875,10 +942,10 @@ function leastSquares(X, y, weights, ridge = 1e-6) {
   const A = Array.from({ length: p }, () => new Array(p + 1).fill(0));
   for (let i = 0; i < X.length; i++) {
     const w = weights ? weights[i] : 1;
-    const row = X[i];
+    const row2 = X[i];
     for (let a = 0; a < p; a++) {
-      const wa = w * row[a];
-      for (let b = a; b < p; b++) A[a][b] += wa * row[b];
+      const wa = w * row2[a];
+      for (let b = a; b < p; b++) A[a][b] += wa * row2[b];
       A[a][p] += wa * y[i];
     }
   }
@@ -898,7 +965,7 @@ function leastSquares(X, y, weights, ridge = 1e-6) {
       for (let k = c; k <= p; k++) A[r][k] -= f * A[c][k];
     }
   }
-  return A.map((row, i) => row[p] / A[i][i]);
+  return A.map((row2, i) => row2[p] / A[i][i]);
 }
 function dot(a, b) {
   let s = 0;
@@ -1330,3 +1397,296 @@ function evaluateOutcome(method, happened, detail, window) {
     window
   };
 }
+
+// ../firebase/functions/src/analytics/energy-model.ts
+var MIN_MODEL_DAYS = 90;
+var MAX_CVRMSE_MONTHLY = 15;
+var MIN_MONTH_DAYS = 20;
+var MIN_GATE_MONTHS = 3;
+var COVERED_MONTH_DAYS = 10;
+var CUSUM_K = 0.5;
+var CUSUM_H = 5;
+var MIN_SHIFT_PCT = 10;
+var SPIKE_Z = 2.5;
+var REFIT_DAYS = 28;
+var COOL_GRID = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
+var HEAT_GRID = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+var cdd = (t, tb) => Math.max(0, t - tb);
+var hdd = (t, tb) => Math.max(0, tb - t);
+function harmonics(day) {
+  const { jm, jd } = dayToJalali(day);
+  const doy = (jm <= 6 ? (jm - 1) * 31 : 186 + (jm - 7) * 30) + jd - 1;
+  const w = 2 * Math.PI * doy / 365.2422;
+  return [Math.sin(w), Math.cos(w), Math.sin(2 * w), Math.cos(2 * w)];
+}
+function row(spec, d) {
+  const out = [];
+  const t = d.tMean;
+  for (const f of spec.features) {
+    switch (f) {
+      case "intercept":
+        out.push(1);
+        break;
+      case "occupied":
+        out.push(d.occupied);
+        break;
+      case "friday":
+        out.push(weekdayOf(d.day) === 5 ? 1 : 0);
+        break;
+      case "annual":
+        out.push(...harmonics(d.day));
+        break;
+      case "cdd":
+      case "cddOcc":
+      case "hdd": {
+        if (t === null || t === void 0 || !isFinite(t)) return null;
+        if (f === "cdd") out.push(cdd(t, spec.tbCool));
+        else if (f === "cddOcc") out.push(cdd(t, spec.tbCool) * (spec.occScale > 0 ? d.occupied / spec.occScale : 0));
+        else out.push(hdd(t, spec.tbHeat));
+        break;
+      }
+    }
+  }
+  return out;
+}
+function coefOf(spec, name) {
+  let i = 0;
+  for (const f of spec.features) {
+    if (f === name) return spec.coef[i];
+    i += f === "annual" ? 4 : 1;
+  }
+  return 0;
+}
+function fitSpec(base, data) {
+  const X = [];
+  const y = [];
+  const used = [];
+  for (const d of data) {
+    const r = row(base, d);
+    if (!r) continue;
+    X.push(r);
+    y.push(d.consumption);
+    used.push(d);
+  }
+  if (!X.length || X.length < X[0].length + 2) return null;
+  const coef = leastSquares(X, y, void 0, 1e-6);
+  if (!coef) return null;
+  const resid = y.map((v, i) => v - dot(coef, X[i]));
+  return { spec: Object.assign({}, base, { coef }), used, resid, sse: resid.reduce((s, e) => s + e * e, 0), p: coef.length };
+}
+function physical(f) {
+  const s = f.spec;
+  if (s.features.indexOf("hdd") >= 0 && coefOf(s, "hdd") < 0) return false;
+  if (s.features.indexOf("cdd") >= 0) {
+    const c = coefOf(s, "cdd");
+    if (c < 0 || c + coefOf(s, "cddOcc") < 0) return false;
+  }
+  return true;
+}
+var adjusted = (f) => f.sse / Math.max(1, f.used.length - f.p);
+function robust(f, minDays) {
+  const rmse0 = Math.sqrt(adjusted(f));
+  const kept = f.used.filter((_, i) => Math.abs(f.resid[i]) <= 3 * rmse0);
+  if (kept.length === f.used.length || kept.length < minDays) return f;
+  const base = Object.assign({}, f.spec);
+  delete base.coef;
+  const second = fitSpec(base, kept);
+  return second && physical(second) ? second : f;
+}
+function jalaliMonth(day) {
+  const { jy, jm } = dayToJalali(day);
+  return `${jy}-${jm < 10 ? "0" : ""}${jm}`;
+}
+function monthlyFit(spec, days) {
+  const groups = {};
+  for (const d of days) {
+    const r = row(spec, d);
+    if (!r) continue;
+    const k = jalaliMonth(d.day);
+    const g = groups[k] || (groups[k] = { n: 0, actual: 0, predicted: 0 });
+    g.n++;
+    g.actual += d.consumption;
+    g.predicted += Math.max(0, dot(spec.coef, r));
+  }
+  const full = Object.keys(groups).map((k) => groups[k]).filter((g) => g.n >= MIN_MONTH_DAYS);
+  if (full.length < 2) return { months: full.length, cvrmse: null, nmbe: null };
+  const m = mean(full.map((g) => g.actual));
+  const dof = full.length - 1;
+  const sse = full.reduce((s, g) => s + (g.actual - g.predicted) * (g.actual - g.predicted), 0);
+  const bias = full.reduce((s, g) => s + (g.actual - g.predicted), 0);
+  return {
+    months: full.length,
+    cvrmse: m > 0 ? round2(Math.sqrt(sse / dof) / m * 100, 2) : null,
+    nmbe: m > 0 ? round2(bias / (dof * m) * 100, 3) : null
+  };
+}
+function finish(f, all, excluded, dropped) {
+  const n = f.used.length;
+  const y = f.used.map((d) => d.consumption);
+  const m = mean(y);
+  const dof = Math.max(1, n - f.p);
+  const rmse = Math.sqrt(f.sse / dof);
+  const sst = y.reduce((s, v) => s + (v - m) * (v - m), 0);
+  const monthly = monthlyFit(f.spec, all);
+  const perMonth = {};
+  for (const d of f.used) {
+    const jm = dayToJalali(d.day).jm;
+    perMonth[jm] = (perMonth[jm] || 0) + 1;
+  }
+  const stats = {
+    n,
+    p: f.p,
+    from: f.used[0].day,
+    to: f.used[n - 1].day,
+    mean: round2(m, 3),
+    rmse: round2(rmse, 3),
+    cvrmseDaily: m > 0 ? round2(rmse / m * 100, 2) : Infinity,
+    r2: sst > 0 ? round2(1 - f.sse / sst, 4) : 0,
+    months: monthly.months,
+    cvrmseMonthly: monthly.cvrmse,
+    nmbeMonthly: monthly.nmbe,
+    dropped,
+    excluded,
+    coveredMonths: Object.keys(perMonth).map(Number).filter((m2) => perMonth[m2] >= COVERED_MONTH_DAYS).sort((a, b) => a - b)
+  };
+  let reason = null;
+  if (monthly.months < MIN_GATE_MONTHS) reason = `insufficient_months: ${monthly.months} of ${MIN_GATE_MONTHS} months with \u2265 ${MIN_MONTH_DAYS} days`;
+  else if (monthly.cvrmse === null || monthly.cvrmse >= MAX_CVRMSE_MONTHLY) reason = `cvrmse_monthly ${monthly.cvrmse}% \u2265 ${MAX_CVRMSE_MONTHLY}%`;
+  const spec = {
+    kind: f.spec.kind,
+    coef: f.spec.coef.map((c) => round2(c, 6)),
+    features: f.spec.features,
+    tbCool: f.spec.tbCool,
+    tbHeat: f.spec.tbHeat,
+    occScale: f.spec.occScale
+  };
+  return Object.assign(spec, { stats, valid: reason === null, reason });
+}
+function fitEnergyModel(rows, exclude = []) {
+  const skip = {};
+  for (const d of exclude) skip[d] = true;
+  const clean = rows.filter((r) => isFinite(r.consumption) && r.consumption >= 0 && isFinite(r.occupied)).sort((a, b) => a.day < b.day ? -1 : 1);
+  const data = clean.filter((r) => !skip[r.day]);
+  const excluded = clean.length - data.length;
+  if (data.length < MIN_MODEL_DAYS) return { ok: false, reason: "insufficient_data", have: data.length, need: MIN_MODEL_DAYS };
+  const occScale = Math.max(1, ...data.map((d) => d.occupied));
+  const base = { tbCool: null, tbHeat: null, occScale };
+  const noWeather = [];
+  const occ = fitSpec(Object.assign({ kind: "occupancy", features: ["intercept", "occupied", "friday"] }, base), data);
+  if (occ) noWeather.push(occ);
+  if (data.length >= 300) {
+    const seas = fitSpec(Object.assign({ kind: "seasonal", features: ["intercept", "occupied", "friday", "annual"] }, base), data);
+    if (seas) noWeather.push(seas);
+  }
+  let weather = null;
+  const withTemp = data.filter((d) => d.tMean !== null && d.tMean !== void 0 && isFinite(d.tMean));
+  if (withTemp.length >= MIN_MODEL_DAYS) {
+    const tries = [];
+    for (const tc of COOL_GRID) {
+      tries.push({ kind: "weather", features: ["intercept", "occupied", "friday", "cdd", "cddOcc"], tbCool: tc, tbHeat: null, occScale });
+      for (const th of HEAT_GRID) {
+        if (th > tc) continue;
+        tries.push({ kind: "weather", features: ["intercept", "occupied", "friday", "cdd", "cddOcc", "hdd"], tbCool: tc, tbHeat: th, occScale });
+      }
+    }
+    for (const th of HEAT_GRID) tries.push({ kind: "weather", features: ["intercept", "occupied", "friday", "hdd"], tbCool: null, tbHeat: th, occScale });
+    for (const t of tries) {
+      const f = fitSpec(t, withTemp);
+      if (!f || !physical(f)) continue;
+      if (!weather || adjusted(f) < adjusted(weather)) weather = f;
+    }
+  }
+  const done = (f, all) => {
+    const r = robust(f, MIN_MODEL_DAYS);
+    return finish(r, all, excluded, f.used.length - r.used.length);
+  };
+  const fallbacks = noWeather.map((f) => done(f, data));
+  const bestOf = (xs) => xs.slice().sort((a, b) => a.valid !== b.valid ? a.valid ? -1 : 1 : a.stats.cvrmseDaily - b.stats.cvrmseDaily)[0] || null;
+  const fallback = bestOf(fallbacks);
+  const weatherModel = weather ? done(weather, withTemp) : null;
+  const chosen = weatherModel && (weatherModel.valid || !(fallback && fallback.valid)) ? weatherModel : fallback;
+  if (!chosen) return { ok: false, reason: "insufficient_data", have: data.length, need: MIN_MODEL_DAYS };
+  const candidates = (weatherModel ? [weatherModel] : []).concat(fallbacks).map((c) => ({
+    kind: c.kind,
+    cvrmseDaily: c.stats.cvrmseDaily,
+    cvrmseMonthly: c.stats.cvrmseMonthly,
+    valid: c.valid
+  }));
+  const model = Object.assign({}, chosen, { fallback: chosen === fallback ? null : fallback });
+  return { ok: true, model, candidates };
+}
+function predictDay(model, d) {
+  let spec = model;
+  let r = row(model, d);
+  if (!r && model.fallback) {
+    spec = model.fallback;
+    r = row(spec, d);
+  }
+  if (!r) return null;
+  const e = Math.max(0, dot(spec.coef, r));
+  const cv = spec.stats.mean > 0 ? spec.stats.rmse / spec.stats.mean : 0;
+  const sigma = e > 0 && cv > 0 ? cv * e : spec.stats.rmse;
+  return {
+    expected: round2(e, 2),
+    lower: round2(Math.max(0, e - 1.96 * sigma), 2),
+    upper: round2(e + 1.96 * sigma, 2),
+    sigma: round2(sigma, 3),
+    cv: round2(cv * 100, 3),
+    kind: spec.kind,
+    usedWeather: spec.kind === "weather",
+    valid: spec.valid
+  };
+}
+function scoreDay(model, d, prevCusum, thresholdPct) {
+  const p = predictDay(model, d);
+  if (!p) return null;
+  const residual = d.consumption - p.expected;
+  const z = p.sigma > 0 ? residual / p.sigma : 0;
+  const deviationPct = p.expected > 0 ? residual / p.expected * 100 : 0;
+  const k = p.cv > 0 ? Math.max(CUSUM_K, MIN_SHIFT_PCT / (2 * p.cv)) : CUSUM_K;
+  let cusum = Math.max(0, (prevCusum || 0) + z - k);
+  const drift = p.valid && cusum > CUSUM_H;
+  if (drift) cusum = 0;
+  return {
+    day: d.day,
+    expected: p.expected,
+    lower: p.lower,
+    upper: p.upper,
+    actual: round2(d.consumption, 2),
+    residual: round2(residual, 2),
+    z: round2(z, 2),
+    deviationPct: round2(deviationPct, 1),
+    cusum: round2(cusum, 3),
+    spike: p.valid && z > SPIKE_Z && deviationPct > thresholdPct,
+    drift,
+    usedWeather: p.usedWeather,
+    valid: p.valid,
+    seasonCovered: (model.stats.coveredMonths || []).indexOf(dayToJalali(d.day).jm) >= 0
+  };
+}
+function measureWithModel(model, period) {
+  let a = 0;
+  let e = 0;
+  let n = 0;
+  let variance2 = 0;
+  for (const d of period) {
+    const p = predictDay(model, d);
+    if (!p) continue;
+    a += d.consumption;
+    e += p.expected;
+    variance2 += p.sigma * p.sigma;
+    n++;
+  }
+  const savings = e - a;
+  const uncertainty = 1.96 * Math.sqrt(variance2);
+  return {
+    days: n,
+    totalActual: round2(a, 2),
+    totalExpected: round2(e, 2),
+    savings: round2(savings, 2),
+    uncertainty: round2(uncertainty, 2),
+    significant: model.valid && n > 0 && Math.abs(savings) > uncertainty
+  };
+}
+var exclusionMonth = jalaliMonth;
+var MAX_EXCLUDED_DAYS_PER_MONTH = 5;

@@ -185,6 +185,12 @@ function postInsight(e) {
 }
 
 /** Smart-meter / IoT readings: same record shape as manual entry. */
+/** POST /v1/hotels/{id}/weather: daily temperature pushed by n8n or another source (lib/weather.js). */
+function postWeather(e) {
+  const b = verified(e);
+  return require(`${__hooks}/lib/weather.js`).push(e, b, hotelOf(e));
+}
+
 function postReading(e) {
   const b = verified(e);
   const hotelId = hotelOf(e);
@@ -364,4 +370,4 @@ function revokeKey(e) {
   return e.json(200, { keyId: key.getString("keyId"), active: false });
 }
 
-module.exports = { aiBudget, aiUsage, purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, rollup, runInsights, runForecasts, flushOutbox, flushNow };
+module.exports = { aiBudget, aiUsage, purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, postWeather, rollup, runInsights, runForecasts, flushOutbox, flushNow };

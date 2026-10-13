@@ -145,7 +145,9 @@ function runInsights(app, hotelId, now) {
   const today = z.dayKey(now);
   // The rules look at up to 35 days of operations/energy but only 7 days of tasks.
   const data = loadHotelData(app, hotelId, z.addDays(today, -35), now, z.addDays(today, -7));
-  const drafts = core.generateInsights(Object.assign({}, data, { today, now, addDays: z.addDays }));
+  const input = Object.assign({}, data, { today, now, addDays: z.addDays });
+  if (z.feature(app, hotelId, "energyBaseline")) input.energyModel = require(`${__hooks}/lib/energy.js`).stateForRules(app, hotelId, today);
+  const drafts = core.generateInsights(input);
   let created = 0;
   for (const d of drafts) if (upsertInsight(app, hotelId, d, now)) created++;
   slaAlerts(app, hotelId, data.tickets, now);

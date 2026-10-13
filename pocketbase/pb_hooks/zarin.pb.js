@@ -25,9 +25,11 @@
  *                     POST /api/zarin/admin/hotels/{id}/analytics,
  *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke],
  *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user)
- * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js)
+ * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js),
+ *                     including POST /v1/hotels/{id}/weather (daily temperature, second path to lib/weather.js)
  * [flag]: needs the hotel's feature flag (hotels.settings.features).
  * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
+ *             energy 22:10 (01:40 Tehran): weather, F2 model refit and scoring [energyBaseline],
  *             insights 03:10 (06:40 Tehran) + recommendation close/evaluation [recommendationLoop],
  *             SLA every 15 min, outbox every minute, nonce purge every 10 min,
  *             assistant conversation retention 00:25.
@@ -70,6 +72,7 @@ routerAdd("GET", "/v1/hotels/{hotelId}/maintenance/overdue", (e) => require(`${_
 routerAdd("POST", "/v1/hotels/{hotelId}/notifications", (e) => require(`${__hooks}/lib/integration.js`).postNotification(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/insights", (e) => require(`${__hooks}/lib/integration.js`).postInsight(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/energy/readings", (e) => require(`${__hooks}/lib/integration.js`).postReading(e));
+routerAdd("POST", "/v1/hotels/{hotelId}/weather", (e) => require(`${__hooks}/lib/integration.js`).postWeather(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/metrics/rollup", (e) => require(`${__hooks}/lib/integration.js`).rollup(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/insights/run", (e) => require(`${__hooks}/lib/integration.js`).runInsights(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/ai/budget", (e) => require(`${__hooks}/lib/integration.js`).aiBudget(e));
@@ -139,6 +142,16 @@ cronAdd("zarin_forecasts", "40 21 * * *", () => {
   for (const id of z.activeHotelIds($app)) {
     if (!z.feature($app, id, "forecasts")) continue;
     try { forecasting.runForecasts($app, id, new Date()); } catch (err) { console.log("forecasts failed", id, String(err)); }
+  }
+});
+
+// 01:40 Tehran: weather, F2 model refit and scoring (before the 06:40 insights).
+cronAdd("zarin_energy", "10 22 * * *", () => {
+  const z = require(`${__hooks}/lib/zarin.js`);
+  const energy = require(`${__hooks}/lib/energy.js`);
+  for (const id of z.activeHotelIds($app)) {
+    if (!z.feature($app, id, "energyBaseline")) continue;
+    try { energy.run($app, id, new Date()); } catch (err) { console.log("energy model failed", id, String(err)); }
   }
 });
 

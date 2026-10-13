@@ -21,7 +21,7 @@ export async function withRetry(fn, tries = 8) {
 }
 
 /** Collections the importer writes, watched on every other hotel. */
-export const WATCHED = ["rooms", "staff", "shifts", "tasks", "maintenanceTickets", "ticketEvents", "energyReadings", "dailyOperations", "inventoryItems", "inventoryMovements"];
+export const WATCHED = ["rooms", "staff", "shifts", "tasks", "maintenanceTickets", "ticketEvents", "energyReadings", "dailyOperations", "inventoryItems", "inventoryMovements", "weatherDaily"];
 
 /** Record counts of every hotel except `skip` (to prove they are untouched). */
 export async function snapshotHotels(pb, skip) {
@@ -114,6 +114,7 @@ export async function applyPlan(pb, plan, { password, log = console.log }) {
   const itemIds = await importBatch("inventoryItems", plan.items.map((i) => ({ fields: i.fields })));
   const itemBySku = new Map(plan.items.map((i, k) => [i.sku, itemIds[k]]));
   await importBatch("dailyOperations", plan.operations);
+  if (plan.weather?.length) await importBatch("weatherDaily", plan.weather);
   await importBatch("shifts", plan.shifts.map((s) => ({ fields: { ...s.fields, staff: staffByEmp.get(s.emp), user: userByEmp.get(s.emp) ?? "" } })));
 
   step(`History before ${plan.cutoff} (quiet: no alerts, notifications or room changes; real created dates)`);

@@ -65,6 +65,8 @@ export function readDataset({ csv, xlsx }) {
     events: table("ticketEvents"), energy: table("energyReadings"), operations: table("dailyOperations"),
     items: table("inventoryItems"), movements: table("inventoryMovements"), shifts: table("shifts"),
     users: wb.records("App_Users"), scenarios: wb.records("Test_Scenarios"),
+    // Estimated / modelled daily temperature (the workbook says so); optional for older packs.
+    weather: wb.sheetNames.includes("Weather") ? wb.records("Weather") : [],
   };
 }
 
@@ -302,12 +304,23 @@ export function buildPlan(data, { name, asOf, recentDays = 7, energyDays = recen
     const dev = base > 0 ? ((r.fields.consumption - base) / base) * 100 : 0;
     return dev > threshold ? { type: r.fields.type, day: r.fields.day, critical: dev > threshold * 2 } : null;
   }).filter(Boolean);
+  // ---------------------------------------------------------- weather (F2)
+  // Excel serial dates (days since 1899-12-30). Imported with source=import:
+  // the weather adapter never overwrites these rows.
+  const excelDay = (v) => (typeof v === "number" ? new Date(Date.UTC(1899, 11, 30) + v * 864e5).toISOString().slice(0, 10) : String(v).slice(0, 10));
+  const weather = (data.weather ?? [])
+    .filter((w) => w.temp_mean_c !== "" && w.temp_mean_c !== undefined && w.temp_mean_c !== null)
+    .map((w) => {
+      const hasRange = isFinite(Number(w.temp_min_c)) && isFinite(Number(w.temp_max_c)) && w.temp_min_c !== "" && w.temp_max_c !== "";
+      return { fields: { day: excelDay(w.date), tMean: num(w.temp_mean_c), tMin: hasRange ? num(w.temp_min_c) : 0, tMax: hasRange ? num(w.temp_max_c) : 0, hasRange, source: "import" } };
+    });
+
   const expectCriticalTickets = tickets.filter((t) => t.recent && ["high", "critical"].includes(t.create.priority)).length;
 
   return {
     name, asOf, asOfUtc: utc(asOf), asOfDay, cutoff, recentDays, energyCutoff, energyDays,
     hotel, users, skippedUsers, staff, rooms, items, operations, shifts, tasks, tickets, events,
-    energy, historyMovements, replay, replayStats, issues,
+    energy, weather, historyMovements, replay, replayStats, issues,
     expect: { spikes: expectSpikes, criticalTickets: expectCriticalTickets },
     counts: {
       users: users.length, staff: staff.length, rooms: rooms.length, items: items.length, dailyOperations: operations.length,
@@ -316,6 +329,7 @@ export function buildPlan(data, { name, asOf, recentDays = 7, energyDays = recen
       ticketEvents: events.length,
       energy: { history: energy.filter((r) => !r.recent).length, api: energy.filter((r) => r.recent).length },
       movements: { history: historyMovements.length, api: replay.length },
+      weatherDaily: weather.length,
     },
   };
 }

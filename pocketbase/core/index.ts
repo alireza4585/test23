@@ -21,7 +21,7 @@ export {
   normalizeNationalId,
 } from "../../firebase/functions/src/domain/national-id";
 export { computeDailyMetrics } from "../../firebase/functions/src/analytics/metrics";
-export { generateInsights } from "../../firebase/functions/src/analytics/rules-engine";
+export { energyModelRule, generateInsights } from "../../firebase/functions/src/analytics/rules-engine";
 export {
   ACTIVE_TICKET_STATUSES,
   DEFAULT_SETTINGS,
@@ -53,3 +53,15 @@ export {
   evaluateMean,
   evaluateOutcome,
 } from "../../firebase/functions/src/analytics/evaluation";
+export {
+  CUSUM_H,
+  MAX_CVRMSE_MONTHLY,
+  MAX_EXCLUDED_DAYS_PER_MONTH,
+  MIN_MODEL_DAYS,
+  REFIT_DAYS,
+  exclusionMonth,
+  fitEnergyModel,
+  measureWithModel,
+  predictDay,
+  scoreDay,
+} from "../../firebase/functions/src/analytics/energy-model";

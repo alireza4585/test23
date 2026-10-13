@@ -63,6 +63,22 @@ export interface EngineInput {
   items: ItemRow[];
   movements: MovementRow[];
   rooms: RoomRow[];
+  /**
+   * Weather-normalised model state per meter type (F2), present only when the
+   * hotel's energyBaseline flag is on and a model has scored recent days.
+   */
+  energyModel?: EnergyModelState[];
+}
+
+/** Recent scores of one meter type against its stored model (pb_hooks/lib/energy.js). */
+export interface EnergyModelState {
+  type: "electricity" | "water" | "gas";
+  valid: boolean;
+  kind: string;
+  cvrmseMonthly: number | null;
+  unit: string;
+  /** Last days, oldest first. */
+  days: { day: string; expected: number; actual: number; deviationPct: number; spike: boolean; drift: boolean; usedWeather: boolean; seasonCovered?: boolean }[];
 }
 
 /**
@@ -83,8 +99,11 @@ const fmt = (v: number, d = 0) => {
  * the auditable numbers here.
  */
 export function generateInsights(input: EngineInput): InsightDraft[] {
+  // A valid weather/occupancy model supersedes the crude intensity rule for that meter.
+  const modelled = (input.energyModel ?? []).some((m) => m.type === "electricity" && m.valid);
   return [
-    ...energyIntensityRule(input),
+    ...(modelled ? [] : energyIntensityRule(input)),
+    ...energyModelRule(input),
     ...stockoutForecastRule(input),
     ...housekeepingEfficiencyRule(input),
     ...repeatFailureRule(input),
@@ -158,6 +177,70 @@ export function energyIntensityRule(input: EngineInput): InsightDraft[] {
       },
     },
   ];
+}
+
+const ENERGY_LABEL: Record<string, string> = { electricity: "برق", water: "آب", gas: "گاز" };
+
+/**
+ * F2: a spike or sustained drift against the hotel's own model (occupancy and,
+ * when available, temperature) in the last 3 scored days. Numbers come from
+ * the stored scores; the cause is only suggested.
+ */
+export function energyModelRule(input: EngineInput): InsightDraft[] {
+  const out: InsightDraft[] = [];
+  for (const m of input.energyModel ?? []) {
+    if (!m.valid || m.days.length === 0) continue;
+    const recent = m.days.slice(-3);
+    const flagged = recent.filter((d) => d.spike || d.drift);
+    if (flagged.length === 0) continue;
+    // The run of consecutive days above expected that ends at the last flag.
+    const lastFlag = m.days.map((d) => d.spike || d.drift).lastIndexOf(true);
+    let start = lastFlag;
+    while (start > 0 && m.days[start - 1].actual > m.days[start - 1].expected) start--;
+    const run = m.days.slice(start, lastFlag + 1);
+    const actual = sumBy(run, (d) => d.actual);
+    const expected = sumBy(run, (d) => d.expected);
+    const pct = expected > 0 ? ((actual - expected) / expected) * 100 : 0;
+    if (pct <= 0) continue;
+    const label = ENERGY_LABEL[m.type] ?? m.type;
+    const hvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac");
+    const tariff = input.settings.energyTariff[m.type] ?? 0;
+    const extraPerDay = (actual - expected) / run.length;
+    const drift = flagged.some((d) => d.drift);
+    const unseen = run.some((d) => d.seasonCovered === false);
+    out.push({
+      id: `energyModel_${m.type}`,
+      rule: "energyModel",
+      category: "energy",
+      title: drift
+        ? `مصرف ${label} به‌طور پایدار ${fmt(pct)}٪ بالاتر از مقدار موردانتظار`
+        : `جهش مصرف ${label}: ${fmt(pct)}٪ بالاتر از مقدار موردانتظار`,
+      summary:
+        `مصرف ${label} در ${fmt(run.length)} روز (${run[0].day} تا ${run[run.length - 1].day}) ` +
+        `${fmt(actual)} ${m.unit} بود، در برابر ${fmt(expected)} ${m.unit} موردانتظار مدل` +
+        (run.every((d) => d.usedWeather) ? " با در نظر گرفتن دما و اشغال." : " با در نظر گرفتن اشغال (بدون دادهٔ دما).") +
+        (hvac.length > 0 ? ` احتمالاً مرتبط: ${fmt(hvac.length)} تیکت باز HVAC.` : "") +
+        (unseen ? " اطمینان پایین: مدل هنوز دادهٔ این ماه از سال را ندیده است." : ""),
+      recommendation: hvac.length > 0
+        ? "بازدید تجهیزات مرتبط با تیکت‌های باز HVAC و بررسی زمان‌بندی BMS (کارکرد در ساعات و فضاهای خالی)."
+        : "بازرسی مصرف‌کننده‌های بزرگ (چیلر، بویلر، پمپ‌ها) و زمان‌بندی BMS؛ اگر رویداد شناخته‌شده‌ای علت است، آن را ثبت کنید.",
+      confidence: unseen ? 0.45 : drift ? 0.8 : 0.7,
+      priority: (pct > 20 || drift) && !unseen ? "high" : "medium",
+      estimatedMonthlySaving: Math.round(extraPerDay * 30 * tariff),
+      evidence: [
+        `مدل: ${m.kind === "weather" ? "دما و اشغال" : "اشغال و فصل"}${m.cvrmseMonthly !== null ? `، CV(RMSE) ماهانه ${fmt(m.cvrmseMonthly, 1)}٪` : ""}`,
+        ...run.map((d) => `${d.day}: ${fmt(d.actual)} در برابر ${fmt(d.expected)} ${m.unit}${d.drift ? " (انحراف پایدار)" : d.spike ? " (جهش)" : ""}`),
+        ...(hvac.length > 0 ? [`تیکت‌های باز HVAC: ${fmt(hvac.length)}`] : []),
+      ],
+      route: "/energy",
+      audienceRoles: ["generalManager", "energyManager", "maintenanceManager"],
+      expectedImpact: {
+        metric: `${m.type}VsModel`, unit: m.unit, baseline: Math.round(actual / run.length), expected: Math.round(expected / run.length),
+        monthlyIrr: Math.round(extraPerDay * 30 * tariff), method: "energyBaseline", subject: { type: m.type },
+      },
+    });
+  }
+  return out;
 }
 
 /** Consumption-rate stock-out forecast (14-day issue velocity). */

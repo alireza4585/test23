@@ -5,6 +5,7 @@ import { createHmac } from "node:crypto";
 import { createServer } from "node:http";
 
 import { SECRET, SUPERUSER, startTestServer } from "../scripts/test-server.mjs";
+import { startMockWeather } from "./weather-fixture.mjs";
 
 export { SECRET, SUPERUSER };
 
@@ -80,12 +81,16 @@ function startMockLlm() {
 export default async function setup({ provide }) {
   const n8n = await startMockN8n();
   const llm = await startMockLlm();
+  const weather = await startMockWeather();
   const seededAt = new Date();
   const pb = await startTestServer({
     seedNow: seededAt,
     keepData: process.env.KEEP_PB_DATA === "1",
     webhookUrl: `${n8n.url}/webhook/zarin-events`,
-    env: { ZH_AI_PROVIDER: "openai_compatible", ZH_AI_BASE_URL: llm.url, ZH_AI_MODEL: "mock-model" },
+    env: {
+      ZH_AI_PROVIDER: "openai_compatible", ZH_AI_BASE_URL: llm.url, ZH_AI_MODEL: "mock-model",
+      ZH_WEATHER_PROVIDER: "open_meteo", ZH_WEATHER_BASE_URL: weather.url,
+    },
   });
   provide("pbUrl", pb.url);
   provide("pbDir", pb.dir);
@@ -93,9 +98,11 @@ export default async function setup({ provide }) {
   provide("hotelId", pb.hotelId);
   provide("n8nUrl", n8n.url);
   provide("llmUrl", llm.url);
+  provide("weatherUrl", weather.url);
   return async () => {
     await pb.stop();
     n8n.server.close();
     llm.server.close();
+    weather.server.close();
   };
 }

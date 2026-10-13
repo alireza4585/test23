@@ -121,6 +121,8 @@ migrate((app) => {
       { name: "tMean", type: "number", required: true, min: -60, max: 60 },
       { name: "tMin", type: "number", min: -60, max: 60 },
       { name: "tMax", type: "number", min: -60, max: 60 },
+      // tMin/tMax hold 0 when not supplied; this says whether they were.
+      { name: "hasRange", type: "bool" },
       // open_meteo | nasa_power | push:<label> | import
       { name: "source", type: "text", required: true, max: 60 },
     ].concat(stamps()),
