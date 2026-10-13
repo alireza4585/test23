@@ -53,7 +53,7 @@ erDiagram
 
 | مسیر | فیلدها | توضیح |
 |---|---|---|
-| `permissions/{code}` 🔒 | `code, module` | کاتالوگ ۳۳ مجوز (Permissions) |
+| `permissions/{code}` 🔒 | `code, module` | کاتالوگ ۳۴ مجوز (Permissions) |
 | `roleTemplates/{role}` 🔒 | `role, tier, permissions[], assignableRoles[], version` | قالب ۱۵ نقش (Role Templates). از `rbac.ts` تولید می‌شود |
 | `users/{uid}` 🔒* | `nationalId, nationalIdMasked, fullName, role, hotelIds[], primaryHotelId, staffId, status (active/suspended/disabled), mustChangePassword, passwordChangedAt, locale, createdAt` | *کاربر فقط می‌تواند `mustChangePassword` (فقط به false)، `passwordChangedAt` و `locale` را تغییر دهد |
 | `users/{uid}/sessions/{deviceId}` | `platform, model, osVersion, appVersion, pushToken, createdAt, lastSeenAt, revokedAt` | دستگاه‌های فعال. ثبت از طریق `authRegisterSession` |
@@ -135,6 +135,15 @@ erDiagram
 - عکس خرابی‌ها و PDF گزارش‌ها فیلد فایل **protected** همان رکورد هستند (حداکثر ۸MB و ۲۰MB).
 - کلیدهای یکتا با ایندکس UNIQUE تعریف شده‌اند: `(hotel, number)` برای اتاق، `(hotel, day, type)` برای انرژی، `(hotel, day)` برای عملیات روزانه و KPI، و `(hotel, dedupeKey)` برای هشدار.
 - `users` همان collection auth پیش‌فرض PocketBase است با این فیلدها: `nationalId` (hidden و unique، فیلد identity ورود)، `role`، `permissions` (relation به کاتالوگ، محاسبه‌شده توسط سرور)، `hotels`، `primaryHotel`، `status` و `mustChangePassword`.
+
+- **AI فاز ۱ (فقط PocketBase):**
+  - `weatherDaily`: دمای روزانه، یکتا روی `(hotel, day)`، با `source`.
+  - `energyModels`: هر برازش. `status` یکی از active، rejected یا superseded است.
+  - `energyExpected`: امتیاز روزانه، یکتا روی `(hotel, type, day)`.
+  - `energyExclusions`: روزهای کنارگذاشته‌شده از برازش، با دلیل و ثبت‌کننده.
+  - `aiActions`: اقدام‌های نوع‌دار، با `department`، `params`، `executedRef` و `outcome`.
+  - `briefings`: یکتا روی `(hotel, day, role)`.
+  - همه را فقط سرور می‌نویسد. فیلد `aiInsights.activatedAt` هم اضافه شده است. جزئیات در [۱۸](18-ai-phase-1.md).
 
 ## نگاشت به PostgreSQL (فاز بک‌اند اختصاصی)
 

@@ -4,7 +4,7 @@
 
 ```
 User ──(custom claims)──► role + hotelIds
-role ──(Role Template)──► Permissions (۳۳ کد)
+role ──(Role Template)──► Permissions (۳۴ کد)
 Permission ──► UI (منو، مسیر، دکمه)   ← فقط برای نمایش
 Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 ```
@@ -74,6 +74,7 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 | `notifications.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● |
 | `ai.insights.view` | ● | ● | ● | ● | ● | ● | ● | ● | ● |  |  |  |  |  | ● |
 | `ai.assistant.use` | ● | ● | ● | ● | ● |  |  |  |  |  |  |  |  |  | ● |
+| `ai.actions.approve` | ● |  | ● | ● | ● | ● | ● | ● | ● |  |  |  |  |  |  |
 | `users.manage` | ● | ● | ● |  |  |  |  |  |  | ● |  |  |  |  |  |
 | `audit.view` | ● | ● | ● |  |  |  |  |  |  |  |  |  |  |  |  |
 | `hotel.settings` | ● | ● | ● |  |  |  |  |  |  |  |  |  |  |  |  |
@@ -123,6 +124,7 @@ Permission ──► Firestore Rules / Cloud Functions ← اجبار واقعی
 - **انبار.** `quantity` فقط وقتی تغییر می‌کند که یک **سند حرکت** در همان تراکنش وجود داشته باشد و `quantityBefore` و `quantityAfter` را توضیح دهد. این با `getAfter` بررسی می‌شود. حرکات انبار تغییرناپذیرند.
 - **Actor stamp.** فیلدهای `createdBy`، `updatedBy`، `recordedBy` و `actor` باید `uid` خود کاربر باشند.
 - **درآمد فقط‌نوشتنی (PocketBase، فاز ۰.۵).** `finance.record` اجازهٔ ثبت درآمد روزانه را می‌دهد و `finance.view` اجازهٔ خواندن آن را. این دو مستقل‌اند: پذیرش ثبت می‌کند ولی نمی‌خواند. درآمد در `dailyFinance` است و فقط با `finance.view` خوانده می‌شود. نوشتن فقط از `POST /api/zarin/operations/daily` انجام می‌شود. insightهای revenue، گزارش‌های دارای ارقام مالی و سری‌های درآمدی پیش‌بینی هم فقط با `finance.view` دیده می‌شوند. جزئیات در [۱۷](17-ai-phase-0.5.md).
+- **مرکز اقدام (PocketBase، فاز ۱).** `ai.actions.approve` اجازهٔ تأیید یا رد اقدام‌های پیشنهادی را می‌دهد، ولی هر مدیر بخش فقط اقدام‌های بخش خودش را (`ROLE_ACTION_DEPARTMENTS` در `rbac.ts`؛ GM و عملیات همهٔ بخش‌ها). اجرای اقدام مجوز خودش را هم لازم دارد (`maintenance.report` برای تیکت، `housekeeping.assign` برای کار). کنار گذاشتن روز از مدل انرژی (`adjustBaseline`) فقط برای `generalManager` و `energyManager` است. همهٔ این‌ها در سرور اعمال و آزموده می‌شوند. جزئیات در [۱۸](18-ai-phase-1.md#۳-f1-مرکز-اقدام).
 - **مجموعه‌های فقط-سرور.** `alerts`، `aiInsights`، `notifications`، `dailyMetrics`، `auditLogs`، `members`، `aiConversations` و `usage` را کلاینت نمی‌تواند ایجاد کند. فقط تغییر محدود مجاز است، مثلاً acknowledge کردن هشدار یا تغییر وضعیت یک insight.
 - **تست‌ها.** ۲۰ تست rules روی emulator اجرا می‌شوند، از جمله: دسترسی بین هتل‌ها، جعل actor، دسترسی مستخدم به تسک دیگران، انتقال غیرمجاز اتاق، دستکاری موجودی بدون ledger و نوشتن در auditLogs.
 

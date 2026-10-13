@@ -144,11 +144,25 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 
 **route در insights:** فقط مسیر داخلی اپ پذیرفته می‌شود (`400 invalid_route`).
 
+## فاز ۱: مرکز اقدام، مدل انرژی و گزارش صبحگاهی (PocketBase)
+
+| مسیر | دسترسی | کار |
+|---|---|---|
+| `POST /api/zarin/actions/{id}/decide` | `ai.actions.approve` و بخش اقدام در `ROLE_ACTION_DEPARTMENTS` [`recommendationLoop`] | بدنه: `{decision: "approve" \| "reject", note?, params?}`. رد بدون `note` (دست‌کم ۳ نویسه) پذیرفته نمی‌شود. `params` فقط فیلدهای `EDITABLE_PARAMS`. خطاها: `403 department_not_allowed`، `403 baseline_adjust_not_allowed`، `400 action_not_pending`، `400 note_required`، `400 param_not_editable`، `404` برای اقدام مالی بدون `finance.view` |
+| `POST /api/zarin/actions` | `generalManager` یا `energyManager` [`recommendationLoop` و `energyBaseline`] | فقط `adjustBaseline`: `{hotelId, type: "adjustBaseline", reason, params: {meterType, days: ["yyyy-MM-dd"]}}`. خطاها: `reason_required` (کمتر از ۱۰ نویسه)، `invalid_day`، `no_reading_for_day`، `exclusion_cap_exceeded` (بیش از ۵ روز در ماه جلالی) |
+| `POST /api/zarin/briefings/{id}/rate` | فقط نقش صاحب گزارش [`morningBriefing`] | `{useful: true \| false}` |
+| `GET /api/collections/aiActions/records` | `ai.insights.view`؛ اقدام مالی فقط با `finance.view` | فقط‌خواندنی |
+| `GET /api/collections/briefings/records` | فقط گزارش نقش خود کاربر؛ گزارش دارای مورد مالی فقط با `finance.view` | فقط‌خواندنی |
+| `GET /api/collections/energyModels \| energyExpected \| energyExclusions \| weatherDaily/records` | `energy.view` | فقط‌خواندنی |
+| `POST /v1/hotels/{id}/weather` | HMAC | دمای روزانه: `{source, days: [{day, tMean, tMin?, tMax?}]}`، حداکثر ۴۰۰ روز. ردیف‌های `import` بازنویسی نمی‌شوند |
+
+`GET /v1/hotels/{id}/summary` با پرچم `morningBriefing` فیلد `briefings: {day, roles: [{role, text, source, items, containsFinance}]}` را هم دارد (بدون پرچم `null`). جزئیات در [۱۸](18-ai-phase-1.md).
+
 ## رویدادهای خروجی (Backend → n8n)
 
 `POST N8N_WEBHOOK_URL` با همان امضا. بدنه: `{id, type, hotelId, occurredAt, data}`.
 
-نوع‌ها: `alert.raised`، `maintenance.ticket.created`، `maintenance.ticket.updated`، `energy.anomaly`، `inventory.lowStock`، `insight.created`، `user.created`.
+نوع‌ها: `alert.raised`، `maintenance.ticket.created`، `maintenance.ticket.updated`، `energy.anomaly`، `inventory.lowStock`، `insight.created`، `user.created`. فاز ۱: `action.proposed` و `action.reminder` (فقط اولویت بالا؛ `{actionId, type, department, priority, roles}`)، `action.executed`، `action.measured` و `briefing.ready` (`{day, roles}`).
 
 فیلدهای هر نوع در [`n8n/README.md`](../n8n/README.md) آمده است.
 

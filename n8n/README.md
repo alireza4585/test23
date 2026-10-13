@@ -18,8 +18,8 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 
 | فایل | Trigger | کار |
 |---|---|---|
-| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`. رویدادِ هتلی که در `ZARIN_HOTEL_IDS` نیست (مثلاً هتل آزمایشی روی همان بک‌اند) دور ریخته می‌شود: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله |
-| `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. |
+| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`. رویدادِ هتلی که در `ZARIN_HOTEL_IDS` نیست (مثلاً هتل آزمایشی روی همان بک‌اند) دور ریخته می‌شود: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله <br>• `action.proposed` و `action.reminder` (اقدام با اولویت بالا در مرکز اقدام، فاز ۱) → گروه بلهٔ همان بخش (انرژی یا تأسیسات، و برای بقیه گروه مدیریت). پیام فقط بخش، نوع و شناسهٔ اقدام را دارد. `briefing.ready` عمداً route نمی‌شود |
+| `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. اگر هتل پرچم `morningBriefing` داشته باشد، گزارش صبحگاهی ذخیره‌شدهٔ GM جای متن کوتاه را در ایمیل و گروه مدیریت می‌گیرد، و گزارش مدیر انرژی و مدیر تأسیسات (اگر موردی داشته باشد و مالی نباشد) به گروه همان بخش می‌رود ([سند ۱۸](../docs/18-ai-phase-1.md#۵-n8n)). |
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. همان مجموعهٔ تیکت‌های دیرکرد تا ۴ ساعت دوباره اعلان نمی‌شود (`dedupeKey` در بدنهٔ اعلان) و پیامک فقط وقتی می‌رود که اعلان واقعاً ارسال شده باشد. |
 | `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
 
@@ -29,7 +29,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 
 | کانال | متغیرها | نودهای گیت | کار اضافه |
 |---|---|---|---|
-| بله | `BALE_BOT_TOKEN` به‌علاوهٔ `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID` یا `BALE_ENERGY_CHAT_ID` | `Bale configured? · management / maintenance / energy` در ۰۱، و `· management` در ۰۲ | — |
+| بله | `BALE_BOT_TOKEN` به‌علاوهٔ `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID` یا `BALE_ENERGY_CHAT_ID` | `Bale configured? · management / maintenance / energy / action` در ۰۱، و `· management` در ۰۲. گزارش‌های بخش در ۰۲ (`Department briefings`) بدون `BALE_BOT_TOKEN` یا شناسهٔ گروه همان بخش رد می‌شوند | — |
 | پیامک (کاوه‌نگار) | `KAVENEGAR_API_KEY` به‌علاوهٔ `ONCALL_MANAGER_MOBILE` یا `MAINTENANCE_MANAGER_MOBILE` | `SMS configured? · on-call` در ۰۱، و `· maintenance` در ۰۳ | — |
 | ایمیل | `ZARIN_MAIL_FROM` به‌علاوهٔ `PROCUREMENT_EMAIL` یا `ZARIN_REPORT_RECIPIENTS` | `E-mail configured? · procurement` در ۰۱، و `· GM & owner` در ۰۲ | Credential SMTP و روشن کردن نود ایمیل (پایین) |
 
@@ -75,6 +75,10 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `inventory.lowStock` | `itemId, name, sku, quantity, reorderLevel, reorderQuantity, supplier` |
 | `insight.created` | `insightId, title, priority` |
 | `user.created` | `uid, role` |
+| `action.proposed`، `action.reminder` | `actionId, type, department, priority, roles` (فقط اولویت بالا) |
+| `action.executed` | `actionId, type, department, executedRef` |
+| `action.measured` | `actionId, status, improved` |
+| `briefing.ready` | `day, roles` |
 
 ارسال رویداد به‌صورت *fire-and-forget* است. اگر n8n در دسترس نباشد، عملیات اصلی (مثل ثبت تیکت) شکست نمی‌خورد. در PocketBase، رویدادها در صف `outbox` می‌مانند و هر دقیقه دوباره ارسال می‌شوند (حداکثر ۸ بار). هر ارسال پیش از فرستادن، رویداد را برای خودش رزرو می‌کند، پس اگر cron و `POST /v1/outbox/flush` هم‌زمان اجرا شوند، رویداد تکراری ارسال نمی‌شود. هشدار و اعلان درون‌برنامه‌ای همیشه توسط خود بک‌اند ساخته می‌شوند و n8n فقط کانال‌های **بیرونی** را اضافه می‌کند.
 
@@ -188,8 +192,8 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 
 `test/e2e.mjs` هر چهار workflow را روی یک n8n واقعی (نسخهٔ 2.35.7) و یک PocketBase محلیِ seedشده اجرا می‌کند. بله، کاوه‌نگار و SMTP با سرویس‌های ساختگی محلی جایگزین می‌شوند، پس هیچ پیامی واقعاً ارسال نمی‌شود. این موارد بررسی می‌شوند:
 
-- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، رد شدن رویداد جعلی، و دور ریختن رویداد هتلی که در `ZARIN_HOTEL_IDS` نیست.
-- گزارش صبحگاهی RTL در ۰۲، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
+- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، اقدام پیشنهادی و یادآوری به گروه بخش، رد شدن رویداد جعلی، و دور ریختن رویداد هتلی که در `ZARIN_HOTEL_IDS` نیست.
+- گزارش صبحگاهی RTL در ۰۲ (با گزارش ذخیره‌شدهٔ GM در ایمیل و گروه مدیریت، و گزارش‌های بخش در گروه‌های خودشان)، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
 - نبودِ ارسال تکراری.
 - اجرای دوبارهٔ `import-workflows.mjs` بدون از دست رفتن Credentialها.
 - هیچ اجرای ناموفقی در n8n ثبت نشود.
