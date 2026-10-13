@@ -172,7 +172,7 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 |---|---|---|
 | `onTicketCreated` | ایجاد تیکت | هشدار (critical/high) یا اعلان به مدیر تعمیرات، خارج کردن اتاق خالی از سرویس در خرابی بحرانی، رویداد n8n |
 | `onTicketUpdated` | assign و تغییر وضعیت | اعلان به تکنسین هنگام ارجاع، اعلان به گزارش‌دهنده هنگام رفع، بستن هشدارهای تیکت و SLA، رویداد n8n |
-| `onEnergyReadingWritten` | قرائت انرژی | مقایسه با baseline، هشدار `energySpike` و رویداد `energy.anomaly` |
+| `onEnergyReadingWritten` | قرائت انرژی | مقایسه با baseline، هشدار `energySpike` و رویداد `energy.anomaly`. در PocketBase با پرچم `energyBaseline`: هشدار «اطمینان کم» و اعلان «خطای داده» فقط داخل اپ‌اند و رویدادی نمی‌فرستند ([۱۸](18-ai-phase-1.md#۲۲-هشدار)) |
 | `onInventoryItemUpdated` | تغییر موجودی | رسیدن به نقطهٔ سفارش ← هشدار `lowStock` و رویداد `inventory.lowStock` (dedupe) |
 | `onTaskWritten` | پایان تسک | ثبت `durationMinutes` |
 | `auditHotelWrites` | هر نوشتن زیر `hotels/{h}` | Audit log با actor و diff |

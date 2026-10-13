@@ -71,7 +71,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `alert.raised` | `alertId, type, severity, title, message, audienceRoles, …` |
 | `maintenance.ticket.created` | `ticketId, title, category, priority, location, reportedByName, slaDueAt` |
 | `maintenance.ticket.updated` | `ticketId, from, to, assigneeName` |
-| `energy.anomaly` | `day, type, consumption, baseline, deviation` |
+| `energy.anomaly` | `day, type, consumption, baseline, deviation`. هشدارهای «اطمینان کم» (فصلی که مدل ندیده، یا مدل/خط مبنای کمتر از ۱۸۰ روز) و اعلان «خطای داده» عمداً هیچ رویدادی نمی‌فرستند و فقط داخل اپ می‌مانند |
 | `inventory.lowStock` | `itemId, name, sku, quantity, reorderLevel, reorderQuantity, supplier` |
 | `insight.created` | `insightId, title, priority` |
 | `user.created` | `uid, role` |
