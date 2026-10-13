@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { shiftDay } from "../../src/analytics/calendar";
 import {
+  MATURE_MODEL_DAYS,
   MAX_EXCLUDED_DAYS_PER_MONTH,
   MIN_MODEL_DAYS,
   ModelDay,
+  dataErrorOf,
   exclusionMonth,
   fitEnergyModel,
+  implausibleDays,
   predictDay,
   scoreDay,
 } from "../../src/analytics/energy-model";
@@ -180,5 +183,44 @@ describe("weather-normalised energy model (F2)", () => {
     const byMonth: Record<string, number> = {};
     for (const d of alarms(res.model, all.slice(365))) byMonth[exclusionMonth(d)] = (byMonth[exclusionMonth(d)] || 0) + 1;
     for (const k of Object.keys(byMonth)) expect(byMonth[k], k).toBeLessThanOrEqual(2);
+  });
+
+  it("labels zero and impossible readings as data errors: no alarm, CUSUM untouched", () => {
+    expect(dataErrorOf(0, 1000)).toBe("zero");
+    expect(dataErrorOf(3000, 1000)).toBe("implausibleHigh");
+    expect(dataErrorOf(150, 1000)).toBe("implausibleLow");
+    expect(dataErrorOf(1500, 1000)).toBeNull();
+    const all = hotel(365 + 60, { seed: 5 });
+    const res = fitEnergyModel(all.slice(0, 365));
+    if (!res.ok) throw new Error("fit failed");
+    const d = all[380];
+    const triple = scoreDay(res.model, { ...d, consumption: d.consumption * 3 }, 2, 15)!;
+    expect(triple).toMatchObject({ dataError: "implausibleHigh", spike: false, drift: false, cusum: 2 });
+    const zero = scoreDay(res.model, { ...d, consumption: 0 }, 4.5, 15)!;
+    expect(zero).toMatchObject({ dataError: "zero", spike: false, drift: false, cusum: 4.5 });
+    // A real +30 % day is still a fault, not a data error.
+    const fault = scoreDay(res.model, { ...d, consumption: d.consumption * 1.3 }, 0, 15)!;
+    expect(fault.dataError).toBeNull();
+    expect(fault.spike).toBe(true);
+  });
+
+  it("keeps data errors out of the fit", () => {
+    const all = hotel(365, { seed: 9 });
+    const clean = fitEnergyModel(all);
+    const dirty = all.map((d, i) => (i % 60 === 30 ? { ...d, consumption: d.consumption * 3 } : i % 60 === 45 ? { ...d, consumption: 0 } : d));
+    expect(implausibleDays(dirty)).toEqual(dirty.filter((_, i) => i % 60 === 30 || i % 60 === 45).map((d) => d.day));
+    const res = fitEnergyModel(dirty);
+    if (!res.ok || !clean.ok) throw new Error("fit failed");
+    expect(res.model.stats.dataErrors).toBe(12);
+    expect(Math.abs(res.model.stats.cvrmseDaily - clean.model.stats.cvrmseDaily)).toBeLessThan(0.3);
+  });
+
+  it("marks alarms of a young model or an unseen season as low-confidence", () => {
+    const all = hotel(365 + 30, { seed: 4 });
+    const young = fitEnergyModel(all.slice(0, MATURE_MODEL_DAYS - 30));
+    const mature = fitEnergyModel(all.slice(0, 365));
+    if (!young.ok || !mature.ok) throw new Error("fit failed");
+    expect(scoreDay(young.model, all[MATURE_MODEL_DAYS - 31], 0, 15)!.lowConfidence).toBe(true);
+    expect(scoreDay(mature.model, all[370], 0, 15)!.lowConfidence).toBe(false);
   });
 });

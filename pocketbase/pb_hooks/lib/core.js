@@ -23,12 +23,16 @@ __export(index_exports, {
   ACTION_DEPARTMENTS: () => ACTION_DEPARTMENTS,
   ACTION_TYPES: () => ACTION_TYPES,
   ACTIVE_TICKET_STATUSES: () => ACTIVE_TICKET_STATUSES,
+  ALERT_EPISODE_DAYS: () => ALERT_EPISODE_DAYS,
   ASSIGNABLE_ROLES: () => ASSIGNABLE_ROLES,
   BASELINE_ADJUST_ROLES: () => BASELINE_ADJUST_ROLES,
   CUSUM_H: () => CUSUM_H,
+  DATA_ERROR_HIGH_RATIO: () => DATA_ERROR_HIGH_RATIO,
+  DATA_ERROR_LOW_RATIO: () => DATA_ERROR_LOW_RATIO,
   DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
   EDITABLE_PARAMS: () => EDITABLE_PARAMS,
   EVALUATION_WINDOW_DAYS: () => EVALUATION_WINDOW_DAYS,
+  MATURE_MODEL_DAYS: () => MATURE_MODEL_DAYS,
   MAX_CVRMSE: () => MAX_CVRMSE,
   MAX_CVRMSE_MONTHLY: () => MAX_CVRMSE_MONTHLY,
   MAX_EXCLUDED_DAYS_PER_MONTH: () => MAX_EXCLUDED_DAYS_PER_MONTH,
@@ -42,6 +46,7 @@ __export(index_exports, {
   ROLE_PERMISSIONS: () => ROLE_PERMISSIONS,
   ROLE_TIER: () => ROLE_TIER,
   ROOM_TRANSITIONS: () => ROOM_TRANSITIONS,
+  SPIKE_Z: () => SPIKE_Z,
   bootstrapMeanDiff: () => bootstrapMeanDiff,
   briefingCategoriesFor: () => categoriesFor,
   briefingFactsOf: () => factsOf,
@@ -53,6 +58,7 @@ __export(index_exports, {
   canDecideDepartment: () => canDecideDepartment,
   checkReading: () => checkReading,
   computeDailyMetrics: () => computeDailyMetrics,
+  dataErrorOf: () => dataErrorOf,
   daySet: () => daySet,
   dayToJalali: () => dayToJalali,
   dayToUtcMs: () => dayToUtcMs,
@@ -68,6 +74,7 @@ __export(index_exports, {
   fitEnergyModel: () => fitEnergyModel,
   forecastSeries: () => forecastSeries,
   generateInsights: () => generateInsights,
+  implausibleDays: () => implausibleDays,
   iranFixedHolidays: () => iranFixedHolidays,
   isActiveTicket: () => isActiveTicket,
   isRole: () => isRole,
@@ -1458,8 +1465,42 @@ var COVERED_MONTH_DAYS = 10;
 var CUSUM_K = 0.5;
 var CUSUM_H = 5;
 var MIN_SHIFT_PCT = 10;
-var SPIKE_Z = 2.5;
+var SPIKE_Z = 3;
+var ALERT_EPISODE_DAYS = 10;
 var REFIT_DAYS = 28;
+var DATA_ERROR_HIGH_RATIO = 2;
+var DATA_ERROR_LOW_RATIO = 0.2;
+var MATURE_MODEL_DAYS = 180;
+var NEIGHBOUR_DAYS = 7;
+var MIN_NEIGHBOURS = 4;
+function dataErrorOf(consumption, expected2) {
+  if (!isFinite(consumption) || consumption <= 0) return "zero";
+  if (!(expected2 > 0)) return null;
+  if (consumption >= DATA_ERROR_HIGH_RATIO * expected2) return "implausibleHigh";
+  if (consumption <= DATA_ERROR_LOW_RATIO * expected2) return "implausibleLow";
+  return null;
+}
+var dayNumber = (day) => Math.round(Date.parse(`${day}T00:00:00Z`) / 864e5);
+function implausibleDays(rows) {
+  const out = [];
+  const n = rows.map((r) => dayNumber(r.day));
+  let lo = 0;
+  let hi = 0;
+  for (let i = 0; i < rows.length; i++) {
+    while (n[lo] < n[i] - NEIGHBOUR_DAYS) lo++;
+    while (hi < rows.length && n[hi] <= n[i] + NEIGHBOUR_DAYS) hi++;
+    const around = [];
+    for (let j = lo; j < hi; j++) if (j !== i && rows[j].consumption > 0) around.push(rows[j].consumption);
+    let median = 0;
+    if (around.length >= MIN_NEIGHBOURS) {
+      around.sort((a, b) => a - b);
+      const m = around.length >> 1;
+      median = around.length % 2 ? around[m] : (around[m - 1] + around[m]) / 2;
+    }
+    if (dataErrorOf(rows[i].consumption, median)) out.push(rows[i].day);
+  }
+  return out;
+}
 var COOL_GRID = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 var HEAT_GRID = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 var cdd = (t, tb) => Math.max(0, t - tb);
@@ -1571,7 +1612,7 @@ function monthlyFit(spec, days) {
     nmbe: m > 0 ? round2(bias / (dof * m) * 100, 3) : null
   };
 }
-function finish(f, all, excluded, dropped) {
+function finish(f, all, excluded, dropped, dataErrors) {
   const n = f.used.length;
   const y = f.used.map((d) => d.consumption);
   const m = mean(y);
@@ -1598,6 +1639,7 @@ function finish(f, all, excluded, dropped) {
     nmbeMonthly: monthly.nmbe,
     dropped,
     excluded,
+    dataErrors,
     coveredMonths: Object.keys(perMonth).map(Number).filter((m2) => perMonth[m2] >= COVERED_MONTH_DAYS).sort((a, b) => a - b)
   };
   let reason = null;
@@ -1616,7 +1658,11 @@ function finish(f, all, excluded, dropped) {
 function fitEnergyModel(rows, exclude = []) {
   const skip = {};
   for (const d of exclude) skip[d] = true;
-  const clean = rows.filter((r) => isFinite(r.consumption) && r.consumption >= 0 && isFinite(r.occupied)).sort((a, b) => a.day < b.day ? -1 : 1);
+  const valid = rows.filter((r) => isFinite(r.consumption) && isFinite(r.occupied)).sort((a, b) => a.day < b.day ? -1 : 1);
+  const bad = {};
+  for (const d of implausibleDays(valid)) bad[d] = true;
+  const clean = valid.filter((r) => !bad[r.day]);
+  const dataErrors = valid.length - clean.length;
   const data = clean.filter((r) => !skip[r.day]);
   const excluded = clean.length - data.length;
   if (data.length < MIN_MODEL_DAYS) return { ok: false, reason: "insufficient_data", have: data.length, need: MIN_MODEL_DAYS };
@@ -1649,7 +1695,7 @@ function fitEnergyModel(rows, exclude = []) {
   }
   const done = (f, all) => {
     const r = robust(f, MIN_MODEL_DAYS);
-    return finish(r, all, excluded, f.used.length - r.used.length);
+    return finish(r, all, excluded, f.used.length - r.used.length, dataErrors);
   };
   const fallbacks = noWeather.map((f) => done(f, data));
   const bestOf = (xs) => xs.slice().sort((a, b) => a.valid !== b.valid ? a.valid ? -1 : 1 : a.stats.cvrmseDaily - b.stats.cvrmseDaily)[0] || null;
@@ -1695,9 +1741,11 @@ function scoreDay(model, d, prevCusum, thresholdPct) {
   const z = p.sigma > 0 ? residual / p.sigma : 0;
   const deviationPct = p.expected > 0 ? residual / p.expected * 100 : 0;
   const k = p.cv > 0 ? Math.max(CUSUM_K, MIN_SHIFT_PCT / (2 * p.cv)) : CUSUM_K;
-  let cusum = Math.max(0, (prevCusum || 0) + z - k);
-  const drift = p.valid && cusum > CUSUM_H;
+  const dataError = dataErrorOf(d.consumption, p.expected);
+  let cusum = dataError ? Math.max(0, prevCusum || 0) : Math.max(0, (prevCusum || 0) + z - k);
+  const drift = !dataError && p.valid && cusum > CUSUM_H;
   if (drift) cusum = 0;
+  const seasonCovered = (model.stats.coveredMonths || []).indexOf(dayToJalali(d.day).jm) >= 0;
   return {
     day: d.day,
     expected: p.expected,
@@ -1708,11 +1756,13 @@ function scoreDay(model, d, prevCusum, thresholdPct) {
     z: round2(z, 2),
     deviationPct: round2(deviationPct, 1),
     cusum: round2(cusum, 3),
-    spike: p.valid && z > SPIKE_Z && deviationPct > thresholdPct,
+    spike: !dataError && p.valid && z > SPIKE_Z && deviationPct > thresholdPct,
     drift,
     usedWeather: p.usedWeather,
     valid: p.valid,
-    seasonCovered: (model.stats.coveredMonths || []).indexOf(dayToJalali(d.day).jm) >= 0
+    seasonCovered,
+    dataError,
+    lowConfidence: !seasonCovered || (model.stats.n || 0) < MATURE_MODEL_DAYS
   };
 }
 function measureWithModel(model, period) {
@@ -1722,7 +1772,7 @@ function measureWithModel(model, period) {
   let variance2 = 0;
   for (const d of period) {
     const p = predictDay(model, d);
-    if (!p) continue;
+    if (!p || dataErrorOf(d.consumption, p.expected)) continue;
     a += d.consumption;
     e += p.expected;
     variance2 += p.sigma * p.sigma;

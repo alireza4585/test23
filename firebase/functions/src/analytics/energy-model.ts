@@ -18,9 +18,14 @@
  * A model that fails the gate is stored but not used for alerts; the caller
  * falls back to the Batch 1 baseline and says "model not reliable yet".
  *
+ * Data errors (zero, or a reading no hotel can produce: below DATA_ERROR_LOW_RATIO
+ * or above DATA_ERROR_HIGH_RATIO times the expected value, e.g. a slip of the
+ * keyboard on manual entry) are labelled as such: never a spike or drift, kept
+ * out of the CUSUM and, judged against the surrounding fortnight, out of the fit.
+ *
  * Detection on top of a model. Meter noise grows with load, so a day's
  * residual is standardised by CV(RMSE) × expected rather than by a fixed RMSE.
- *   spike  z > 2.5 and above the hotel's alert threshold (percent);
+ *   spike  z > SPIKE_Z (3) and above the hotel's alert threshold (percent);
  *   drift  one-sided CUSUM tuned to the smallest sustained fault of interest
  *          (MIN_SHIFT_PCT = 10 %): k = max(0.5, MIN_SHIFT_PCT / (2·CV)), h = 5,
  *          reset after each alarm. A well-fitting model therefore ignores a
@@ -37,9 +42,73 @@ export const COVERED_MONTH_DAYS = 10;
 export const CUSUM_K = 0.5;
 export const CUSUM_H = 5;
 export const MIN_SHIFT_PCT = 10;
-export const SPIKE_Z = 2.5;
+/**
+ * 3 rather than 2.5: on the dataset with 10 % meter noise added, z 2.5–3.3
+ * spikes caused most false alarms, and the 20 % faults were still found
+ * (by the CUSUM) in every seed (docs/18, robustness backtest).
+ */
+export const SPIKE_Z = 3;
+/**
+ * One alert per meter per episode: a flagged day within this many days of the
+ * last alert for the same meter is stored and shown, but raises no new alert
+ * (a sustained deviation reminds every ALERT_EPISODE_DAYS days). Chosen by the
+ * robustness backtest: at most 2 false alerts a month in every scenario.
+ */
+export const ALERT_EPISODE_DAYS = 10;
 /** Weekly refits would slowly absorb a sustained fault; refit every 28 days. */
 export const REFIT_DAYS = 28;
+/**
+ * Readings outside [LOW, HIGH] × expected are data errors, not faults. In the
+ * test dataset no day leaves 0.57–1.51 × the median of its fortnight, and a
+ * real fault of interest is +10…+50 %. HIGH is 2 rather than 2.5: with 10 %
+ * meter noise a ×3 entry error landed at 2.25–2.48 × expected (robustness
+ * backtest), while healthy and event days stayed far below 2.
+ */
+export const DATA_ERROR_HIGH_RATIO = 2;
+export const DATA_ERROR_LOW_RATIO = 0.2;
+/** A model trained on fewer days than this is young: its alarms are low-confidence. */
+export const MATURE_MODEL_DAYS = 180;
+const NEIGHBOUR_DAYS = 7;
+const MIN_NEIGHBOURS = 4;
+
+export type DataError = "zero" | "implausibleHigh" | "implausibleLow";
+
+/** Data-error label of a reading against an expected value (null when plausible). */
+export function dataErrorOf(consumption: number, expected: number): DataError | null {
+  if (!isFinite(consumption) || consumption <= 0) return "zero";
+  if (!(expected > 0)) return null;
+  if (consumption >= DATA_ERROR_HIGH_RATIO * expected) return "implausibleHigh";
+  if (consumption <= DATA_ERROR_LOW_RATIO * expected) return "implausibleLow";
+  return null;
+}
+
+const dayNumber = (day: string) => Math.round(Date.parse(`${day}T00:00:00Z`) / 864e5);
+
+/**
+ * Days of [rows] (sorted by day) whose reading is a data error against the
+ * median of the other readings within ±NEIGHBOUR_DAYS days — the training
+ * filter, used before any model exists. Zero is always an error.
+ */
+export function implausibleDays(rows: ModelDay[]): string[] {
+  const out: string[] = [];
+  const n = rows.map((r) => dayNumber(r.day));
+  let lo = 0;
+  let hi = 0;
+  for (let i = 0; i < rows.length; i++) {
+    while (n[lo] < n[i] - NEIGHBOUR_DAYS) lo++;
+    while (hi < rows.length && n[hi] <= n[i] + NEIGHBOUR_DAYS) hi++;
+    const around: number[] = [];
+    for (let j = lo; j < hi; j++) if (j !== i && rows[j].consumption > 0) around.push(rows[j].consumption);
+    let median = 0;
+    if (around.length >= MIN_NEIGHBOURS) {
+      around.sort((a, b) => a - b);
+      const m = around.length >> 1;
+      median = around.length % 2 ? around[m] : (around[m - 1] + around[m]) / 2;
+    }
+    if (dataErrorOf(rows[i].consumption, median)) out.push(rows[i].day);
+  }
+  return out;
+}
 
 const COOL_GRID = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 const HEAT_GRID = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
@@ -78,6 +147,8 @@ export interface ModelStats {
   nmbeMonthly: number | null;
   dropped: number;
   excluded: number;
+  /** Training days left out as data errors (implausibleDays). */
+  dataErrors: number;
   /**
    * Jalali months of the year (1–12) with at least COVERED_MONTH_DAYS training
    * days. In its first year a model has not seen every season; an alarm in an
@@ -223,7 +294,7 @@ export function monthlyFit(spec: ModelSpec, days: ModelDay[]): { months: number;
   };
 }
 
-function finish(f: Fitted, all: ModelDay[], excluded: number, dropped: number) {
+function finish(f: Fitted, all: ModelDay[], excluded: number, dropped: number, dataErrors: number) {
   const n = f.used.length;
   const y = f.used.map((d) => d.consumption);
   const m = mean(y);
@@ -251,6 +322,7 @@ function finish(f: Fitted, all: ModelDay[], excluded: number, dropped: number) {
     nmbeMonthly: monthly.nmbe,
     dropped,
     excluded,
+    dataErrors,
     coveredMonths: Object.keys(perMonth).map(Number).filter((m) => perMonth[m] >= COVERED_MONTH_DAYS).sort((a, b) => a - b),
   };
   let reason: string | null = null;
@@ -269,16 +341,20 @@ function finish(f: Fitted, all: ModelDay[], excluded: number, dropped: number) {
 
 /**
  * Fits the candidates on [rows] minus [exclude] (days kept out by
- * adjustBaseline) and returns the chosen model with its no-weather fallback.
+ * adjustBaseline) and minus data errors (implausibleDays), and returns the chosen model with its no-weather fallback.
  * Weather is used only when at least [MIN_MODEL_DAYS] training days have a
  * temperature.
  */
 export function fitEnergyModel(rows: ModelDay[], exclude: string[] = []): FitResult {
   const skip: Record<string, boolean> = {};
   for (const d of exclude) skip[d] = true;
-  const clean = rows
-    .filter((r) => isFinite(r.consumption) && r.consumption >= 0 && isFinite(r.occupied))
+  const valid = rows
+    .filter((r) => isFinite(r.consumption) && isFinite(r.occupied))
     .sort((a, b) => (a.day < b.day ? -1 : 1));
+  const bad: Record<string, boolean> = {};
+  for (const d of implausibleDays(valid)) bad[d] = true;
+  const clean = valid.filter((r) => !bad[r.day]);
+  const dataErrors = valid.length - clean.length;
   const data = clean.filter((r) => !skip[r.day]);
   const excluded = clean.length - data.length;
   if (data.length < MIN_MODEL_DAYS) return { ok: false, reason: "insufficient_data", have: data.length, need: MIN_MODEL_DAYS };
@@ -314,7 +390,7 @@ export function fitEnergyModel(rows: ModelDay[], exclude: string[] = []): FitRes
 
   const done = (f: Fitted, all: ModelDay[]) => {
     const r = robust(f, MIN_MODEL_DAYS);
-    return finish(r, all, excluded, f.used.length - r.used.length);
+    return finish(r, all, excluded, f.used.length - r.used.length, dataErrors);
   };
   const fallbacks = noWeather.map((f) => done(f, data));
   const bestOf = <T extends { valid: boolean; stats: ModelStats }>(xs: T[]): T | null =>
@@ -386,12 +462,20 @@ export interface DayScore {
   valid: boolean;
   /** Whether the model was trained on this time of year (see ModelStats.coveredMonths). */
   seasonCovered: boolean;
+  /** The reading is a data error (never a spike or drift; CUSUM unchanged). */
+  dataError: DataError | null;
+  /**
+   * An unseen season or a young model (< MATURE_MODEL_DAYS training days):
+   * its alarms stay inside the app (no outbox, Bale or SMS).
+   */
+  lowConfidence: boolean;
 }
 
 /**
  * Scores one day against [model]: spike (z > SPIKE_Z and deviation above
  * [thresholdPct]) and drift (CUSUM continuing from [prevCusum]). Only a
- * valid prediction raises flags.
+ * valid prediction raises flags; a data error raises none and leaves the
+ * CUSUM where it was.
  */
 export function scoreDay(model: EnergyModel, d: ModelDay, prevCusum: number, thresholdPct: number): DayScore | null {
   const p = predictDay(model, d);
@@ -400,9 +484,11 @@ export function scoreDay(model: EnergyModel, d: ModelDay, prevCusum: number, thr
   const z = p.sigma > 0 ? residual / p.sigma : 0;
   const deviationPct = p.expected > 0 ? (residual / p.expected) * 100 : 0;
   const k = p.cv > 0 ? Math.max(CUSUM_K, MIN_SHIFT_PCT / (2 * p.cv)) : CUSUM_K;
-  let cusum = Math.max(0, (prevCusum || 0) + z - k);
-  const drift = p.valid && cusum > CUSUM_H;
+  const dataError = dataErrorOf(d.consumption, p.expected);
+  let cusum = dataError ? Math.max(0, prevCusum || 0) : Math.max(0, (prevCusum || 0) + z - k);
+  const drift = !dataError && p.valid && cusum > CUSUM_H;
   if (drift) cusum = 0;
+  const seasonCovered = (model.stats.coveredMonths || []).indexOf(dayToJalali(d.day).jm) >= 0;
   return {
     day: d.day,
     expected: p.expected,
@@ -413,11 +499,13 @@ export function scoreDay(model: EnergyModel, d: ModelDay, prevCusum: number, thr
     z: round(z, 2) as number,
     deviationPct: round(deviationPct, 1) as number,
     cusum: round(cusum, 3) as number,
-    spike: p.valid && z > SPIKE_Z && deviationPct > thresholdPct,
+    spike: !dataError && p.valid && z > SPIKE_Z && deviationPct > thresholdPct,
     drift,
     usedWeather: p.usedWeather,
     valid: p.valid,
-    seasonCovered: (model.stats.coveredMonths || []).indexOf(dayToJalali(d.day).jm) >= 0,
+    seasonCovered,
+    dataError,
+    lowConfidence: !seasonCovered || (model.stats.n || 0) < MATURE_MODEL_DAYS,
   };
 }
 
@@ -431,7 +519,8 @@ export function measureWithModel(model: EnergyModel, period: ModelDay[]): {
   let variance = 0;
   for (const d of period) {
     const p = predictDay(model, d);
-    if (!p) continue;
+    // A data error would distort the totals: such days are left out.
+    if (!p || dataErrorOf(d.consumption, p.expected)) continue;
     a += d.consumption;
     e += p.expected;
     variance += p.sigma * p.sigma;

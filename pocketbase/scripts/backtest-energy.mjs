@@ -66,6 +66,7 @@ function simulate(rows, variant, { exclude = [], refitOn = null } = {}) {
   let cusum = 0;
   let scored = 0;
   let invalidDays = 0;
+  let lastAlert = null;
   for (let i = core.MIN_MODEL_DAYS; i < input.length; i++) {
     const row = input[i];
     const day = row.day;
@@ -105,7 +106,11 @@ function simulate(rows, variant, { exclude = [], refitOn = null } = {}) {
     const s = core.scoreDay(model, row, cusum, threshold);
     if (!s) continue;
     cusum = s.cusum;
-    if (s.spike || s.drift) alarms.push({ day, kind: s.drift ? "drift" : "spike", deviationPct: s.deviationPct, usedWeather: s.usedWeather, seasonCovered: s.seasonCovered });
+    // One alert per meter per episode, as the server raises them.
+    if ((s.spike || s.drift) && !(lastAlert && between(lastAlert, day) <= core.ALERT_EPISODE_DAYS)) {
+      lastAlert = day;
+      alarms.push({ day, kind: s.drift ? "drift" : "spike", deviationPct: s.deviationPct, usedWeather: s.usedWeather, seasonCovered: s.seasonCovered });
+    }
   }
   return { variant, alarms, refits, scored, invalidDays };
 }
