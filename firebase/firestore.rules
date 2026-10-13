@@ -64,6 +64,7 @@ service cloud.firestore {
         'notifications.view': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager', 'hrManager', 'receptionStaff', 'housekeepingStaff', 'maintenanceStaff', 'restaurantStaff', 'analyst'],
         'ai.insights.view': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager', 'analyst'],
         'ai.assistant.use': ['hotelOwner', 'generalManager', 'operationsManager', 'energyManager', 'analyst'],
+        'ai.actions.approve': ['generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager'],
         'users.manage': ['hotelOwner', 'generalManager', 'hrManager'],
         'audit.view': ['hotelOwner', 'generalManager'],
         'hotel.settings': ['hotelOwner', 'generalManager']

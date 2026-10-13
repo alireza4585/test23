@@ -64,6 +64,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiAssistantUse,
+      AppPermission.aiActionsApprove,
       AppPermission.usersManage,
       AppPermission.auditView,
       AppPermission.hotelSettings,
@@ -89,6 +90,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiAssistantUse,
+      AppPermission.aiActionsApprove,
     },
     AppRole.energyManager: {
       AppPermission.dashboardOperations,
@@ -102,6 +104,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiAssistantUse,
+      AppPermission.aiActionsApprove,
     },
     AppRole.maintenanceManager: {
       AppPermission.dashboardOperations,
@@ -119,6 +122,7 @@ abstract final class RolePolicy {
       AppPermission.reportsGenerate,
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
+      AppPermission.aiActionsApprove,
     },
     AppRole.housekeepingManager: {
       AppPermission.dashboardOperations,
@@ -135,6 +139,7 @@ abstract final class RolePolicy {
       AppPermission.reportsView,
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
+      AppPermission.aiActionsApprove,
     },
     AppRole.restaurantManager: {
       AppPermission.dashboardOperations,
@@ -146,6 +151,7 @@ abstract final class RolePolicy {
       AppPermission.reportsView,
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
+      AppPermission.aiActionsApprove,
     },
     AppRole.inventoryManager: {
       AppPermission.dashboardOperations,
@@ -158,6 +164,7 @@ abstract final class RolePolicy {
       AppPermission.reportsGenerate,
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
+      AppPermission.aiActionsApprove,
     },
     AppRole.hrManager: {
       AppPermission.dashboardOperations,
@@ -260,4 +267,36 @@ abstract final class RolePolicy {
 
   static Set<AppRole> assignableBy(AppRole role) =>
       assignableRoles[role] ?? const <AppRole>{};
+
+  /// Action Center departments each role may decide (with
+  /// [AppPermission.aiActionsApprove]). Mirrors `ROLE_ACTION_DEPARTMENTS` in
+  /// rbac.ts; the server enforces it, the app only hides what would fail.
+  static const Map<AppRole, Set<String>> actionDepartments = {
+    AppRole.superAdmin: _allDepartments,
+    AppRole.generalManager: _allDepartments,
+    AppRole.operationsManager: _allDepartments,
+    AppRole.energyManager: {'energy'},
+    AppRole.maintenanceManager: {'maintenance'},
+    AppRole.housekeepingManager: {'housekeeping'},
+    AppRole.inventoryManager: {'inventory'},
+    AppRole.restaurantManager: {'restaurant'},
+  };
+
+  static const Set<String> _allDepartments = {
+    'energy',
+    'maintenance',
+    'housekeeping',
+    'inventory',
+    'restaurant',
+    'operations',
+  };
+
+  /// Roles that may exclude days from an energy model (`BASELINE_ADJUST_ROLES`).
+  static const Set<AppRole> baselineAdjustRoles = {
+    AppRole.generalManager,
+    AppRole.energyManager,
+  };
+
+  static bool canDecideDepartment(AppRole role, String department) =>
+      actionDepartments[role]?.contains(department) ?? false;
 }

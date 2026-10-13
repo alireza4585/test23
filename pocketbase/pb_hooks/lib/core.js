@@ -111,6 +111,7 @@ var PERMISSIONS = [
   "notifications.view",
   "ai.insights.view",
   "ai.assistant.use",
+  "ai.actions.approve",
   "users.manage",
   "audit.view",
   "hotel.settings"
@@ -168,6 +169,7 @@ var ROLE_PERMISSIONS = {
     "notifications.view",
     "ai.insights.view",
     "ai.assistant.use",
+    "ai.actions.approve",
     "users.manage",
     "audit.view",
     "hotel.settings"
@@ -192,6 +194,7 @@ var ROLE_PERMISSIONS = {
     "reports.generate",
     "notifications.view",
     "ai.insights.view",
+    "ai.actions.approve",
     "ai.assistant.use"
   ],
   energyManager: [
@@ -205,6 +208,7 @@ var ROLE_PERMISSIONS = {
     "reports.generate",
     "notifications.view",
     "ai.insights.view",
+    "ai.actions.approve",
     "ai.assistant.use"
   ],
   maintenanceManager: [
@@ -222,6 +226,7 @@ var ROLE_PERMISSIONS = {
     "reports.view",
     "reports.generate",
     "notifications.view",
+    "ai.actions.approve",
     "ai.insights.view"
   ],
   housekeepingManager: [
@@ -238,6 +243,7 @@ var ROLE_PERMISSIONS = {
     "staff.view",
     "reports.view",
     "notifications.view",
+    "ai.actions.approve",
     "ai.insights.view"
   ],
   restaurantManager: [
@@ -249,6 +255,7 @@ var ROLE_PERMISSIONS = {
     "staff.view",
     "reports.view",
     "notifications.view",
+    "ai.actions.approve",
     "ai.insights.view"
   ],
   inventoryManager: [
@@ -261,6 +268,7 @@ var ROLE_PERMISSIONS = {
     "reports.view",
     "reports.generate",
     "notifications.view",
+    "ai.actions.approve",
     "ai.insights.view"
   ],
   hrManager: [

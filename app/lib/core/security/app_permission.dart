@@ -59,6 +59,9 @@ enum AppPermission {
   aiInsightsView('ai.insights.view'),
   aiAssistantUse('ai.assistant.use'),
 
+  /// Approve or reject Action Center actions of the role's own departments.
+  aiActionsApprove('ai.actions.approve'),
+
   // Administration
   usersManage('users.manage'),
   auditView('audit.view'),

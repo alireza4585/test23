@@ -218,9 +218,11 @@ function hotelSettings(app, hotelId) {
  * Per-hotel feature flags (hotels.settings.features), all off by default:
  *   energyBaseline      occupancy/season baseline for energy alerts + analysis
  *   forecasts           nightly forecasts and the forecast routes
- *   recommendationLoop  auto-close and impact evaluation of recommendations
+ *   recommendationLoop  auto-close and impact evaluation of recommendations;
+ *                       Action Center (typed actions, decide, outcomes)
+ *   morningBriefing     daily cross-department briefing per role (F4)
  */
-const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop"];
+const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing"];
 
 function features(app, hotelId) {
   const s = jsonOf(find(app, "hotels", hotelId), "settings") || {};

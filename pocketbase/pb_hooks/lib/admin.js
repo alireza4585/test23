@@ -21,6 +21,7 @@ const analytics = require(`${__hooks}/lib/analytics.js`);
 const IMPORTABLE = [
   "rooms", "staff", "shifts", "tasks", "maintenanceTickets", "ticketEvents",
   "energyReadings", "dailyOperations", "inventoryItems", "inventoryMovements",
+  "weatherDaily",
 ];
 const MAX_BATCH = 500;
 const STAMP = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;

@@ -57,6 +57,7 @@ export const PERMISSIONS = [
   "notifications.view",
   "ai.insights.view",
   "ai.assistant.use",
+  "ai.actions.approve",
   "users.manage",
   "audit.view",
   "hotel.settings",
@@ -87,7 +88,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "maintenance.viewAll", "maintenance.manage", "energy.view", "energy.record",
     "inventory.view", "inventory.move", "inventory.manage", "staff.view", "staff.manage",
     "operations.recordDaily", "finance.view", "finance.record", "reports.view", "reports.generate",
-    "notifications.view", "ai.insights.view", "ai.assistant.use", "users.manage",
+    "notifications.view", "ai.insights.view", "ai.assistant.use", "ai.actions.approve", "users.manage",
     "audit.view", "hotel.settings",
   ],
   operationsManager: [
@@ -95,33 +96,33 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "housekeeping.viewAll", "housekeeping.assign", "maintenance.report", "maintenance.viewAll",
     "maintenance.manage", "energy.view", "inventory.view", "staff.view", "staff.manage",
     "operations.recordDaily", "finance.record", "reports.view", "reports.generate", "notifications.view",
-    "ai.insights.view", "ai.assistant.use",
+    "ai.insights.view", "ai.actions.approve", "ai.assistant.use",
   ],
   energyManager: [
     "dashboard.operations", "rooms.view", "energy.view", "energy.record", "maintenance.report",
     "maintenance.viewAll", "reports.view", "reports.generate", "notifications.view",
-    "ai.insights.view", "ai.assistant.use",
+    "ai.insights.view", "ai.actions.approve", "ai.assistant.use",
   ],
   maintenanceManager: [
     "dashboard.operations", "rooms.view", "rooms.updateStatus", "maintenance.report",
     "maintenance.viewAll", "maintenance.manage", "maintenance.work", "energy.view",
     "inventory.view", "inventory.move", "staff.view", "reports.view", "reports.generate",
-    "notifications.view", "ai.insights.view",
+    "notifications.view", "ai.actions.approve", "ai.insights.view",
   ],
   housekeepingManager: [
     "dashboard.operations", "rooms.view", "rooms.updateStatus", "housekeeping.viewAll",
     "housekeeping.assign", "housekeeping.complete", "maintenance.report", "maintenance.viewOwn",
-    "inventory.view", "inventory.move", "staff.view", "reports.view", "notifications.view",
+    "inventory.view", "inventory.move", "staff.view", "reports.view", "notifications.view", "ai.actions.approve",
     "ai.insights.view",
   ],
   restaurantManager: [
     "dashboard.operations", "inventory.view", "inventory.move", "maintenance.report",
-    "maintenance.viewOwn", "staff.view", "reports.view", "notifications.view", "ai.insights.view",
+    "maintenance.viewOwn", "staff.view", "reports.view", "notifications.view", "ai.actions.approve", "ai.insights.view",
   ],
   inventoryManager: [
     "dashboard.operations", "inventory.view", "inventory.move", "inventory.manage",
     "maintenance.report", "maintenance.viewOwn", "reports.view", "reports.generate",
-    "notifications.view", "ai.insights.view",
+    "notifications.view", "ai.actions.approve", "ai.insights.view",
   ],
   hrManager: [
     "dashboard.operations", "staff.view", "staff.manage", "users.manage", "maintenance.report",
@@ -140,6 +141,34 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "reports.generate", "notifications.view", "ai.insights.view", "ai.assistant.use",
   ],
 };
+
+/**
+ * Departments of the AI Action Center (aiActions.department). A role with
+ * `ai.actions.approve` may decide only the actions of its own departments;
+ * the server enforces this (pb_hooks/lib/actions.js), the app only mirrors it.
+ */
+export const ACTION_DEPARTMENTS = ["energy", "maintenance", "housekeeping", "inventory", "restaurant", "operations"] as const;
+
+export type ActionDepartment = (typeof ACTION_DEPARTMENTS)[number];
+
+export const ROLE_ACTION_DEPARTMENTS: Partial<Record<Role, readonly ActionDepartment[]>> = {
+  superAdmin: ACTION_DEPARTMENTS,
+  generalManager: ACTION_DEPARTMENTS,
+  operationsManager: ACTION_DEPARTMENTS,
+  energyManager: ["energy"],
+  maintenanceManager: ["maintenance"],
+  housekeepingManager: ["housekeeping"],
+  inventoryManager: ["inventory"],
+  restaurantManager: ["restaurant"],
+};
+
+/** Roles that may exclude days from an energy model fit (adjustBaseline actions). */
+export const BASELINE_ADJUST_ROLES: readonly Role[] = ["generalManager", "energyManager"];
+
+/** Whether [role] may decide an action of [department] (permission checked separately). */
+export function canDecideDepartment(role: Role, department: string): boolean {
+  return ((ROLE_ACTION_DEPARTMENTS[role] ?? []) as readonly string[]).includes(department);
+}
 
 /** Roles each role may create/assign — prevents privilege escalation. */
 export const ASSIGNABLE_ROLES: Partial<Record<Role, readonly Role[]>> = {

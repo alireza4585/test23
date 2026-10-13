@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  ACTION_DEPARTMENTS,
   ASSIGNABLE_ROLES,
+  BASELINE_ADJUST_ROLES,
+  ROLE_ACTION_DEPARTMENTS,
   can,
   canAssign,
   PERMISSIONS,
@@ -72,6 +75,24 @@ describe("RBAC", () => {
     for (const [role, roles] of assign) {
       expect([...roles].sort(), role).toEqual([...(ASSIGNABLE_ROLES[role as keyof typeof ASSIGNABLE_ROLES] ?? [])].sort());
     }
+  });
+
+  it("matches the Flutter Action Center department table", () => {
+    const src = readFileSync(join(repo, "app/lib/core/security/role_policy.dart"), "utf8");
+    const all = [...src.slice(src.indexOf("_allDepartments = {"), src.indexOf("};", src.indexOf("_allDepartments = {"))).matchAll(/'(\w+)'/g)].map((m) => m[1]);
+    expect(all.sort()).toEqual([...ACTION_DEPARTMENTS].sort());
+    const table = src.slice(src.indexOf("actionDepartments = {"), src.indexOf("static const Set<String> _allDepartments"));
+    const dart = new Map<string, string[]>();
+    for (const m of table.matchAll(/AppRole\.(\w+): (_allDepartments|\{([^}]*)\})/g)) {
+      dart.set(m[1], m[2] === "_allDepartments" ? all : [...m[3].matchAll(/'(\w+)'/g)].map((x) => x[1]));
+    }
+    for (const role of ROLES) {
+      expect((dart.get(role) ?? []).sort(), role).toEqual([...(ROLE_ACTION_DEPARTMENTS[role] ?? [])].sort());
+      // A department to decide implies the permission to approve, and vice versa.
+      expect(can(role, "ai.actions.approve"), role).toBe((ROLE_ACTION_DEPARTMENTS[role] ?? []).length > 0);
+    }
+    const adjust = src.slice(src.indexOf("baselineAdjustRoles = {"), src.indexOf("};", src.indexOf("baselineAdjustRoles = {")));
+    expect([...adjust.matchAll(/AppRole\.(\w+)/g)].map((m) => m[1]).sort()).toEqual([...BASELINE_ADJUST_ROLES].sort());
   });
 
   it("prevents privilege escalation", () => {

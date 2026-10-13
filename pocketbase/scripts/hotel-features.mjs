@@ -5,13 +5,13 @@
 //   npm run hotel-features -- <hotelId> on energyBaseline,forecasts
 //   npm run hotel-features -- <hotelId> off forecasts
 //
-// Flags: energyBaseline, forecasts, recommendationLoop.
+// Flags: energyBaseline, forecasts, recommendationLoop, morningBriefing.
 // Sign-in: ZH_PB_URL, ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD (or asked).
 import PocketBase from "pocketbase";
 
 import { serverUrl, superuserLogin } from "./prompt.mjs";
 
-const FLAGS = ["energyBaseline", "forecasts", "recommendationLoop"];
+const FLAGS = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing"];
 const [hotelId, mode, list = ""] = process.argv.slice(2);
 
 try {
