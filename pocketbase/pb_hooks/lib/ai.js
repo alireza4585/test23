@@ -884,4 +884,5 @@ function purgeConversations(app, now) {
 module.exports = {
   ask, narrate, contextFor, buildContext, ruleAnswer, num, accessOf, redactor, clean, redactIds,
   numbersIn, factsOf, unsupportedNumbers, budget, recordUsage, purgeConversations, chatUrl,
+  complete, llmConfigured, scrub, dataBlock, envInt,
 };

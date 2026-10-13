@@ -21,6 +21,7 @@
  *   POST /api/zarin/insights/{id}/decide      recommendation decision (+ linked ticket) [recommendationLoop]
  *   POST /api/zarin/actions/{id}/decide       Action Center: approve (execute) / reject a typed action [recommendationLoop]
  *   POST /api/zarin/actions                   propose adjustBaseline (GM / energy manager) [recommendationLoop, energyBaseline]
+ *   POST /api/zarin/briefings/{id}/rate       "useful / not useful" on one's own morning briefing [morningBriefing]
  *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon [energyBaseline]
  *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now [forecasts]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
@@ -33,6 +34,7 @@
  * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
  *             energy 22:10 (01:40 Tehran): weather, F2 model refit and scoring [energyBaseline],
  *             insights 03:10 (06:40 Tehran) + recommendation close/evaluation [recommendationLoop],
+ *             briefing 03:20 (06:50 Tehran): morning briefing per role [morningBriefing],
  *             SLA every 15 min, outbox every minute, nonce purge every 10 min,
  *             assistant conversation retention 00:25.
  */
@@ -57,6 +59,7 @@ routerAdd("POST", "/api/zarin/ai/ask", (e) => require(`${__hooks}/lib/ai.js`).as
 routerAdd("POST", "/api/zarin/insights/{id}/decide", (e) => require(`${__hooks}/lib/recommendations.js`).decide(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/actions", (e) => require(`${__hooks}/lib/actions.js`).create(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/actions/{id}/decide", (e) => require(`${__hooks}/lib/actions.js`).decide(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/briefings/{id}/rate", (e) => require(`${__hooks}/lib/briefing.js`).rate(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/zarin/energy/analysis", (e) => require(`${__hooks}/lib/intelligence.js`).energyAnalysis(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/hotels/{id}/forecasts/run", (e) => require(`${__hooks}/lib/intelligence.js`).runForecastsNow(e), $apis.requireAuth("users"));
 
@@ -165,6 +168,16 @@ cronAdd("zarin_insights", "10 3 * * *", () => {
   const now = new Date();
   for (const id of z.activeHotelIds($app)) {
     try { analytics.runInsights($app, id, now); } catch (err) { console.log("insights failed", id, String(err)); }
+  }
+});
+
+// 06:50 Tehran: morning briefing per role, after the insights and actions.
+cronAdd("zarin_briefing", "20 3 * * *", () => {
+  const z = require(`${__hooks}/lib/zarin.js`);
+  const briefing = require(`${__hooks}/lib/briefing.js`);
+  for (const id of z.activeHotelIds($app)) {
+    if (!z.feature($app, id, "morningBriefing")) continue;
+    try { briefing.generate($app, id, new Date()); } catch (err) { console.log("briefing failed", id, String(err)); }
   }
 });
 

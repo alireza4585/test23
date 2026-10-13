@@ -14,7 +14,8 @@
  *
  * POST /api/zarin/admin/hotels/{id}/analytics
  *   {rollup?: {from, to}, insights?: bool, sla?: bool, forecasts?: bool, energy?: bool, now?: ISO date}
- *   `energy` runs the nightly F2 job (weather, refit, scoring) as of `now`.
+ *   `energy` runs the nightly F2 job (weather, refit, scoring) as of `now`;
+ *   `briefing` builds the F4 morning briefing as of `now`.
  */
 const z = require(`${__hooks}/lib/zarin.js`);
 const analytics = require(`${__hooks}/lib/analytics.js`);
@@ -106,6 +107,7 @@ function runAnalytics(e) {
   }
   if (b.forecasts) out.forecasts = require(`${__hooks}/lib/forecasting.js`).runForecasts(e.app, hotelId, now);
   if (b.energy) out.energy = require(`${__hooks}/lib/energy.js`).run(e.app, hotelId, now);
+  if (b.briefing) out.briefing = require(`${__hooks}/lib/briefing.js`).generate(e.app, hotelId, now);
   if (b.insights) out.insightsCreated = analytics.runInsights(e.app, hotelId, now);
   if (b.sla) {
     analytics.checkSla(e.app, hotelId, now);

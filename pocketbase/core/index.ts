@@ -71,3 +71,10 @@ export {
 } from "../../firebase/functions/src/analytics/energy-model";
 export { ACTION_TYPES, EDITABLE_PARAMS, proposeActions } from "../../firebase/functions/src/analytics/actions";
 export { bootstrapMeanDiff } from "../../firebase/functions/src/analytics/stats";
+export {
+  briefingText,
+  buildItems as buildBriefingItems,
+  categoriesFor as briefingCategoriesFor,
+  factsOf as briefingFactsOf,
+  itemsForRole as briefingItemsForRole,
+} from "../../firebase/functions/src/analytics/briefing";

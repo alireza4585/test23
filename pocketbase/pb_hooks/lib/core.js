@@ -43,6 +43,11 @@ __export(index_exports, {
   ROLE_TIER: () => ROLE_TIER,
   ROOM_TRANSITIONS: () => ROOM_TRANSITIONS,
   bootstrapMeanDiff: () => bootstrapMeanDiff,
+  briefingCategoriesFor: () => categoriesFor,
+  briefingFactsOf: () => factsOf,
+  briefingItemsForRole: () => itemsForRole,
+  briefingText: () => briefingText,
+  buildBriefingItems: () => buildItems,
   can: () => can,
   canAssign: () => canAssign,
   canDecideDepartment: () => canDecideDepartment,
@@ -1819,4 +1824,373 @@ function notify(department, roles, insight, impact) {
     params: { roles, title: cut(insight.title, 120), body: cut(insight.recommendation, 500) },
     expectedImpact: impact
   };
+}
+
+// ../firebase/functions/src/analytics/briefing.ts
+var HISTORY_DAYS = 28;
+var MIN_HISTORY_POINTS = 14;
+var ROBUST_Z = 3;
+var MAX_ITEMS = 7;
+var LABEL = { electricity: "\u0628\u0631\u0642", water: "\u0622\u0628", gas: "\u06AF\u0627\u0632" };
+var UNIT = { electricity: "kWh", water: "m\xB3", gas: "m\xB3" };
+var fmt2 = (v, d = 0) => {
+  const fixed = Math.abs(v).toFixed(d);
+  const [int, frac] = fixed.split(".");
+  const sign = v < 0 && Number(fixed) !== 0 ? "-" : "";
+  return sign + int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (frac && Number(frac) !== 0 ? `.${frac}` : "");
+};
+var r1 = (v) => Math.round(v * 10) / 10;
+var emptyFacts = () => ({ values: {}, counts: {}, windows: {}, roomsNow: {}, labels: {} });
+function robustZ(x2, history) {
+  const h = history.filter((v) => isFinite(v));
+  if (h.length < MIN_HISTORY_POINTS) return null;
+  const median = quantile(h, 0.5);
+  const mad = quantile(h.map((v) => Math.abs(v - median)), 0.5);
+  const scale = Math.max(1.4826 * mad, 0.02 * Math.abs(median), 1e-9);
+  return { z: (x2 - median) / scale, median };
+}
+function titleFacts(id, title, f) {
+  f.labels[`${id}_title`] = title;
+  const ascii = title.replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776)).replace(/٬/g, ",");
+  const re = /(\d+(?:,\d{3})*)\s*(?:تا\s+)?(خرابی|تیکت|روز|اتاق|قلم)/g;
+  let m;
+  let i = 0;
+  while (m = re.exec(ascii)) {
+    const n = Number(m[1].replace(/,/g, ""));
+    if (m[2] === "\u0631\u0648\u0632") f.windows[`${id}_${i}`] = n;
+    else if (m[2] === "\u0627\u062A\u0627\u0642") f.roomsNow[`${id}_${i}`] = n;
+    else if (m[2] === "\u0642\u0644\u0645") f.counts[`${id}_lowStock_${i}`] = n;
+    else f.counts[`${id}_tickets_${i}`] = n;
+    i++;
+  }
+}
+function buildItems(input) {
+  var _a, _b, _c;
+  const { today, addDays } = input;
+  const yesterday = addDays(today, -1);
+  const history = Array.from({ length: HISTORY_DAYS }, (_, i) => addDays(yesterday, -(i + 1)));
+  const items = [];
+  const actionFor = (insightId) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = input.actions.find((a) => a.insight === insightId)) == null ? void 0 : _a2.id) != null ? _b2 : null;
+  };
+  const openHvac = input.tickets.filter((t) => isActiveTicket(t) && t.category === "hvac");
+  const occ = (day) => {
+    const o = input.operations.find((r) => r.day === day);
+    return o && o.roomsAvailable > 0 ? o.roomsOccupied / o.roomsAvailable * 100 : null;
+  };
+  const occY = occ(yesterday);
+  if (occY !== null) {
+    const rz = robustZ(occY, history.map(occ).filter((v) => v !== null));
+    const f = emptyFacts();
+    f.values.occupancyYesterday = r1(occY);
+    let finding = `\u0627\u0634\u063A\u0627\u0644 \u062F\u06CC\u0631\u0648\u0632 ${fmt2(r1(occY), 1)}\u066A \u0628\u0648\u062F`;
+    if (rz) {
+      f.values.occupancyMedian = r1(rz.median);
+      f.windows.historyDays = HISTORY_DAYS;
+      finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)}\u066A`;
+    }
+    if (input.forecastOccupancy !== null && input.forecastOccupancy !== void 0) {
+      f.values.occupancyForecastToday = r1(input.forecastOccupancy);
+      finding += `. \u067E\u06CC\u0634\u200C\u0628\u06CC\u0646\u06CC \u0627\u0645\u0631\u0648\u0632 ${fmt2(r1(input.forecastOccupancy), 1)}\u066A`;
+    }
+    const anomalous = !!rz && Math.abs(rz.z) >= ROBUST_Z;
+    items.push({
+      id: "occupancy",
+      kind: anomalous ? "anomaly" : "status",
+      category: "occupancy",
+      title: anomalous ? occY > rz.median ? "\u0627\u0634\u063A\u0627\u0644 \u063A\u06CC\u0631\u0639\u0627\u062F\u06CC \u0628\u0627\u0644\u0627" : "\u0627\u0634\u063A\u0627\u0644 \u063A\u06CC\u0631\u0639\u0627\u062F\u06CC \u067E\u0627\u06CC\u06CC\u0646" : "\u0627\u0634\u063A\u0627\u0644",
+      finding: `${finding}.`,
+      cause: null,
+      actionId: null,
+      route: "/rooms",
+      severity: anomalous ? Math.abs(rz.z) : 0.5,
+      finance: false,
+      facts: f
+    });
+  }
+  for (const type of ["electricity", "water", "gas"]) {
+    const unit = UNIT[type];
+    const label = LABEL[type];
+    const model = ((_a = input.energyModel) != null ? _a : []).find((m) => m.type === type && m.valid);
+    const dayRow = model == null ? void 0 : model.days.find((d) => d.day === yesterday);
+    const f = emptyFacts();
+    const id = `energy_${type}`;
+    let finding;
+    let anomalous;
+    let severity;
+    let up;
+    if (model && dayRow) {
+      const pct = r1(dayRow.deviationPct);
+      f.values[`${id}_actual`] = Math.round(dayRow.actual);
+      f.values[`${id}_expected`] = Math.round(dayRow.expected);
+      f.values[`${id}_deviationPct`] = Math.abs(pct);
+      up = pct > 0;
+      finding = `\u0645\u0635\u0631\u0641 ${label} \u062F\u06CC\u0631\u0648\u0632 ${fmt2(Math.round(dayRow.actual))} ${unit} \u0628\u0648\u062F\u060C ${fmt2(Math.abs(pct), 1)}\u066A ${up ? "\u0628\u06CC\u0634\u062A\u0631" : "\u06A9\u0645\u062A\u0631"} \u0627\u0632 ${fmt2(Math.round(dayRow.expected))} ${unit} \u0645\u0648\u0631\u062F\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u062F\u0644` + (dayRow.usedWeather ? " (\u0628\u0627 \u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644)" : " (\u0628\u0627 \u0627\u0634\u063A\u0627\u0644)");
+      const run = [];
+      for (let i = model.days.length - 1; i >= 0 && (model.days[i].spike || model.days[i].drift); i--) run.unshift(model.days[i].day);
+      anomalous = dayRow.spike || dayRow.drift;
+      if (anomalous && run.length > 1) {
+        f.windows[`${id}_flaggedDays`] = run.length;
+        finding += `\u061B ${fmt2(run.length)} \u0631\u0648\u0632 \u067E\u06CC\u0627\u067E\u06CC \u0628\u0627\u0644\u0627\u062A\u0631 \u0627\u0632 \u0628\u0627\u0632\u0647\u0654 \u0645\u0648\u0631\u062F\u0627\u0646\u062A\u0638\u0627\u0631`;
+      }
+      if (dayRow.seasonCovered === false) finding += "\u061B \u0627\u0637\u0645\u06CC\u0646\u0627\u0646 \u067E\u0627\u06CC\u06CC\u0646: \u0645\u062F\u0644 \u062F\u0627\u062F\u0647\u0654 \u0627\u06CC\u0646 \u0645\u0627\u0647 \u0627\u0632 \u0633\u0627\u0644 \u0631\u0627 \u0646\u062F\u06CC\u062F\u0647 \u0627\u0633\u062A";
+      severity = anomalous ? 3 + Math.abs(pct) / 10 : Math.abs(pct) / 20;
+    } else {
+      const val = (day) => {
+        const rows = input.energy.filter((e) => e.day === day && e.type === type);
+        return rows.length ? rows.reduce((s, e) => s + e.consumption, 0) : null;
+      };
+      const y = val(yesterday);
+      if (y === null) continue;
+      const rz = robustZ(y, history.map(val).filter((v) => v !== null));
+      f.values[`${id}_actual`] = Math.round(y);
+      up = !!rz && y > rz.median;
+      finding = `\u0645\u0635\u0631\u0641 ${label} \u062F\u06CC\u0631\u0648\u0632 ${fmt2(Math.round(y))} ${unit} \u0628\u0648\u062F`;
+      if (rz) {
+        f.values[`${id}_median`] = Math.round(rz.median);
+        f.windows.historyDays = HISTORY_DAYS;
+        finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(Math.round(rz.median))} ${unit} (\u0628\u062F\u0648\u0646 \u062A\u0639\u062F\u06CC\u0644 \u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644)`;
+      }
+      anomalous = !!rz && Math.abs(rz.z) >= ROBUST_Z;
+      severity = anomalous ? Math.abs(rz.z) : 0.3;
+    }
+    let cause = null;
+    if (anomalous && up && type !== "water" && openHvac.length > 0) {
+      f.counts[`${id}_openHvacTickets`] = openHvac.length;
+      f.labels[`${id}_hvacTitle`] = openHvac[0].title;
+      cause = `\u0645\u0645\u06A9\u0646 \u0627\u0633\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0634\u062F \u0628\u0627 ${fmt2(openHvac.length)} \u062A\u06CC\u06A9\u062A \u0628\u0627\u0632 HVAC (\xAB${openHvac[0].title}\xBB)`;
+    }
+    const insight = (_b = input.insights.find((i) => i.rule === "energyModel" && i.title.indexOf(label) >= 0)) != null ? _b : type === "electricity" ? input.insights.find((i) => i.rule === "energyIntensity") : void 0;
+    items.push({
+      id,
+      kind: anomalous ? "anomaly" : "status",
+      category: "energy",
+      title: anomalous ? `\u0645\u0635\u0631\u0641 ${label} ${up ? "\u0628\u0627\u0644\u0627\u062A\u0631" : "\u067E\u0627\u06CC\u06CC\u0646\u200C\u062A\u0631"} \u0627\u0632 \u0627\u0646\u062A\u0638\u0627\u0631` : `\u0645\u0635\u0631\u0641 ${label}`,
+      finding: `${finding}.`,
+      cause,
+      actionId: anomalous && insight ? actionFor(insight.id) : null,
+      route: "/energy",
+      severity,
+      finance: false,
+      facts: f
+    });
+  }
+  const cleanMinutes = (day) => {
+    const d = input.tasks.filter((t) => t.day === day && t.type === "checkoutClean" && t.status === "done" && t.startedAt && t.completedAt).map((t) => (t.completedAt.getTime() - t.startedAt.getTime()) / 6e4);
+    return d.length ? d.reduce((a, b) => a + b, 0) / d.length : null;
+  };
+  const absent = (day, department) => input.shifts.filter((s) => s.day === day && s.department === department && s.status === "absent").length;
+  const cY = cleanMinutes(yesterday);
+  if (cY !== null) {
+    const rz = robustZ(cY, history.map(cleanMinutes).filter((v) => v !== null));
+    if (rz && rz.z >= ROBUST_Z) {
+      const f = emptyFacts();
+      f.values.checkoutCleanMinutes = r1(cY);
+      f.values.checkoutCleanMedian = r1(rz.median);
+      f.values.checkoutCleanTarget = (_c = input.settings.targetCleanMinutes.checkoutClean) != null ? _c : 35;
+      f.windows.historyDays = HISTORY_DAYS;
+      const absY = absent(yesterday, "housekeeping");
+      const absMedian = quantile(history.map((d) => absent(d, "housekeeping")), 0.5);
+      let cause = null;
+      if (absY > absMedian) {
+        f.values.housekeepingAbsentYesterday = absY;
+        f.values.housekeepingAbsentMedian = absMedian;
+        cause = `\u0645\u0645\u06A9\u0646 \u0627\u0633\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0634\u062F \u0628\u0627 \u063A\u06CC\u0628\u062A ${fmt2(absY)} \u0646\u0641\u0631 \u0627\u0632 \u06A9\u0627\u0631\u06A9\u0646\u0627\u0646 \u062E\u0627\u0646\u0647\u200C\u062F\u0627\u0631\u06CC (\u0645\u0639\u0645\u0648\u0644\u0627\u064B ${fmt2(absMedian)} \u0646\u0641\u0631)`;
+      }
+      const insight = input.insights.find((i) => i.rule === "hkEfficiency");
+      items.push({
+        id: "housekeeping_clean",
+        kind: "anomaly",
+        category: "housekeeping",
+        title: "\u0632\u0645\u0627\u0646 \u0646\u0638\u0627\u0641\u062A \u0627\u062A\u0627\u0642\u200C\u0647\u0627\u06CC \u062A\u062E\u0644\u06CC\u0647 \u0628\u0627\u0644\u0627",
+        finding: `\u0645\u06CC\u0627\u0646\u06AF\u06CC\u0646 \u0646\u0638\u0627\u0641\u062A \u0627\u062A\u0627\u0642 \u062A\u062E\u0644\u06CC\u0647 \u062F\u06CC\u0631\u0648\u0632 ${fmt2(r1(cY), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0628\u0648\u062F\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0648 \u0647\u062F\u0641 ${fmt2(f.values.checkoutCleanTarget)} \u062F\u0642\u06CC\u0642\u0647.`,
+        cause,
+        actionId: insight ? actionFor(insight.id) : null,
+        route: "/housekeeping",
+        severity: rz.z,
+        finance: false,
+        facts: f
+      });
+    }
+  }
+  for (const department of Array.from(new Set(input.shifts.map((s) => s.department))).sort()) {
+    const aY = absent(yesterday, department);
+    const rz = robustZ(aY, history.map((d) => absent(d, department)));
+    if (!rz || rz.z < ROBUST_Z || aY < 2) continue;
+    const f = emptyFacts();
+    f.values[`absent_${department}`] = aY;
+    f.values[`absentMedian_${department}`] = rz.median;
+    f.labels[`department_${department}`] = department;
+    items.push({
+      id: `staffing_${department}`,
+      kind: "anomaly",
+      category: "staffing",
+      title: `\u063A\u06CC\u0628\u062A \u063A\u06CC\u0631\u0639\u0627\u062F\u06CC \u062F\u0631 ${department}`,
+      finding: `\u062F\u06CC\u0631\u0648\u0632 ${fmt2(aY)} \u0646\u0641\u0631 \u062F\u0631 ${department} \u063A\u0627\u06CC\u0628 \u0628\u0648\u062F\u0646\u062F\u061B \u0645\u0639\u0645\u0648\u0644\u0627\u064B ${fmt2(rz.median)} \u0646\u0641\u0631.`,
+      cause: null,
+      actionId: null,
+      route: "/staff",
+      severity: rz.z,
+      finance: false,
+      facts: f
+    });
+  }
+  const created = (day) => input.tickets.filter((t) => t.createdAt && dayKeyLocal(t.createdAt) === day).length;
+  const tY = created(yesterday);
+  const tz = robustZ(tY, history.map(created));
+  const repeat = input.insights.filter((i) => i.rule === "repeatFailure");
+  if (tz && tz.z >= ROBUST_Z && tY >= 3) {
+    const f = emptyFacts();
+    f.counts.ticketsCreatedYesterday = tY;
+    f.values.ticketsCreatedMedian = tz.median;
+    let cause = null;
+    if (repeat.length) {
+      f.labels.repeatTitle = repeat[0].title;
+      titleFacts("repeatCause", repeat[0].title, f);
+      cause = `\u0645\u0645\u06A9\u0646 \u0627\u0633\u062A \u0645\u0631\u062A\u0628\u0637 \u0628\u0627\u0634\u062F \u0628\u0627 \u062E\u0631\u0627\u0628\u06CC \u062A\u06A9\u0631\u0627\u0631\u06CC: \xAB${repeat[0].title}\xBB`;
+    }
+    items.push({
+      id: "maintenance_created",
+      kind: "anomaly",
+      category: "maintenance",
+      title: "\u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u062A\u0639\u0645\u06CC\u0631 \u0628\u06CC\u0634 \u0627\u0632 \u0645\u0639\u0645\u0648\u0644",
+      finding: `\u062F\u06CC\u0631\u0648\u0632 ${fmt2(tY)} \u062A\u06CC\u06A9\u062A \u062A\u0639\u0645\u06CC\u0631 \u062B\u0628\u062A \u0634\u062F\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 \u0631\u0648\u0632\u0627\u0646\u0647 ${fmt2(tz.median)}.`,
+      cause,
+      actionId: null,
+      route: "/maintenance",
+      severity: tz.z,
+      finance: false,
+      facts: f
+    });
+  }
+  const overdue = input.tickets.filter((t) => isActiveTicket(t) && t.slaDueAt && t.slaDueAt < input.now);
+  if (overdue.length) {
+    const f = emptyFacts();
+    f.counts.overdueTickets = overdue.length;
+    const critical2 = overdue.filter((t) => t.priority === "critical").length;
+    if (critical2) f.counts.overdueTicketsCritical = critical2;
+    items.push({
+      id: "maintenance_overdue",
+      kind: "alert",
+      category: "maintenance",
+      title: "\u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u06AF\u0630\u0634\u062A\u0647 \u0627\u0632 SLA",
+      finding: `${fmt2(overdue.length)} \u062A\u06CC\u06A9\u062A \u0645\u0639\u0648\u0642 \u0628\u0627\u0632 \u0627\u0633\u062A${critical2 ? `\u060C \u0627\u0632 \u062C\u0645\u0644\u0647 ${fmt2(critical2)} \u062A\u06CC\u06A9\u062A \u0628\u062D\u0631\u0627\u0646\u06CC` : ""}.`,
+      cause: null,
+      actionId: null,
+      route: "/maintenance",
+      severity: 2 + overdue.length / 5 + critical2,
+      finance: false,
+      facts: f
+    });
+  }
+  const CATEGORY = {
+    repeatFailure: "maintenance",
+    outOfOrderRooms: "maintenance",
+    stockout: "inventory",
+    outOfOrderRevenue: "revenue",
+    weekdayOccupancy: "revenue",
+    hkEfficiency: "housekeeping"
+  };
+  for (const ins of input.insights) {
+    const category = CATEGORY[ins.rule];
+    if (!category) continue;
+    if (ins.rule === "hkEfficiency" && items.some((i) => i.id === "housekeeping_clean")) continue;
+    const f = emptyFacts();
+    titleFacts(ins.id, ins.title, f);
+    const linked = ins.rule === "repeatFailure" && items.some((i) => i.id === "maintenance_created") ? "\u061B \u062F\u0631 \u0627\u0641\u0632\u0627\u06CC\u0634 \u062A\u06CC\u06A9\u062A\u200C\u0647\u0627\u06CC \u062F\u06CC\u0631\u0648\u0632 \u0647\u0645 \u062F\u06CC\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F" : "";
+    items.push({
+      id: `insight_${ins.id}`,
+      kind: "insight",
+      category,
+      title: ins.title,
+      finding: `${ins.title}${linked}.`,
+      cause: null,
+      actionId: actionFor(ins.id),
+      route: category === "inventory" ? "/inventory" : category === "revenue" ? "/insights" : "/maintenance",
+      severity: (ins.priority === "high" ? 3 : ins.priority === "medium" ? 2 : 1) + 0.1,
+      finance: category === "revenue",
+      facts: f
+    });
+  }
+  const covered = (type) => type === "energySpike" || type === "maintenanceSla";
+  const critical = input.alerts.filter((a) => a.severity === "critical" && !covered(a.type));
+  if (critical.length) {
+    const f = emptyFacts();
+    f.counts.openCriticalAlerts = critical.length;
+    critical.slice(0, 3).forEach((a, i) => f.labels[`alert_${i}`] = a.title);
+    items.push({
+      id: "alerts_critical",
+      kind: "alert",
+      category: "maintenance",
+      title: "\u0647\u0634\u062F\u0627\u0631\u0647\u0627\u06CC \u0628\u062D\u0631\u0627\u0646\u06CC \u0628\u0627\u0632",
+      finding: `${fmt2(critical.length)} \u0647\u0634\u062F\u0627\u0631 \u0628\u062D\u0631\u0627\u0646\u06CC \u0628\u0627\u0632 \u0627\u0633\u062A: ${critical.slice(0, 3).map((a) => `\xAB${a.title}\xBB`).join("\u060C ")}.`,
+      cause: null,
+      actionId: null,
+      route: "/notifications",
+      severity: 2.5 + critical.length,
+      finance: false,
+      facts: f
+    });
+  }
+  const ooo = input.rooms.filter((r) => r.status === "outOfOrder");
+  if (ooo.length && !input.insights.some((i) => i.rule === "outOfOrderRooms")) {
+    const f = emptyFacts();
+    f.roomsNow.outOfOrder = ooo.length;
+    items.push({
+      id: "rooms_ooo",
+      kind: "status",
+      category: "maintenance",
+      title: "\u0627\u062A\u0627\u0642\u200C\u0647\u0627\u06CC \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633",
+      finding: `${fmt2(ooo.length)} \u0627\u062A\u0627\u0642 \u062E\u0627\u0631\u062C \u0627\u0632 \u0633\u0631\u0648\u06CC\u0633 \u0627\u0633\u062A.`,
+      cause: null,
+      actionId: null,
+      route: "/rooms",
+      severity: 1 + ooo.length / 10,
+      finance: false,
+      facts: f
+    });
+  }
+  return items;
+}
+function dayKeyLocal(d) {
+  return new Date(d.getTime() + 210 * 6e4).toISOString().slice(0, 10);
+}
+function categoriesFor(perms) {
+  const out = /* @__PURE__ */ new Set();
+  if (perms["dashboard.executive"] || perms["dashboard.operations"] || perms["finance.view"]) out.add("occupancy");
+  if (perms["energy.view"]) out.add("energy");
+  if (perms["maintenance.viewAll"] || perms["maintenance.manage"]) out.add("maintenance");
+  if (perms["housekeeping.viewAll"]) out.add("housekeeping");
+  if (perms["inventory.view"]) out.add("inventory");
+  if (perms["staff.view"]) out.add("staffing");
+  if (perms["finance.view"]) out.add("revenue");
+  return out;
+}
+function itemsForRole(items, perms) {
+  const cats = categoriesFor(perms);
+  const allowed = items.filter((i) => cats.has(i.category) && (!i.finance || perms["finance.view"] === true));
+  return allowed.sort((a, b) => b.severity - a.severity || (a.id < b.id ? -1 : 1)).slice(0, MAX_ITEMS);
+}
+function factsOf(items, day) {
+  const out = { day, ...emptyFacts() };
+  for (const i of items) {
+    Object.assign(out.values, i.facts.values);
+    Object.assign(out.counts, i.facts.counts);
+    Object.assign(out.windows, i.facts.windows);
+    Object.assign(out.roomsNow, i.facts.roomsNow);
+    Object.assign(out.labels, i.facts.labels);
+  }
+  return out;
+}
+function briefingText(items, day) {
+  const lines = [`\u06AF\u0632\u0627\u0631\u0634 \u0635\u0628\u062D\u06AF\u0627\u0647\u06CC ${day}`];
+  if (!items.length) lines.push("\u062F\u0627\u062F\u0647\u0654 \u06A9\u0627\u0641\u06CC \u0628\u0631\u0627\u06CC \u06AF\u0632\u0627\u0631\u0634 \u0627\u0645\u0631\u0648\u0632 \u0646\u06CC\u0633\u062A: \u0647\u06CC\u0686 \u0634\u0627\u062E\u0635 \u06CC\u0627 \u06CC\u0627\u0641\u062A\u0647\u0654 \u062A\u0627\u0632\u0647\u200C\u0627\u06CC \u0628\u0631\u0627\u06CC \u0646\u0642\u0634 \u0634\u0645\u0627 \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A.");
+  items.forEach((it, i) => {
+    let line = `${i + 1}. ${it.title}: ${it.finding}`;
+    if (it.cause) line += ` \u0639\u0644\u062A \u0627\u062D\u062A\u0645\u0627\u0644\u06CC: ${it.cause}.`;
+    if (it.actionId) line += " \u06CC\u06A9 \u0627\u0642\u062F\u0627\u0645 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F\u06CC \u062F\u0631 \u0645\u0631\u06A9\u0632 \u0627\u0642\u062F\u0627\u0645 \u0645\u0646\u062A\u0638\u0631 \u062A\u0635\u0645\u06CC\u0645 \u0627\u0633\u062A.";
+    lines.push(line);
+  });
+  return lines.join("\n");
 }

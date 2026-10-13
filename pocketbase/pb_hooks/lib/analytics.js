@@ -166,12 +166,19 @@ function checkSla(app, hotelId, now) {
   slaAlerts(app, hotelId, data.tickets, now);
 }
 
-/** KPIs + open alerts + active insights for one day (default: yesterday). */
+/**
+ * KPIs + open alerts + active insights for one day (default: yesterday); with
+ * the morningBriefing flag also today's stored briefing per role (F4).
+ */
 function summary(app, hotelId, day, now) {
   const target = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : z.addDays(z.dayKey(now), -1);
   const data = loadHotelData(app, hotelId, z.addDays(target, -7), now);
   const p = { h: hotelId };
+  const briefings = z.feature(app, hotelId, "morningBriefing")
+    ? { day: z.dayKey(now), roles: require(`${__hooks}/lib/briefing.js`).stored(app, hotelId, z.dayKey(now)) }
+    : null;
   return {
+    briefings,
     hotelId,
     hotel: data.name,
     day: target,
