@@ -19,6 +19,8 @@
 - APK قدیم روی سرور تازه خواندن‌ها را درست انجام می‌دهد، اما **ذخیرهٔ «ثبت روزانه» با `403` رد می‌شود**. این عمدی است ([۱۷، بخش ۵](17-ai-phase-0.5.md#۵-سازگاری-نسخههای-اپ)) و در تمرین هم دیده شد.
 - پس APK تازه باید **بلافاصله** پس از قدم ۴ نصب شود. بهترین زمان، ساعت کم‌کار پذیرش است.
 
+**دامنه‌ها:** این سند آدرس‌های تازه را به کار می‌برد: PocketBase روی `https://ali2.axono.ir` و n8n روی `https://ali.axono.ir`. اگر انتقال دامنه ([۰۹، بخش ۱۰](09-liara-runbook.md#۱۰-انتقال-به-دامنههای-تازه)) هنوز انجام نشده، اول آن را انجام دهید. آزمون اتصال هر دو سرویس با `npm run check-endpoints` است (همان بخش، قدم ۷).
+
 **دربارهٔ shell:** دستورهای `zsh` روی Mac شما اجرا می‌شوند. دستورهای `sh` در «خط فرمان» برنامه در پنل لیارا اجرا می‌شوند. هیچ رمز یا کلیدی را در چت نفرستید.
 
 ## ۱. ساخت APK (پیش از هر تغییری روی سرور)
@@ -28,7 +30,7 @@ cd ~/test23 && git fetch origin && git checkout ai/phase-1 && git pull
 cd app && flutter pub get
 flutter build apk --release \
   --dart-define=ZH_BACKEND=pocketbase \
-  --dart-define=ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+  --dart-define=ZH_PB_URL=https://ali2.axono.ir
 ```
 
 **بررسی:**
@@ -72,7 +74,7 @@ flutter build apk --release \
 
 **بررسی:**
 
-- [ ] `https://zarin-hoshmand-nieplltrhr.liara.run/v1/health` همچنان `{"ok":true,…}` برمی‌گرداند.
+- [ ] `https://ali2.axono.ir/v1/health` همچنان `{"ok":true,…}` برمی‌گرداند.
 
 ## ۴. کپی migrationها و hookها (استقرار اصلی)
 

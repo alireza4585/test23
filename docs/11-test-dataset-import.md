@@ -57,7 +57,7 @@ npm run import-dataset -- --csv ~/Downloads/app_import_csv_S1_Normal.zip --xlsx 
 ## ۲. اجرا
 
 ```zsh
-ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run import-dataset -- --csv ~/Downloads/app_import_csv_S1_Normal.zip --xlsx ~/Downloads/ParsianAzadi_Zarin_TestDataset_S1_Normal.xlsx --apply
+ZH_PB_URL=https://ali2.axono.ir npm run import-dataset -- --csv ~/Downloads/app_import_csv_S1_Normal.zip --xlsx ~/Downloads/ParsianAzadi_Zarin_TestDataset_S1_Normal.xlsx --apply
 ```
 
 1. ایمیل و رمز superuser پرسیده می‌شود.
@@ -141,14 +141,14 @@ ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run import-dataset -- 
 - **cronهای سرور:** این cronها (SLA، rollup شبانه، بینش‌ها) برای هتل آزمایشی هم با **زمان واقعی** اجرا می‌شوند. پس عددها کم‌کم از عکس لحظهٔ 2026-10-07 09:30 فاصله می‌گیرند. مثلاً تیکت‌های باز دیرکرد پیدا می‌کنند و روزهای مانده تا اتمام موجودی کم می‌شود.
 - **مقایسهٔ دوباره:** مقایسه با وضعیت فعلی سرور، بدون نوشتن چیزی:
   ```zsh
-  ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run import-dataset -- --csv ~/Downloads/app_import_csv_S1_Normal.zip --xlsx ~/Downloads/ParsianAzadi_Zarin_TestDataset_S1_Normal.xlsx --report <شناسهٔ هتل>
+  ZH_PB_URL=https://ali2.axono.ir npm run import-dataset -- --csv ~/Downloads/app_import_csv_S1_Normal.zip --xlsx ~/Downloads/ParsianAzadi_Zarin_TestDataset_S1_Normal.xlsx --report <شناسهٔ هتل>
   ```
 
 ## برگرداندن
 
 - **حذف هتل آزمایشی (پیشنهادی):**
   ```zsh
-  HOTEL_ID=<شناسهٔ هتل> ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run reset-demo
+  HOTEL_ID=<شناسهٔ هتل> ZH_PB_URL=https://ali2.axono.ir npm run reset-demo
   ```
   اسکریپت فهرست چیزهایی را که پاک می‌شوند نشان می‌دهد و `yes` می‌خواهد. هتل آزمایشی با همهٔ داده‌هایش و ۲۲۱ کاربرش پاک می‌شود. هتل‌های دیگر دست نمی‌خورند. بعد از آن می‌توانید دوباره import کنید.
 - **بازگرداندن کل دیتابیس:** در پنل `/_/` ← Settings ← Backups، فایل `zarin-before-import-…zip` را Restore کنید. کل دیتابیس به لحظهٔ قبل از import برمی‌گردد و **هر تغییر بعد از آن، از جمله در هتل واقعی، از بین می‌رود.** فقط وقتی سراغ این راه بروید که `reset-demo` کافی نباشد.

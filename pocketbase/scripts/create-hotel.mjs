@@ -2,7 +2,7 @@
 // General Manager (who must change the temporary password at first login).
 // Everyone else is then created by that manager inside the app.
 //
-//   ZH_PB_URL=https://….liara.run npm run create-hotel
+//   ZH_PB_URL=https://ali2.axono.ir npm run create-hotel
 //
 // Whatever is not set in the environment is asked for, passwords without
 // echo, and checked as it is typed: ZH_PB_SUPERUSER_EMAIL,

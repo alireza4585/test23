@@ -93,7 +93,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /** PocketBase server URL from ZH_PB_URL or the terminal, checked to be reachable. */
 export async function serverUrl({ fallback } = {}) {
   const url = await value("ZH_PB_URL", {
-    question: `PocketBase URL${fallback ? ` [${fallback}]` : " (https://….liara.run)"}: `,
+    question: `PocketBase URL${fallback ? ` [${fallback}]` : " (e.g. https://ali2.axono.ir)"}: `,
     fallback,
     validate: async (v) => {
       if (!/^https?:\/\/[^\s/]+/.test(v)) return "Use a full address starting with https:// (or http:// locally).";

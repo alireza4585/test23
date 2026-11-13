@@ -1,8 +1,8 @@
 // Imports a hotel test dataset (CSV pack + workbook) into a NEW trial hotel.
 //
 //   npm run import-dataset -- --csv app_import_csv_S1_Normal.zip --xlsx dataset.xlsx            plan only, no server
-//   ZH_PB_URL=https://….liara.run npm run import-dataset -- --csv … --xlsx … --apply           import
-//   ZH_PB_URL=https://….liara.run npm run import-dataset -- --csv … --xlsx … --report <hotelId> compare again
+//   ZH_PB_URL=https://ali2.axono.ir npm run import-dataset -- --csv … --xlsx … --apply           import
+//   ZH_PB_URL=https://ali2.axono.ir npm run import-dataset -- --csv … --xlsx … --report <hotelId> compare again
 //
 // Options: --name "Parsian Azadi – TEST"  --as-of "2026-10-07 09:30" (Tehran; default: Test_Scenarios' "now")
 //          --recent-days 7  --energy-days N (energy window through the API; default = --recent-days)

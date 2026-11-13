@@ -5,7 +5,7 @@
 // password is public). Superusers (`_superusers`), settings and other hotels
 // are not touched. Dry run unless --yes is given.
 //
-//   ZH_PB_URL=https://….liara.run npm run reset-demo
+//   ZH_PB_URL=https://ali2.axono.ir npm run reset-demo
 //
 // Shows what would be deleted, then (in a terminal) asks you to type "yes".
 // The superuser e-mail and password are asked for unless

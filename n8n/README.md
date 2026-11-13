@@ -141,7 +141,7 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 ## n8n روی لیارا
 
-آدرس n8n: `https://zarin-hoshmand-jexcz8u8pp.liara.run`. هر چهار workflow در این نمونه import شده‌اند و فعلاً غیرفعال‌اند.
+آدرس n8n: `https://ali.axono.ir`. هر چهار workflow در این نمونه import شده‌اند و فعلاً غیرفعال‌اند.
 
 مراحل باقی‌مانده به ترتیب اجرا، همراه با جدول کامل متغیرهای محیطی، Credentialها، ترتیب فعال‌سازی، آزمون نهایی و عیب‌یابی، در **[راهنمای راه‌اندازی لیارا](../docs/09-liara-runbook.md)** آمده است.
 
@@ -154,7 +154,7 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 ```zsh
 # macOS (zsh)، در پوشهٔ مخزن
-export N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run
+export N8N_URL=https://ali.axono.ir
 read -s "N8N_API_KEY?n8n API key: "; echo; export N8N_API_KEY
 node n8n/scripts/import-workflows.mjs
 unset N8N_API_KEY
@@ -162,7 +162,7 @@ unset N8N_API_KEY
 
 در bash به‌جای خط `read` از `read -rsp "n8n API key: " N8N_API_KEY; echo; export N8N_API_KEY` استفاده کنید. در Windows PowerShell 7:
 ```powershell
-$env:N8N_URL="https://zarin-hoshmand-jexcz8u8pp.liara.run"; $env:N8N_API_KEY = Read-Host -MaskInput "n8n API key"
+$env:N8N_URL="https://ali.axono.ir"; $env:N8N_API_KEY = Read-Host -MaskInput "n8n API key"
 node n8n/scripts/import-workflows.mjs; Remove-Item Env:N8N_API_KEY
 ```
 

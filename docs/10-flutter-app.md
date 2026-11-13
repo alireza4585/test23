@@ -1,7 +1,7 @@
 # ۱۰. اتصال اپ Flutter به سرور لیارا (macOS)
 
 این راهنما اپ اندروید را روی Mac اجرا یا build می‌کند و آن را به سرور PocketBase روی لیارا وصل می‌کند:
-`https://zarin-hoshmand-nieplltrhr.liara.run`
+`https://ali2.axono.ir`
 
 ## پیش‌نیازها
 
@@ -32,7 +32,7 @@ flutter emulators                          # فهرست شبیه‌سازها
 flutter emulators --launch <نام شبیه‌ساز>    # یا از Android Studio ← Device Manager
 flutter run \
   --dart-define=ZH_BACKEND=pocketbase \
-  --dart-define=ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+  --dart-define=ZH_PB_URL=https://ali2.axono.ir
 ```
 
 اگر هیچ شبیه‌سازی ندارید، از Android Studio ← Device Manager یک دستگاه با Android 10 یا جدیدتر بسازید.
@@ -43,7 +43,7 @@ flutter run \
 cd ~/zarin/app
 flutter build apk --release \
   --dart-define=ZH_BACKEND=pocketbase \
-  --dart-define=ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+  --dart-define=ZH_PB_URL=https://ali2.axono.ir
 ```
 
 - خروجی: `build/app/outputs/flutter-apk/app-release.apk`
@@ -69,7 +69,7 @@ flutter build apk --release \
 
 **اگر ورود خطا داد:**
 - «کد ملی معتبر نیست»: رقم کنترل کد ملی نادرست است.
-- خطای اتصال: آدرس `ZH_PB_URL` در build را بررسی کنید و `https://zarin-hoshmand-nieplltrhr.liara.run/v1/health` را در مرورگر گوشی باز کنید.
+- خطای اتصال: آدرس `ZH_PB_URL` در build را بررسی کنید و `https://ali2.axono.ir/v1/health` را در مرورگر گوشی باز کنید.
 - رمز اشتباه: رمز موقت را superuser می‌تواند در پنل `/_/` ← `users` عوض کند. در این صورت فیلد `mustChangePassword` را هم روشن بگذارید.
 
 ## بررسی‌های انجام‌شده

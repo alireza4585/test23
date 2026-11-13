@@ -6,8 +6,8 @@
 
 | برنامه | آدرس | نوع |
 |---|---|---|
-| PocketBase (بک‌اند) | `https://zarin-hoshmand-nieplltrhr.liara.run` | برنامهٔ آمادهٔ PocketBase 0.40.4 با دیسک دائمی |
-| n8n (اتوماسیون) | `https://zarin-hoshmand-jexcz8u8pp.liara.run` | n8n 2.26.2 |
+| PocketBase (بک‌اند) | `https://ali2.axono.ir` | برنامهٔ آمادهٔ PocketBase 0.40.4 با دیسک دائمی |
+| n8n (اتوماسیون) | `https://ali.axono.ir` | n8n 2.26.2 |
 
 ## وضعیت فعلی
 
@@ -23,6 +23,7 @@
 | فعال‌سازی workflowها و `ZH_N8N_WEBHOOK_URL` | ⬜ مرحله‌های ۶ و ۷ |
 | اتصال اپ Flutter به سرور | ⬜ [راهنمای ۱۰](10-flutter-app.md) |
 | Zarin AI مرحلهٔ ۱ (پیش‌بینی، خط مبنای انرژی، مرکز پیشنهادها، تقویم) | ⬜ مرحلهٔ ۲ (hookها و دو migration جدید)، مرحلهٔ ۴ (workflow 03)، سپس تعطیلات قمری در تقویم اپ. جزئیات: [۱۴](14-ai-batch1.md#8-deployment-liara) |
+| انتقال به دامنه‌های تازه (`ali2.axono.ir` و `ali.axono.ir`) | ⬜ [بخش ۱۰](#۱۰-انتقال-به-دامنههای-تازه) |
 | ورود دادهٔ آزمایشی پارسیان آزادی در هتل trial جدا | ⬜ [راهنمای ۱۱](11-test-dataset-import.md). پیش از آن مرحلهٔ ۲ (hookها) و مرحلهٔ ۴ (workflow 01) |
 
 workflowها روی n8n 2.26.2 (همان نسخهٔ لیارا، ایمیج رسمی Docker) و 2.35.7 تست شده‌اند: اجرای کامل با همهٔ کانال‌ها و بدون هیچ کانال، رفتار دکمهٔ Publish در Editor، و روش به‌روزرسانی بدون API key (مرحلهٔ ۴).
@@ -91,13 +92,13 @@ cd /tmp && rm -rf test23-* s.tgz \
 **پاک کردن دادهٔ دمو:**
 ```zsh
 cd ~/test23/pocketbase
-ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run reset-demo
+ZH_PB_URL=https://ali2.axono.ir npm run reset-demo
 ```
 اسکریپت ایمیل و رمز superuser را می‌پرسد، فهرست چیزهایی را که پاک می‌شوند نشان می‌دهد (هتل «هتل بزرگ زرین» و ۱۶ حساب دمو) و برای پاک کردن، تایپ `yes` می‌خواهد. هتل‌های دیگر و حساب superuser پاک نمی‌شوند.
 
 **ساخت هتل واقعی و مدیرکل:**
 ```zsh
-ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run create-hotel
+ZH_PB_URL=https://ali2.axono.ir npm run create-hotel
 ```
 - اسکریپت این موارد را به ترتیب می‌پرسد: ایمیل و رمز superuser، نام هتل، شهر، تعداد اتاق، ستاره، نام مدیرکل، کد ملی او و رمز موقت. سپس خلاصه را نشان می‌دهد و پس از تأیید (`y`) هتل و مدیرکل را می‌سازد. اگر ساختن مدیرکل شکست بخورد، هتل هم پاک می‌شود و چیزی نیمه‌کاره نمی‌ماند.
 - خروجی یک خط `ZARIN_HOTEL_IDS=<شناسه>` چاپ می‌کند. این مقدار را در n8n بگذارید.
@@ -113,7 +114,7 @@ ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run create-hotel
 2. روی Mac:
    ```zsh
    cd ~/test23
-   export N8N_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run
+   export N8N_URL=https://ali.axono.ir
    read -s "N8N_API_KEY?n8n API key: "; echo; export N8N_API_KEY
    node n8n/scripts/import-workflows.mjs
    unset N8N_API_KEY
@@ -144,7 +145,7 @@ ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run create-hotel
 | `NODE_FUNCTION_ALLOW_BUILTIN` | ✅ | `crypto` |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE` | ✅ | `false` |
 | `GENERIC_TIMEZONE` | ✅ | `Asia/Tehran` |
-| `ZARIN_API_BASE` | ✅ | `https://zarin-hoshmand-nieplltrhr.liara.run`، بدون `/` در انتها |
+| `ZARIN_API_BASE` | ⚠️ با دامنهٔ تازه عوض شود ([بخش ۱۰](#۱۰-انتقال-به-دامنههای-تازه)) | `https://ali2.axono.ir`، بدون `/` در انتها |
 | `ZARIN_INTEGRATION_SECRET` | ✅ | برابر `ZH_INTEGRATION_SECRET` در PocketBase |
 | `ZARIN_HOTEL_IDS` | ✅ پس از مرحلهٔ ۳ عوض شود | شناسهٔ هتل واقعی. چند هتل را با `,` جدا کنید. workflow 01 رویدادهای هتل‌های دیگر (مثل هتل آزمایشی) را دور می‌ریزد |
 | `ZARIN_MAIL_FROM`، `ZARIN_REPORT_RECIPIENTS` | ✅ | فرستنده، و ایمیل GM و مالک |
@@ -179,7 +180,7 @@ ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run npm run create-hotel
 پس از Publish شدن ۰۱، در برنامهٔ **PocketBase** این متغیر را اضافه کنید:
 
 ```
-ZH_N8N_WEBHOOK_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/zarin-events
+ZH_N8N_WEBHOOK_URL=https://ali.axono.ir/webhook/zarin-events
 ```
 
 از این لحظه، رویدادها (هشدار، خرابی، کمبود موجودی، ناهنجاری انرژی) در صف `outbox` قرار می‌گیرند و هر دقیقه، هر کدام فقط یک بار، با امضای HMAC به n8n ارسال می‌شوند. تا وقتی این متغیر خالی است، هیچ رویدادی در صف نمی‌ماند.
@@ -200,7 +201,7 @@ ZH_N8N_WEBHOOK_URL=https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/zarin-eve
 ```zsh
 read -s "METER_KEY?X-Meter-Key: "; echo
 read "HOTEL_ID?Hotel ID: "
-curl -sS -X POST https://zarin-hoshmand-jexcz8u8pp.liara.run/webhook/meter-readings \
+curl -sS -X POST https://ali.axono.ir/webhook/meter-readings \
   -H "content-type: application/json" -H "X-Meter-Key: $METER_KEY" \
   -d "{\"readings\":[{\"hotelId\":\"$HOTEL_ID\",\"meterId\":\"TEST-E1\",\"type\":\"electricity\",\"day\":\"2020-01-01\",\"value\":1234.5}]}"
 unset METER_KEY
@@ -223,6 +224,95 @@ unset METER_KEY
 - [ ] **ساختار سرور دست نخورده است:** طرح دیتابیس از پنل `/_/` تغییر نکرده و `liara deploy` روی برنامهٔ PocketBase اجرا نشده است.
 - [ ] **پشتیبان روزانهٔ PocketBase فعال است** (`/_/` ← Settings ← Backups).
 - [ ] **هیچ رمز، توکن یا کلیدی جای ناامن نیست:** نه در مخزن، نه در فایل، نه در پیام، و نه در history ترمینال. اسکریپت‌ها رمز را خودشان می‌پرسند؛ جاهای دیگر از `read -s` استفاده کنید.
+
+## ۱۰. انتقال به دامنه‌های تازه
+
+| سرویس | دامنهٔ قبلی | دامنهٔ تازه |
+|---|---|---|
+| PocketBase | `https://zarin-hoshmand-nieplltrhr.liara.run` | `https://ali2.axono.ir` |
+| n8n | `https://zarin-hoshmand-jexcz8u8pp.liara.run` | `https://ali.axono.ir` |
+
+### چه چیزی در کد عوض نمی‌شود
+
+هیچ کدی آدرس سرورها را در خود ندارد. هر اتصال آدرس را از یک تنظیم می‌گیرد:
+
+| اتصال | از کجا می‌خواند | کجا عوض می‌شود |
+|---|---|---|
+| اپ ← PocketBase | `ZH_PB_URL` هنگام build | APK تازه (قدم ۶) |
+| n8n ← PocketBase (۰۲، ۰۳، ۰۴) | `ZARIN_API_BASE` | متغیرهای n8n (قدم ۴) |
+| PocketBase ← n8n (رویدادها به ۰۱) | `ZH_N8N_WEBHOOK_URL` | متغیرهای PocketBase (قدم ۲) |
+| گیت‌وی کنتور ← n8n (۰۴) | تنظیم خود گیت‌وی | قدم ۵ |
+| ai-worker ← PocketBase | `ZH_PB_URL` | فقط اگر worker مستقر شده باشد |
+
+امضای HMAC به نام دامنه وابسته نیست، پس کلیدها و سکرت‌ها عوض نمی‌شوند. workflowها هم دوباره import نمی‌شوند، چون مسیر webhookها (`/webhook/zarin-events` و `/webhook/meter-readings`) همان است.
+
+### قدم‌ها، به ترتیب
+
+1. **دامنه‌ها در لیارا:**
+   - در پنل لیارا ← برنامهٔ PocketBase ← «دامنه‌ها»، `ali2.axono.ir` را اضافه کنید. همین کار را برای برنامهٔ n8n با `ali.axono.ir` انجام دهید.
+   - رکوردهای DNS را همان‌طور که لیارا نشان می‌دهد در DNS دامنهٔ `axono.ir` ثبت کنید.
+   - صبر کنید تا گواهی SSL هر دو دامنه فعال شود.
+   - **دامنهٔ `liara.run` قبلی را حذف نکنید.** APKهای نصب‌شده تا قدم ۶ با همان کار می‌کنند.
+
+   **بررسی:** در مرورگر Mac، `https://ali2.axono.ir/v1/health` باید `{"ok":true,…}` برگرداند و `https://ali.axono.ir` باید صفحهٔ ورود n8n را نشان دهد. هیچ‌کدام نباید هشدار گواهی بدهد.
+
+2. **PocketBase ← n8n:** در برنامهٔ PocketBase ← متغیرهای محیطی:
+
+   ```
+   ZH_N8N_WEBHOOK_URL=https://ali.axono.ir/webhook/zarin-events
+   ```
+
+   ذخیره کنید. برنامه restart می‌شود. رویدادهایی که در صف مانده‌اند، از این لحظه به آدرس تازه فرستاده می‌شوند.
+
+3. **Application URL در PocketBase:** پنل `https://ali2.axono.ir/_/` ← Settings ← Application ← Application URL را `https://ali2.axono.ir` بگذارید و Save کنید.
+   - PocketBase این آدرس را فقط در لینک ایمیل‌ها (مثل بازیابی رمز) به کار می‌برد. ورود اپ با کد ملی به آن وابسته نیست.
+   - تنظیم دیگری را در این صفحه تغییر ندهید.
+
+4. **n8n ← PocketBase:** در برنامهٔ n8n ← متغیرهای محیطی:
+
+   | متغیر | مقدار |
+   |---|---|
+   | `ZARIN_API_BASE` | `https://ali2.axono.ir`، بدون `/` در انتها |
+   | `WEBHOOK_URL` | `https://ali.axono.ir/`، با `/` در انتها |
+   | `N8N_EDITOR_BASE_URL` | `https://ali.axono.ir/`. فقط اگر این متغیر از قبل تعریف شده است |
+   | `N8N_HOST` | `ali.axono.ir`. فقط اگر این متغیر از قبل تعریف شده است |
+
+   - `WEBHOOK_URL` آدرسی است که n8n روی نودهای Webhook نشان می‌دهد. اگر خالی بماند، n8n آدرس داخلی یا قبلی را نشان می‌دهد، ولی webhookها روی دامنهٔ تازه همچنان پاسخ می‌دهند.
+   - بقیهٔ متغیرها، از جمله `ZARIN_INTEGRATION_SECRET`، `ZARIN_KEY_ID` و `ZARIN_HOTEL_IDS`، عوض نمی‌شوند.
+
+   **بررسی:** workflow ۰۱ را باز کنید و روی نود Webhook دوبار کلیک کنید. Production URL باید `https://ali.axono.ir/webhook/zarin-events` باشد.
+
+5. **گیت‌وی کنتور (اگر تنظیم شده):** آدرس ارسال را به `https://ali.axono.ir/webhook/meter-readings` تغییر دهید. کلید `X-Meter-Key` همان است.
+
+6. **APK تازه:** آدرس PocketBase داخل APK ذخیره می‌شود، پس APK باید دوباره ساخته شود:
+
+   ```zsh
+   cd ~/test23/app && flutter pub get
+   flutter build apk --release \
+     --dart-define=ZH_BACKEND=pocketbase \
+     --dart-define=ZH_PB_URL=https://ali2.axono.ir
+   ```
+
+   - شاخه‌ای را build کنید که روی سرور مستقر است.
+   - APK را روی همهٔ گوشی‌ها نصب کنید.
+
+7. **آزمون اتصال** روی Mac (فقط‌خواندنی؛ چیزی ثبت یا اجرا نمی‌شود):
+
+   ```zsh
+   cd ~/test23/pocketbase && npm ci --omit=dev
+   ZH_PB_URL=https://ali2.axono.ir N8N_URL=https://ali.axono.ir npm run check-endpoints -- --superuser --signed <شناسهٔ هتل واقعی>
+   ```
+
+   - اسکریپت ایمیل و رمز superuser و سکرت مشترک را بدون نمایش روی صفحه می‌پرسد. اگر n8n با کلید scoped امضا می‌کند، پیش از اجرا `ZARIN_KEY_ID` و `ZARIN_KEY_SECRET` را با `read -s` تنظیم کنید تا همان مسیر آزموده شود.
+   - انتظار: همهٔ ردیف‌ها `PASS`. ردیف ۰۴ تا وقتی Header Auth تنظیم و Publish نشده، `INFO` با `404` است.
+   - ردیف Outbox فقط پس از اولین رویداد بعد از قدم ۲ معنا دارد. پس اول آزمون‌های قدم ۸ را انجام دهید و بعد اسکریپت را دوباره اجرا کنید.
+
+8. **آزمون کامل:** آزمون‌های جدول [بخش ۸](#۸-آزمون-نهایی) را با دامنه‌های تازه تکرار کنید:
+   - workflow ۰۲ را دستی اجرا کنید؛
+   - با APK تازه یک خرابی critical ثبت کنید؛
+   - در `outbox` بررسی کنید که ردیف تازه `deliveredAt` دارد.
+
+9. **دامنهٔ قبلی:** تا وقتی همهٔ گوشی‌ها APK تازه را ندارند، دامنهٔ `liara.run` را نگه دارید.
 
 ## عیب‌یابی
 

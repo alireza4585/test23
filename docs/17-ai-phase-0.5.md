@@ -144,7 +144,7 @@ cd ~/test23 && git fetch origin && git checkout ai/phase-0.5-finance && git pull
 cd app && flutter pub get
 flutter build apk --release \
   --dart-define=ZH_BACKEND=pocketbase \
-  --dart-define=ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+  --dart-define=ZH_PB_URL=https://ali2.axono.ir
 ```
 
 - خروجی: `build/app/outputs/flutter-apk/app-release.apk`.
@@ -188,7 +188,7 @@ PocketBase پس از تغییر `/pb_hooks` خودش restart می‌شود و پ
 
 ### ۶.۵ بررسی سرور
 
-1. `https://zarin-hoshmand-nieplltrhr.liara.run/v1/health` باید `{"ok":true,…}` برگرداند.
+1. `https://ali2.axono.ir/v1/health` باید `{"ok":true,…}` برگرداند.
 2. در لاگ لیارا خطای migration نباشد.
 3. پنل `/_/` ← Collections:
    - `dailyFinance` وجود دارد و ردیف‌های آن با روزهای دارای درآمد هتل‌ها می‌خواند؛

@@ -309,7 +309,7 @@ cd ~/test23 && git fetch origin && git checkout ai/phase-1 && git pull
 cd app && flutter pub get
 flutter build apk --release \
   --dart-define=ZH_BACKEND=pocketbase \
-  --dart-define=ZH_PB_URL=https://zarin-hoshmand-nieplltrhr.liara.run
+  --dart-define=ZH_PB_URL=https://ali2.axono.ir
 ```
 
 **ترتیب:** اول سرور، بعد APK. همهٔ بخش‌های تازهٔ اپ پشت پرچم‌اند. ولی اگر `recommendationLoop` روی هتل trial روشن باشد و سرور هنوز به‌روز نشده باشد، زبانهٔ «اقدام‌ها» خطا نشان می‌دهد. APK فاز ۰.۵ با سرور فاز ۱ درست کار می‌کند.
