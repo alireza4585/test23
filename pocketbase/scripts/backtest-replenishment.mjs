@@ -20,11 +20,15 @@
 //
 // Acceptance criteria (docs/15, F5) and noise, as measured here:
 //   1. Stock-out warning: for every item that runs out (stock reaches 0 in the
-//      ledger), the reorder suggestion of the nights just before. Unmeasurable
-//      when fewer than 3 nights had a plan before the stock-out (the first
-//      MIN_HISTORY_DAYS of an item's ledger have none). Target ≥ 3 days.
-//   2. Daily-delivery items: no "will run out" (reorder) warning on items on
-//      the par path; the old 14-day linear rule on the same nights for contrast.
+//      ledger), the warning of the nights just before: a reorder (stock-out
+//      risk) suggestion, or a par top-up whose quantity with the stock on hand
+//      covers the usage until the next real delivery in the ledger.
+//      Unmeasurable when fewer than 3 nights had a plan before the stock-out
+//      (the first MIN_HISTORY_DAYS of an item's ledger have none). Target ≥ 3
+//      days; on par-path items, not worse than the old 14-day rule.
+//   2. Daily-delivery items: no stock-out warning on par-path items that never
+//      ran out (their par was enough); the old rule on the same nights for
+//      contrast. With --daily the par path is forced, so read it with (1).
 //   3. Forecast quality: out-of-sample MAE of the usage forecast against naive
 //      (yesterday's usage), one day ahead and over the lead time (< 1: better).
 //   Noise: suggestion runs (consecutive nights with a reorder suggestion) and
@@ -99,6 +103,14 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
       }
     }
     const usage = (d) => ms.filter((m) => m.day === d && (m.type === "issue" || m.type === "waste")).reduce((s, m) => s + Math.abs(m.delta), 0);
+    const receiptsSorted = [...receiptDays].sort();
+    // Usage from day d until the hotel's next real delivery (the ledger's next receipt on or after d).
+    const usageUntilNext = (d) => {
+      const next = receiptsSorted.find((x) => x >= d) ?? addDays(lastDay, 1);
+      let s = 0;
+      for (let x = d; x < next && x <= lastDay; x = addDays(x, 1)) s += usage(x);
+      return s;
+    };
     const nights = [];
     for (let d = firstDay; d <= lastDay; d = addDays(d, 1)) {
       const before = ms.filter((m) => m.day < d);
@@ -108,9 +120,18 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
       const issued14 = before.filter((m) => m.day >= addDays(d, -14) && (m.type === "issue" || m.type === "waste")).reduce((s, m) => s + Math.abs(m.delta), 0);
       const perDay = issued14 / 14;
       const s = plan.suggestion;
+      // A warning: a reorder (stock-out risk), or a par top-up whose quantity, with the stock
+      // on hand, covers the usage until the next real delivery.
+      const covering = s?.kind === "par" && onHand + s.quantity >= usageUntilNext(d);
+      // Par path: the expected delivery had not come (supplier delay) on this night.
+      const lastBefore = [...receiptDays].filter((x) => x < d).sort().pop();
+      const overdue = plan.pattern === "daily" && !!lastBefore && plan.deliveryInterval != null && between(lastBefore, d) > plan.deliveryInterval;
       nights.push({
+        warning: s?.kind === "reorder" || covering, covering, overdue,
         day: d, ok: plan.ok, pattern: plan.pattern, kind: s?.kind ?? null, quantity: s?.quantity ?? null, onHand: r2(onHand),
         par: plan.parLevel, rate: plan.forecast.rate, safety: plan.safetyStock, lead: plan.leadTime.days,
+        // when this night's order would arrive: the next expected delivery on the par path, else the lead time
+        arrives: plan.nextDeliveryDays ?? plan.leadTime.days,
         oldWarn: perDay > 0 && onHand / perDay <= 5, actual: usage(d),
       });
       if (s) {
@@ -126,7 +147,7 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
       const prior = nights.filter((n) => n.day < s);
       const planned = prior.filter((n) => n.ok).length;
       let first = null;
-      for (let i = prior.length - 1; i >= 0 && prior[i].kind === "reorder"; i--) first = prior[i];
+      for (let i = prior.length - 1; i >= 0 && prior[i].warning; i--) first = prior[i];
       let oldFirst = null;
       for (let i = prior.length - 1; i >= 0 && prior[i].oldWarn; i--) oldFirst = prior[i].day;
       const measurable = planned >= MIN_WARNING_DAYS;
@@ -161,7 +182,7 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
     const shelf = item.shelfLifeDays;
     const sug = nights.filter((n) => n.kind && n.rate > 0);
     // Stock right after the delivery: what is left on arrival (lead time later) plus the order.
-    const atDelivery = (n) => (n.kind === "par" ? n.onHand : Math.max(0, n.onHand - n.rate * n.lead)) + n.quantity;
+    const atDelivery = (n) => Math.max(0, n.onHand - n.rate * n.arrives) + n.quantity;
     const shelfChecks = shelf ? {
       shelfLifeDays: shelf, suggestions: sug.length,
       // the order alone (rounding up one unit allowed)
@@ -189,10 +210,12 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
     const daily = nights.filter((n) => n.pattern === "daily");
     perItem.push({
       id: item.id, name: item.name, supplier: item.supplierName || null, forcedDaily: item.deliveryPattern === "daily",
+      parTopUpsCovering: nights.filter((n) => n.covering).length,
       pattern: daily.length > nights.length / 2 ? "daily" : "scheduled", ledgerStart: itemStart,
       stockoutDays: stockout.size, episodes, runs, shelf: shelfChecks,
       reorderNights: nights.filter((n) => n.kind === "reorder").length,
       dailyNights: daily.length, newReorderOnDaily: daily.filter((n) => n.kind === "reorder").length,
+      reorderOnDailyOverdue: daily.filter((n) => n.kind === "reorder" && n.overdue).length,
       parTopUps: daily.filter((n) => n.kind === "par").length, oldWarnOnDaily: daily.filter((n) => n.oldWarn).length,
       nightsOk: nights.filter((n) => n.ok).length, nights: nights.length,
       mae1: r2(mean(e1)), naive1: r2(mean(n1)), ratio1: ratio(e1, n1), maeL: r2(mean(eL)), naiveL: r2(mean(nL)), ratioL: ratio(eL, nL),
@@ -210,16 +233,29 @@ export function backtest({ items, movements, lastDay, firstDay, only = [] }) {
     medianLead: median(measured.filter((e) => e.pass).map((e) => e.leadDays)),
     leadBands: { "3–7": measured.filter((e) => e.leadDays >= 3 && e.leadDays <= 7).length, "8–14": measured.filter((e) => e.leadDays >= 8 && e.leadDays <= 14).length, ">14": measured.filter((e) => e.leadDays > 14).length },
     unmeasurable: all.filter((e) => !e.measurable).map((e) => ({ item: e.item, stockout: e.stockout, reason: e.reason })),
+    // Items on the par path: the new plan must not do worse than the old 14-day rule.
+    parPath: (() => {
+      const names = new Set(perItem.filter((p) => p.pattern === "daily").map((p) => p.id));
+      const m = measured.filter((e) => names.has(e.sku));
+      const passed = m.filter((e) => e.pass).length;
+      const old = m.filter((e) => e.oldRuleLeadDays >= MIN_WARNING_DAYS).length;
+      return { items: names.size, measurable: m.length, passed, oldRulePassed: old, notWorseThanOldRule: passed >= old };
+    })(),
     failed: measured.filter((e) => !e.pass),
     episodesDetail: all,
   };
   const dailyItems = perItem.filter((p) => p.pattern === "daily");
   const dailyEnough = dailyItems.filter((p) => p.stockoutDays === 0);
   const c2 = {
-    status: !dailyItems.length ? "not measurable: no item on the par path (set deliveryPattern, or --daily / --daily-match)" : dailyItems.every((p) => p.newReorderOnDaily === 0) ? "pass" : "fail",
+    // No stock-out warning on par-path items that never ran out (par was enough).
+    // A warning while the expected delivery is overdue is the supplier-delay signal, not a false alarm.
+    status: !dailyItems.length ? "not measurable: no item on the par path (set deliveryPattern, or --daily / --daily-match)" : !dailyEnough.length ? "not measurable: every par-path item ran out" : dailyEnough.every((p) => p.newReorderOnDaily - p.reorderOnDailyOverdue === 0) ? "pass" : "fail",
     dailyItems: dailyItems.length, forced: dailyItems.filter((p) => p.forcedDaily).length, withoutStockouts: dailyEnough.length,
-    newWarnings: dailyItems.reduce((s, p) => s + p.newReorderOnDaily, 0),
-    oldRuleWarnings: dailyItems.reduce((s, p) => s + p.oldWarnOnDaily, 0),
+    newWarnings: dailyEnough.reduce((s, p) => s + p.newReorderOnDaily, 0),
+    newWarningsDeliveryOverdue: dailyEnough.reduce((s, p) => s + p.reorderOnDailyOverdue, 0),
+    falseAlarms: dailyEnough.reduce((s, p) => s + p.newReorderOnDaily - p.reorderOnDailyOverdue, 0),
+    warningsOnItemsThatRanOut: dailyItems.filter((p) => p.stockoutDays > 0).reduce((s, p) => s + p.newReorderOnDaily, 0),
+    oldRuleWarnings: dailyEnough.reduce((s, p) => s + p.oldWarnOnDaily, 0),
     parTopUpNights: dailyItems.reduce((s, p) => s + p.parTopUps, 0),
     stillRanOut: dailyItems.filter((p) => p.stockoutDays > 0).map((p) => ({ item: p.name, days: p.stockoutDays })),
   };
@@ -313,9 +349,10 @@ if (isMain) {
   const forced = items.filter((i) => i.deliveryPattern === "daily").map((i) => i.name);
   console.log(`F5 backtest ${res.firstDay} … ${res.lastDay} (${res.weeks} weeks), ${res.items} items${forced.length ? `; par path forced for ${forced.length}: ${forced.join(", ")}` : ""}`);
   console.log(`1. stock-out warning ≥ ${MIN_WARNING_DAYS} days: ${c1.status} — ${c1.itemsRunningOut} items run out, ${c1.episodes} episodes, ${c1.measurable} measurable: ${c1.passed}/${c1.measurable} warned in time (old rule ${c1.oldRulePassed}/${c1.measurable}); median lead ${c1.medianLead} days; lead 3–7: ${c1.leadBands["3–7"]}, 8–14: ${c1.leadBands["8–14"]}, >14: ${c1.leadBands[">14"]}; unmeasurable ${c1.unmeasurable.length}`);
+  console.log(`   par-path items: ${c1.parPath.passed}/${c1.parPath.measurable} warned in time vs old rule ${c1.parPath.oldRulePassed}/${c1.parPath.measurable} — ${c1.parPath.notWorseThanOldRule ? "not worse" : "WORSE"} than the old rule (${c1.parPath.items} items on the par path)`);
   for (const e of c1.failed) console.log(`   ✗ ${e.item}: ran out ${e.stockout}, warned ${e.leadDays} day(s) before`);
   for (const e of c1.unmeasurable) console.log(`   · unmeasurable ${e.item} ${e.stockout}: ${e.reason}`);
-  console.log(`2. daily delivery: ${c2.status} — ${c2.dailyItems} items on the par path (${c2.forced} forced), new warnings ${c2.newWarnings}, old rule ${c2.oldRuleWarnings}, par top-up nights ${c2.parTopUpNights}; still ran out: ${c2.stillRanOut.map((x) => `${x.item} (${x.days} d)`).join(", ") || "none"}`);
+  console.log(`2. daily delivery: ${c2.status} — ${c2.dailyItems} items on the par path (${c2.forced} forced), on items that never ran out: stock-out warnings ${c2.newWarnings} (${c2.newWarningsDeliveryOverdue} while a delivery was overdue, ${c2.falseAlarms} false alarms; old rule ${c2.oldRuleWarnings}), par top-up nights ${c2.parTopUpNights}; still ran out: ${c2.stillRanOut.map((x) => `${x.item} (${x.days} d)`).join(", ") || "none"}`);
   console.log(`3. forecast vs naive: ${c3.status} — ${c3.items} items; 1 day: median ${c3.medianRatio1}, pooled ${c3.pooledRatio1}, better on ${c3.shareBetter1}; lead time: median ${c3.medianRatioLead}, pooled ${c3.pooledRatioLead}, better on ${c3.shareBetterLead}`);
   console.log(`noise: ${n.suggestionRuns} suggestion runs → stock-out ${n.runOutcomes.stockout}, receipt ${n.runOutcomes.receipt}, premature ${n.runOutcomes.premature}, open ${n.runOutcomes.open}; items never out with reorder suggestions ${n.itemsNeverOutWithReorderSuggestions}/${n.itemsNeverOut} (${n.reorderNightsOnNeverOutItems} nights)`);
   console.log(`      draft orders: ${n.draftsTotal} (${n.draftsPerWeek}/week; the same suppliers actually delivered ${n.actualDeliveriesPerWeek} times/week) from ${n.suppliersWithDrafts} suppliers; open drafts per night: median ${n.openDraftsPerNight.median}, max ${n.openDraftsPerNight.max}`);
