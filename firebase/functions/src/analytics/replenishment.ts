@@ -273,7 +273,9 @@ export function planItem(
   if (pattern === "daily") {
     // Next delivery is tomorrow: cover tomorrow's usage plus a one-day safety margin.
     const ss1 = r2(SERVICE_Z * f.sigma);
-    const par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    let par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    // A computed par level is never more than the shelf life can use (a set one is the hotel's).
+    if (!(item.parLevel && item.parLevel > 0) && item.shelfLifeDays && item.shelfLifeDays > 0) par = Math.min(par, r2(f.rate * item.shelfLifeDays));
     const short = Math.ceil(par - item.quantity - onOrder);
     return {
       ...base, ok: true, reason: null, forecast: f, safetyStock: ss1, reorderPoint: par, parLevel: par, daysOfCover: cover,
@@ -290,7 +292,13 @@ export function planItem(
   if (f.rate > 0 && slack <= LOOKAHEAD_DAYS) {
     let q = Math.ceil(f.rate * (lead.days + REVIEW_DAYS) + ss - position);
     q = Math.max(q, Math.ceil(item.reorderQuantity ?? 0));
-    if (item.shelfLifeDays && item.shelfLifeDays > 0) q = Math.min(q, Math.ceil(f.rate * item.shelfLifeDays));
+    if (item.shelfLifeDays && item.shelfLifeDays > 0) {
+      // What is left when the order arrives, plus the order, must be used within the
+      // shelf life (capping the order alone still overstocks perishables). If nothing
+      // fits yet, the next nights order once enough has been used.
+      const leftAtArrival = Math.max(0, position - f.rate * lead.days);
+      q = Math.min(q, Math.floor(f.rate * item.shelfLifeDays - leftAtArrival));
+    }
     if (q > 0) s = suggestion("reorder", q, shiftDay(today, Math.max(0, slack)));
   }
   return { ...base, ok: true, reason: null, forecast: f, safetyStock: ss, reorderPoint: rop, parLevel: null, daysOfCover: cover, suggestion: s };

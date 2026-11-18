@@ -2108,7 +2108,8 @@ function planItem(item, supplier, movements, orders, today) {
   };
   if (pattern === "daily") {
     const ss1 = r2(SERVICE_Z * f.sigma);
-    const par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    let par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    if (!(item.parLevel && item.parLevel > 0) && item.shelfLifeDays && item.shelfLifeDays > 0) par = Math.min(par, r2(f.rate * item.shelfLifeDays));
     const short = Math.ceil(par - item.quantity - onOrder);
     return {
       ...base,
@@ -2130,7 +2131,10 @@ function planItem(item, supplier, movements, orders, today) {
   if (f.rate > 0 && slack <= LOOKAHEAD_DAYS) {
     let q = Math.ceil(f.rate * (lead.days + REVIEW_DAYS) + ss - position);
     q = Math.max(q, Math.ceil((_b = item.reorderQuantity) != null ? _b : 0));
-    if (item.shelfLifeDays && item.shelfLifeDays > 0) q = Math.min(q, Math.ceil(f.rate * item.shelfLifeDays));
+    if (item.shelfLifeDays && item.shelfLifeDays > 0) {
+      const leftAtArrival = Math.max(0, position - f.rate * lead.days);
+      q = Math.min(q, Math.floor(f.rate * item.shelfLifeDays - leftAtArrival));
+    }
     if (q > 0) s = suggestion("reorder", q, shiftDay(today, Math.max(0, slack)));
   }
   return { ...base, ok: true, reason: null, forecast: f, safetyStock: ss, reorderPoint: rop, parLevel: null, daysOfCover: cover, suggestion: s };

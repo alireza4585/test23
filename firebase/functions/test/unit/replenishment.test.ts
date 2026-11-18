@@ -117,6 +117,20 @@ describe("replenishment (F5)", () => {
     expect(p.suggestion!.quantity).toBeLessThanOrEqual(Math.ceil(p.forecast.rate * 4));
   });
 
+  it("a short shelf life caps the stock after delivery, not just the order", () => {
+    // 20 a day, 3-day lead time, 4-day shelf life: plan for what is left on arrival.
+    const milk = item({ id: "milk", name: "شیر", shelfLifeDays: 4, deliveryPattern: "scheduled" });
+    for (const quantity of [40, 70, 100]) {
+      const p = planItem({ ...milk, quantity }, null, usage("milk", 56, 20), [], TODAY);
+      if (!p.suggestion) continue;
+      const left = Math.max(0, quantity - p.forecast.rate * p.leadTime.days);
+      expect(left + p.suggestion.quantity).toBeLessThanOrEqual(p.forecast.rate * 4 + 1e-9);
+    }
+    // Low enough that an order is due: it is suggested, and it fits.
+    const due = planItem({ ...milk, quantity: 40 }, null, usage("milk", 56, 20), [], TODAY);
+    expect(due.suggestion?.kind).toBe("reorder");
+  });
+
   it("under 14 days of history: no forecast and no suggestion", () => {
     const p = planItem(item({ quantity: 5 }), null, usage("shampoo", 10, 40), [], TODAY);
     expect(p).toMatchObject({ ok: false, suggestion: null });
