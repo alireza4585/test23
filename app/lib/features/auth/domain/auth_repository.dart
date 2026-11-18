@@ -24,6 +24,11 @@ abstract interface class AuthRepository {
     required String currentPassword,
     required String newPassword,
   });
+
+  /// Makes [hotelId] (one of the user's hotels) the hotel the user works in.
+  /// The server recomputes the permissions for it (that hotel's role
+  /// override) and [watchCurrentUser] re-emits the user.
+  Future<void> switchHotel(String hotelId);
 }
 
 /// Device sessions — used for "active devices" in the profile screen,

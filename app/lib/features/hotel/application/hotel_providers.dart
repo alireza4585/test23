@@ -10,6 +10,11 @@ final hotelProvider = StreamProvider<Hotel?>((ref) {
   return ref.watch(hotelRepositoryProvider).watchHotel(hotelId);
 });
 
+/// Any of the user's hotels by id (for the hotel switch in the profile).
+final hotelByIdProvider = StreamProvider.family<Hotel?, String>(
+  (ref, hotelId) => ref.watch(hotelRepositoryProvider).watchHotel(hotelId),
+);
+
 /// Settings with safe defaults while the hotel document loads.
 final hotelSettingsProvider = Provider<HotelSettings>(
   (ref) => ref.watch(hotelProvider).value?.settings ?? const HotelSettings(),

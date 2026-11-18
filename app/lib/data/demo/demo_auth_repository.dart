@@ -27,7 +27,7 @@ class DemoAuthRepository implements AuthRepository {
     fullName: account.fullName,
     role: account.role,
     hotelIds: account.hotelIds,
-    activeHotelId: account.hotelIds.isEmpty ? null : account.hotelIds.first,
+    activeHotelId: account.activeHotelId ?? (account.hotelIds.isEmpty ? null : account.hotelIds.first),
     staffId: account.staffId,
     phone: account.phone,
     status: account.status,
@@ -73,6 +73,18 @@ class DemoAuthRepository implements AuthRepository {
     _store.audit(account.fullName, 'login', 'users/${account.uid}');
     _store.authChanges.add(account.uid);
     return toAppUser(account);
+  }
+
+  @override
+  Future<void> switchHotel(String hotelId) async {
+    final uid = _store.signedInUid;
+    final account = uid == null ? null : _store.accountByUid(uid);
+    if (account == null) throw const SessionExpiredFailure();
+    if (!account.hotelIds.contains(hotelId)) throw const PermissionDeniedFailure('not_hotel_member');
+    await _store.latency();
+    account.activeHotelId = hotelId;
+    _store.audit(account.fullName, 'users.activeHotel', 'users/${account.uid}');
+    _store.authChanges.add(account.uid);
   }
 
   @override

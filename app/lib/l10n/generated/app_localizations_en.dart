@@ -1915,6 +1915,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flagLowConfidence => 'Low confidence';
 
   @override
+  String get switchHotelTitle => 'Active hotel';
+
+  @override
+  String get switchHotelHint =>
+      'You work in one hotel at a time; your permissions follow it.';
+
+  @override
+  String get hotelSwitched => 'Active hotel changed';
+
+  @override
   String get flagExcluded => 'Excluded';
 
   @override

@@ -14,6 +14,7 @@ import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../data/repository_providers.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../auth/domain/app_user.dart';
 import '../../hotel/application/hotel_providers.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -65,7 +66,22 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               children: [
                 if (hotel != null)
-                  ListTile(leading: const Icon(Icons.apartment), title: Text(l10n.hotelLabel), trailing: Text(hotel.name)),
+                  ListTile(
+                    key: const Key('profile.hotel'),
+                    leading: const Icon(Icons.apartment),
+                    title: Text(l10n.hotelLabel),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(hotel.name),
+                        if (user.hotelIds.length > 1) const Icon(Icons.swap_horiz, size: 18),
+                      ],
+                    ),
+                    // Members of several hotels work in one at a time; permissions follow it.
+                    onTap: user.hotelIds.length > 1
+                        ? () => showModalBottomSheet<void>(context: context, builder: (_) => _HotelSwitchSheet(user: user))
+                        : null,
+                  ),
                 ListTile(
                   leading: const Icon(Icons.verified_user_outlined),
                   title: Text(l10n.myPermissions),
@@ -166,6 +182,52 @@ class ProfilePage extends ConsumerWidget {
               style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HotelSwitchSheet extends ConsumerWidget {
+  const _HotelSwitchSheet({required this.user});
+
+  final AppUser user;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: Insets.md),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Insets.lg),
+            child: Text(l10n.switchHotelTitle, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Insets.lg, Insets.xs, Insets.lg, Insets.sm),
+            child: Text(l10n.switchHotelHint, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          for (final id in user.hotelIds)
+            ListTile(
+              key: Key('profile.hotel.$id'),
+              leading: Icon(id == user.activeHotelId ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+              title: Text(ref.watch(hotelByIdProvider(id)).value?.name ?? id),
+              onTap: id == user.activeHotelId
+                  ? null
+                  : () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final navigator = Navigator.of(context);
+                      try {
+                        await ref.read(authRepositoryProvider).switchHotel(id);
+                        navigator.pop();
+                        messenger.showSnackBar(SnackBar(content: Text(l10n.hotelSwitched)));
+                      } catch (e) {
+                        if (context.mounted) showFailure(context, e);
+                      }
+                    },
+            ),
         ],
       ),
     );

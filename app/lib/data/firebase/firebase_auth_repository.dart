@@ -145,6 +145,10 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() => guard(_auth.signOut);
 
+  /// The Firebase backend is frozen (docs/17): no per-hotel switch there.
+  @override
+  Future<void> switchHotel(String hotelId) async => throw const UnsupportedFailure('switchHotel');
+
   @override
   Future<void> changePassword({
     required String currentPassword,

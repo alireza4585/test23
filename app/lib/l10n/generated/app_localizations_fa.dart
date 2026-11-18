@@ -1908,6 +1908,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get flagLowConfidence => 'اطمینان کم';
 
   @override
+  String get switchHotelTitle => 'هتل فعال';
+
+  @override
+  String get switchHotelHint =>
+      'هر بار در یک هتل کار می‌کنید؛ دسترسی‌ها همان هتل را دنبال می‌کنند.';
+
+  @override
+  String get hotelSwitched => 'هتل فعال عوض شد';
+
+  @override
   String get flagExcluded => 'کنارگذاشته';
 
   @override

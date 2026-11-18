@@ -3572,6 +3572,24 @@ abstract class AppLocalizations {
   /// **'اطمینان کم'**
   String get flagLowConfidence;
 
+  /// No description provided for @switchHotelTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'هتل فعال'**
+  String get switchHotelTitle;
+
+  /// No description provided for @switchHotelHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'هر بار در یک هتل کار می‌کنید؛ دسترسی‌ها همان هتل را دنبال می‌کنند.'**
+  String get switchHotelHint;
+
+  /// No description provided for @hotelSwitched.
+  ///
+  /// In fa, this message translates to:
+  /// **'هتل فعال عوض شد'**
+  String get hotelSwitched;
+
   /// No description provided for @flagExcluded.
   ///
   /// In fa, this message translates to:

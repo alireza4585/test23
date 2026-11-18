@@ -115,6 +115,7 @@ class PocketBaseAuthRepository implements AuthRepository {
     if (role == null) throw const AccountNotProvisionedFailure();
     final hotels = (me['hotels'] as List? ?? const []).whereType<String>().toList();
     final primary = me['primaryHotel'] as String?;
+    final active = me['activeHotel'] as String?;
     if (hotels.isEmpty && (primary == null || primary.isEmpty)) {
       throw const AccountNotProvisionedFailure();
     }
@@ -129,7 +130,8 @@ class PocketBaseAuthRepository implements AuthRepository {
       fullName: me['fullName'] as String? ?? '',
       role: role,
       hotelIds: hotels.isEmpty ? [primary!] : hotels,
-      activeHotelId: (primary == null || primary.isEmpty) ? null : primary,
+      // Since AI phase 2 the server keeps the active hotel; older servers only send the primary one.
+      activeHotelId: (active != null && active.isNotEmpty) ? active : ((primary == null || primary.isEmpty) ? null : primary),
       staffId: staffId.isEmpty ? null : staffId,
       status: UserStatus.values.firstWhere((s) => s.name == me['status'], orElse: () => UserStatus.disabled),
       mustChangePassword: me['mustChangePassword'] == true,
@@ -140,6 +142,11 @@ class PocketBaseAuthRepository implements AuthRepository {
           .toSet(),
     );
   }
+
+  @override
+  Future<void> switchHotel(String hotelId) =>
+      // The users subscription of watchCurrentUser re-emits the profile with the new permissions.
+      pbGuard(() => _pb.send('/api/zarin/me/active-hotel', method: 'POST', body: {'hotelId': hotelId}));
 
   @override
   Future<void> signOut() async {

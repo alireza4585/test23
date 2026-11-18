@@ -48,6 +48,9 @@ class DemoAccount {
   final String? phone;
   UserStatus status;
   DateTime? lastLoginAt;
+
+  /// The hotel the account works in (switchHotel); null = the first one.
+  String? activeHotelId;
 }
 
 /// The whole demo "database". One instance per app run (or per test).
