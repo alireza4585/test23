@@ -9,6 +9,7 @@
  * Routes (app, auth required):
  *   GET  /api/zarin/me
  *   POST /api/zarin/me/active-hotel           switch the hotel the caller works in (permissions follow it)
+ *   POST /api/zarin/purchase-orders/{id}/lines|approve|receive|cancel   F5 purchase orders [replenishment]
  *   POST /api/zarin/users                     provision a user (RBAC: canAssign)
  *   POST /api/zarin/users/{id}/status|password|role
  *   POST /api/zarin/sessions                  register this device
@@ -31,6 +32,7 @@
  *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user)
  * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js),
  *                     including POST /v1/hotels/{id}/weather (daily temperature, second path to lib/weather.js)
+ *                     and POST /v1/hotels/{id}/purchase-orders/{po}/sent, GET …/purchase-orders/overdue (F5, n8n 05)
  * [flag]: needs the hotel's feature flag (hotels.settings.features).
  * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
  *             energy 22:10 (01:40 Tehran): weather, F2 model refit and scoring [energyBaseline],
@@ -42,6 +44,10 @@
 
 // ------------------------------------------------------------- app routes
 routerAdd("GET", "/api/zarin/me", (e) => require(`${__hooks}/lib/users.js`).me(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/purchase-orders/{id}/lines", (e) => require(`${__hooks}/lib/replenishment.js`).editLines(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/purchase-orders/{id}/approve", (e) => require(`${__hooks}/lib/replenishment.js`).secondApproval(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/purchase-orders/{id}/receive", (e) => require(`${__hooks}/lib/replenishment.js`).receive(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/purchase-orders/{id}/cancel", (e) => require(`${__hooks}/lib/replenishment.js`).cancel(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/me/active-hotel", (e) => require(`${__hooks}/lib/users.js`).setActiveHotel(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users", (e) => require(`${__hooks}/lib/users.js`).createUser(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users/{id}/status", (e) => require(`${__hooks}/lib/users.js`).setStatus(e), $apis.requireAuth("users"));
@@ -82,6 +88,8 @@ routerAdd("POST", "/v1/hotels/{hotelId}/notifications", (e) => require(`${__hook
 routerAdd("POST", "/v1/hotels/{hotelId}/insights", (e) => require(`${__hooks}/lib/integration.js`).postInsight(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/energy/readings", (e) => require(`${__hooks}/lib/integration.js`).postReading(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/weather", (e) => require(`${__hooks}/lib/integration.js`).postWeather(e));
+routerAdd("POST", "/v1/hotels/{hotelId}/purchase-orders/{id}/sent", (e) => require(`${__hooks}/lib/integration.js`).purchaseOrderSent(e));
+routerAdd("GET", "/v1/hotels/{hotelId}/purchase-orders/overdue", (e) => require(`${__hooks}/lib/integration.js`).purchaseOrdersOverdue(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/metrics/rollup", (e) => require(`${__hooks}/lib/integration.js`).rollup(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/insights/run", (e) => require(`${__hooks}/lib/integration.js`).runInsights(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/ai/budget", (e) => require(`${__hooks}/lib/integration.js`).aiBudget(e));

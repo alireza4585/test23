@@ -383,30 +383,37 @@ function recordMovement(e) {
   const delta = Number(b.delta);
   const valid = { receive: delta > 0, issue: delta < 0, waste: delta < 0, adjust: delta !== 0 };
   if (!valid[b.type] || !isFinite(delta)) throw z.bad("invalid_movement");
-  let item;
-  let before;
-  let movementId;
+  let moved;
   e.app.runInTransaction((tx) => {
-    item = z.find(tx, "inventoryItems", e.request.pathValue("id"));
-    const hotelId = z.requireHotel(c, item.getString("hotel"));
+    const item = z.find(tx, "inventoryItems", e.request.pathValue("id"));
+    z.requireHotel(c, item.getString("hotel"));
     z.requirePerm(c, "inventory.move");
-    before = item.getFloat("quantity");
-    const after = Math.round((before + delta) * 1000) / 1000;
-    if (after < 0) throw z.bad("insufficient_stock", { available: before });
-    const m = new Record(z.col(tx, "inventoryMovements"), {
-      hotel: hotelId, item: item.id, itemName: item.getString("name"), type: b.type, delta,
-      quantityBefore: before, quantityAfter: after, reason: b.reason ? String(b.reason).slice(0, 300) : "",
-      actor: c.id, actorName: c.name,
-    });
-    tx.save(m);
-    item.set("quantity", after);
-    item.set("lastMovement", m.id);
-    item.set("updatedBy", c.id);
-    tx.save(item);
-    movementId = m.id;
+    moved = applyMovement(tx, c, item, b.type, delta, b.reason);
   });
-  lowStockCheck(e.app, item, before);
-  return e.json(200, { id: movementId, quantity: item.getFloat("quantity") });
+  lowStockCheck(e.app, moved.item, moved.before);
+  return e.json(200, { id: moved.id, quantity: moved.item.getFloat("quantity") });
+}
+
+/**
+ * One stock movement inside [tx]: the ledger row and the item's quantity
+ * together (also used by purchase-order receipts, F5). The caller checks the
+ * hotel and the permission.
+ */
+function applyMovement(tx, c, item, type, delta, reason) {
+  const before = item.getFloat("quantity");
+  const after = Math.round((before + delta) * 1000) / 1000;
+  if (after < 0) throw z.bad("insufficient_stock", { available: before });
+  const m = new Record(z.col(tx, "inventoryMovements"), {
+    hotel: item.getString("hotel"), item: item.id, itemName: item.getString("name"), type, delta,
+    quantityBefore: before, quantityAfter: after, reason: reason ? String(reason).slice(0, 300) : "",
+    actor: c.id, actorName: c.name,
+  });
+  tx.save(m);
+  item.set("quantity", after);
+  item.set("lastMovement", m.id);
+  item.set("updatedBy", c.id);
+  tx.save(item);
+  return { id: m.id, item, before, after };
 }
 
 function onItemCreate(e) {
@@ -414,6 +421,7 @@ function onItemCreate(e) {
   const c = z.caller(e);
   e.record.set("lastMovement", "");
   e.record.set("updatedBy", c.id);
+  if (e.record.collection().fields.getByName("replenishment")) e.record.set("replenishment", null);
   e.next();
 }
 
@@ -422,6 +430,10 @@ function onItemUpdate(e) {
   const c = z.caller(e);
   const body = e.requestInfo().body || {};
   if ("quantity" in body || "lastMovement" in body) throw z.bad("use_stock_movement");
+  // The nightly replenishment plan (F5) is the server's: a client value is ignored.
+  if ("replenishment" in body && e.record.collection().fields.getByName("replenishment")) {
+    e.record.set("replenishment", e.record.original().get("replenishment"));
+  }
   e.record.set("updatedBy", c.id);
   e.next();
 }
@@ -604,7 +616,7 @@ function onReportCreate(e) {
 module.exports = {
   ACTIVE_TICKET, roomStatus, taskTransition, onTaskCreate, onTaskUpdate, onRoomWrite,
   onTicketCreate, onTicketUpdate, afterTicketCreated, ticketStatus, ticketAssign,
-  recordMovement, onItemCreate, onItemUpdate, onEnergyWrite, afterEnergyWritten,
+  recordMovement, applyMovement, onItemCreate, onItemUpdate, onEnergyWrite, afterEnergyWritten,
   onOperationsWrite, onStaffWrite, onShiftWrite, onAlertUpdate, onInsightUpdate,
   onInboxUpdate, onSessionUpdate, onHotelUpdate, onReportCreate, lowStockCheck,
 };

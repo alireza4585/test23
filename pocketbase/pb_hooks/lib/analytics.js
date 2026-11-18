@@ -147,6 +147,8 @@ function runInsights(app, hotelId, now) {
   const data = loadHotelData(app, hotelId, z.addDays(today, -35), now, z.addDays(today, -7));
   const input = Object.assign({}, data, { today, now, addDays: z.addDays });
   if (z.feature(app, hotelId, "energyBaseline")) input.energyModel = require(`${__hooks}/lib/energy.js`).stateForRules(app, hotelId, today);
+  // F5: purchase suggestions replace the 14-day stock-out rule.
+  if (z.feature(app, hotelId, "replenishment")) input.replenishment = require(`${__hooks}/lib/replenishment.js`).stateForRules(app, hotelId, now);
   const drafts = core.generateInsights(input);
   let created = 0;
   for (const d of drafts) if (upsertInsight(app, hotelId, d, now)) created++;

@@ -61,7 +61,8 @@ function proposeFor(app, insight, now) {
   });
   let n = 0;
   for (const d of drafts) {
-    const key = `${insight.id}:${d.type}:${z.dayKey(now)}`;
+    // Once per insight cycle (activatedAt), so a cycle that starts again the same day still gets its action.
+    const key = `${insight.id}:${d.type}:${since || z.dayKey(now)}`;
     if (z.findFirst(app, "aiActions", "hotel = {:h} && idempotencyKey = {:k}", { h: hotelId, k: key })) continue;
     const rec = new Record(z.col(app, "aiActions"), {
       hotel: hotelId, insight: insight.id, category: insight.getString("category"), department: d.department, type: d.type,
@@ -69,6 +70,8 @@ function proposeFor(app, insight, now) {
       params: d.params, expectedImpact: d.expectedImpact || null, idempotencyKey: key, source: "rules",
     });
     app.save(rec);
+    // F5: the draft purchase order (with costs) is attached to its action.
+    if (d.type === "createPurchaseOrder") require(`${__hooks}/lib/replenishment.js`).attachDraft(app, rec);
     n++;
     announce(app, rec, "action.proposed");
   }
@@ -92,6 +95,7 @@ function expireFor(app, insightId) {
   for (const a of z.findMany(app, "aiActions", "insight = {:i} && status = 'proposed'", { i: insightId })) {
     a.set("status", "expired");
     app.save(a);
+    if (a.getString("type") === "createPurchaseOrder") require(`${__hooks}/lib/replenishment.js`).cancelDraftOf(app, a.id, "expired");
   }
 }
 
@@ -113,7 +117,8 @@ function nightly(app, hotelId, now) {
   let proposed = 0;
   for (const ins of z.findMany(app, "aiInsights", "hotel = {:h} && status = 'active'", { h: hotelId })) proposed += proposeFor(app, ins, now);
   for (const ins of z.findMany(app, "aiInsights", "hotel = {:h} && status = 'resolved'", { h: hotelId })) expireFor(app, ins.id);
-  return { proposed, reminded: remind(app, hotelId, now), measured: measureDue(app, hotelId, now) };
+  const drafts = z.feature(app, hotelId, "replenishment") ? require(`${__hooks}/lib/replenishment.js`).refreshDrafts(app, hotelId) : 0;
+  return { proposed, drafts, reminded: remind(app, hotelId, now), measured: measureDue(app, hotelId, now) };
 }
 
 // ----------------------------------------------------- adjustBaseline guards
@@ -267,7 +272,10 @@ function executeAdjust(tx, c, rec, p) {
   return { collection: "energyExclusions", ids };
 }
 
-const EXECUTE = { createTicket: executeTicket, createTask: executeTasks, notifyRole: executeNotify, adjustBaseline: executeAdjust };
+const EXECUTE = {
+  createTicket: executeTicket, createTask: executeTasks, notifyRole: executeNotify, adjustBaseline: executeAdjust,
+  createPurchaseOrder: (tx, c, r, params) => require(`${__hooks}/lib/replenishment.js`).executeOrder(tx, c, r, params, new Date()),
+};
 
 /** Outcome to start with: pending until the evaluation window, or not measurable. */
 function startOutcome(app, rec, now) {
@@ -303,6 +311,7 @@ function decide(e) {
       if (r.getString("status") !== "proposed") throw z.bad("action_not_pending");
       r.load({ status: "rejected", decidedBy: c.id, decidedByName: c.name, decidedByRole: c.role, decidedAt: z.pbDate(now), decisionNote: note });
       tx.save(r);
+      if (type === "createPurchaseOrder") require(`${__hooks}/lib/replenishment.js`).cancelDraftOf(tx, r.id, note);
       z.audit(tx, hotelId, { action: "actions.decide", collection: "aiActions", id: r.id, actor: z.actorOf(c), changes: { decision, type, department, note } });
     });
     return e.json(200, z.find(e.app, "aiActions", rec.id));
@@ -312,6 +321,7 @@ function decide(e) {
   if (type === "createTicket") z.requirePerm(c, "maintenance.report");
   if (type === "createTask") z.requirePerm(c, "housekeeping.assign");
   if (type === "adjustBaseline") requireBaselineRole(c);
+  if (type === "createPurchaseOrder") z.requirePerm(c, "inventory.manage");
   const params = Object.assign({}, z.jsonOf(rec, "params") || {});
   const edits = {};
   const editable = core.EDITABLE_PARAMS[type] || [];

@@ -124,6 +124,18 @@ function summary(e) {
   return e.json(200, result);
 }
 
+/** POST /v1/hotels/{hotelId}/purchase-orders/{id}/sent {via} — n8n delivered an approved order (F5). */
+function purchaseOrderSent(e) {
+  const b = verified(e);
+  return e.json(200, require(`${__hooks}/lib/replenishment.js`).markSent(e.app, hotelOf(e), e.request.pathValue("id"), b));
+}
+
+/** GET /v1/hotels/{hotelId}/purchase-orders/overdue — orders past their expected day (n8n reminder, F5). */
+function purchaseOrdersOverdue(e) {
+  verified(e);
+  return e.json(200, require(`${__hooks}/lib/replenishment.js`).overdue(e.app, hotelOf(e), new Date()));
+}
+
 function overdue(e) {
   verified(e);
   return e.json(200, analytics.overdue(e.app, hotelOf(e), new Date()));
@@ -370,4 +382,4 @@ function revokeKey(e) {
   return e.json(200, { keyId: key.getString("keyId"), active: false });
 }
 
-module.exports = { aiBudget, aiUsage, purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, postWeather, rollup, runInsights, runForecasts, flushOutbox, flushNow };
+module.exports = { purchaseOrderSent, purchaseOrdersOverdue, aiBudget, aiUsage, purge, purgeNonces, createKey, revokeKey, appRoute, verified, sign, health, summary, overdue, postNotification, postInsight, postReading, postWeather, rollup, runInsights, runForecasts, flushOutbox, flushNow };
