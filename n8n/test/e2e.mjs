@@ -28,6 +28,9 @@ import { SMTPServer } from "smtp-server";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
 const { startTestServer, SECRET, SUPERUSER } = await import(pathToFileURL(join(REPO, "pocketbase/scripts/test-server.mjs")));
+const { ACCOUNTS } = await import(pathToFileURL(join(REPO, "pocketbase/scripts/seed.mjs")));
+/** The seeded demo account of [role] (no ID written here). */
+const nidOf = (role) => ACCOUNTS.find((a) => a[1] === role)[0];
 const SIGNING = process.env.E2E_SIGNING || "shared";
 const PocketBase = createRequire(join(REPO, "pocketbase/package.json"))("pocketbase/cjs");
 
@@ -364,7 +367,7 @@ try {
       lines: [{ itemId: item.id, name: "E2E-شامپو-سفارش", unit: "عدد", quantity: 40, suggested: 40, kind: "reorder", unitCost: 987654, cost: 39506160 }],
     });
     await su.collection("aiActions").update(action.id, { params: { purchaseOrderId: po.id } });
-    const gm = await pbLogin("0012345679");
+    const gm = await pbLogin(nidOf("generalManager"));
     await gm.send(`/api/zarin/actions/${action.id}/decide`, { method: "POST", body: { decision: "approve" } });
     await flush();
     if (CHANNELS) {
@@ -388,7 +391,7 @@ try {
     await settled();
     // Past its expected day: the daily follow-up reminds the inventory manager (once a day).
     await su.collection("purchaseOrders").update(po.id, { expectedAt: new Date(Date.now() - 3 * 864e5).toISOString().replace("T", " ") });
-    const invMgr = await pbLogin("0078912342");
+    const invMgr = await pbLogin(nidOf("inventoryManager"));
     const late = async () => (await invMgr.collection("inbox").getFullList()).filter((n) => /سفارش خرید دیر کرده/.test(n.title)).length;
     const before05 = http.length;
     await run(5);
