@@ -124,8 +124,33 @@ class DemoPurchaseOrdersRepository implements PurchaseOrdersRepository {
   Stream<List<PurchaseOrder>> watchOrders(String hotelId) {
     _require(AppPermission.inventoryView);
     _propose(hotelId);
-    return _store.purchaseOrders.watch(sort: (a, b) => b.createdAt.compareTo(a.createdAt));
+    final prices = RolePolicy.resolve(_me.role).contains(AppPermission.financeView);
+    return _store.purchaseOrders
+        .watch(sort: (a, b) => b.createdAt.compareTo(a.createdAt))
+        .map((orders) => prices ? orders : [for (final o in orders) _withoutPrices(o)]);
   }
+
+  /// As the server: prices only with finance.view, like revenue.
+  static PurchaseOrder _withoutPrices(PurchaseOrder o) => PurchaseOrder(
+    id: o.id,
+    supplierName: o.supplierName,
+    status: o.status,
+    createdAt: o.createdAt,
+    actionId: o.actionId,
+    leadTimeDays: o.leadTimeDays,
+    orderedAt: o.orderedAt,
+    expectedAt: o.expectedAt,
+    sentAt: o.sentAt,
+    receivedAt: o.receivedAt,
+    approvals: o.approvals,
+    needsSecondApproval: o.needsSecondApproval,
+    note: o.note,
+    editedByName: o.editedByName,
+    lines: [
+      for (final l in o.lines)
+        PurchaseOrderLine(itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, suggested: l.suggested, kind: l.kind, orderBy: l.orderBy, received: l.received),
+    ],
+  );
 
   @override
   Future<void> editLines(String orderId, Map<String, double> quantities) async {

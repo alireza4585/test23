@@ -4,13 +4,14 @@
  *
  *   suppliers        name, contact (e-mail / Bale chat), default lead time
  *   purchaseOrders   draft → (awaitingApproval →) approved → sent → received,
- *                    or cancelled; written by the server only
+ *                    or cancelled; written by the server only; no prices
+ *   purchaseOrderCosts  the prices of an order (unit cost, line cost, total)
  *   inventoryItems   + supplierRef, leadTimeDays, shelfLifeDays, parLevel,
  *                    deliveryPattern, replenishment (the nightly plan, server-written)
  *   aiActions.type   + createPurchaseOrder
  *
- * Purchase orders carry costs, like inventoryItems.unitCost: readable with
- * inventory.view in the active hotel.
+ * Orders are readable with inventory.view in the active hotel; their prices
+ * only with finance.view, exactly like revenue in dailyFinance (phase 0.5).
  */
 const PO_STATUS = ["draft", "awaitingApproval", "approved", "sent", "received", "cancelled"];
 
@@ -66,9 +67,9 @@ migrate((app) => {
       { name: "supplierName", type: "text", max: 120 },
       sel("status", PO_STATUS, true),
       { name: "action", type: "relation", collectionId: actions.id, maxSelect: 1, cascadeDelete: false },
-      // [{itemId, name, unit, quantity, suggested, kind, orderBy, unitCost, cost, received}]
+      // [{itemId, name, unit, quantity, suggested, kind, orderBy, received}]: no prices
+      // (they are in purchaseOrderCosts, readable with finance.view only).
       { name: "lines", type: "json", maxSize: 50000 },
-      { name: "total", type: "number", min: 0 },
       { name: "leadTimeDays", type: "number", min: 0 },
       { name: "orderedAt", type: "date" },
       { name: "expectedAt", type: "date" },
@@ -95,6 +96,27 @@ migrate((app) => {
   });
   app.save(orders);
 
+  // Prices of an order, apart from the order: like dailyFinance (phase 0.5),
+  // readable with finance.view only and written by the server only.
+  const costs = new Collection({
+    type: "base",
+    name: "purchaseOrderCosts",
+    fields: [
+      hotel,
+      { name: "purchaseOrder", type: "relation", collectionId: orders.id, maxSelect: 1, required: true, cascadeDelete: true },
+      // [{itemId, unitCost, cost}]
+      { name: "lines", type: "json", maxSize: 20000 },
+      { name: "total", type: "number", min: 0 },
+    ].concat(stamps()),
+    indexes: ["CREATE UNIQUE INDEX idx_purchase_order_costs ON purchaseOrderCosts (purchaseOrder)"],
+    listRule: can("finance.view"),
+    viewRule: can("finance.view"),
+    createRule: null,
+    updateRule: null,
+    deleteRule: null,
+  });
+  app.save(costs);
+
   const items = app.findCollectionByNameOrId("inventoryItems");
   items.fields.add(new RelationField({ name: "supplierRef", collectionId: suppliers.id, maxSelect: 1, cascadeDelete: false }));
   items.fields.add(new NumberField({ name: "leadTimeDays", min: 0, max: 120 }));
@@ -108,7 +130,7 @@ migrate((app) => {
   const items = app.findCollectionByNameOrId("inventoryItems");
   for (const f of ["replenishment", "deliveryPattern", "parLevel", "shelfLifeDays", "leadTimeDays", "supplierRef"]) items.fields.removeByName(f);
   app.save(items);
-  for (const name of ["purchaseOrders", "suppliers"]) {
+  for (const name of ["purchaseOrderCosts", "purchaseOrders", "suppliers"]) {
     try {
       app.delete(app.findCollectionByNameOrId(name));
     } catch (_) {}

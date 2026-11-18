@@ -364,8 +364,9 @@ try {
     });
     const po = await su.collection("purchaseOrders").create({
       hotel: pbServer.hotelId, supplier: supplier.id, supplierName: supplier.name, status: "draft", action: action.id, leadTimeDays: 2, approvals: [],
-      lines: [{ itemId: item.id, name: "E2E-شامپو-سفارش", unit: "عدد", quantity: 40, suggested: 40, kind: "reorder", unitCost: 987654, cost: 39506160 }],
+      lines: [{ itemId: item.id, name: "E2E-شامپو-سفارش", unit: "عدد", quantity: 40, suggested: 40, kind: "reorder" }],
     });
+    await su.collection("purchaseOrderCosts").create({ hotel: pbServer.hotelId, purchaseOrder: po.id, total: 39506160, lines: [{ itemId: item.id, unitCost: 987654, cost: 39506160 }] });
     await su.collection("aiActions").update(action.id, { params: { purchaseOrderId: po.id } });
     const gm = await pbLogin(nidOf("generalManager"));
     await gm.send(`/api/zarin/actions/${action.id}/decide`, { method: "POST", body: { decision: "approve" } });

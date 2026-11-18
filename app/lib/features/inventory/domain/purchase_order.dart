@@ -33,6 +33,8 @@ class PurchaseOrderLine {
 
   /// Day key (YYYY-MM-DD) by which the order should go out.
   final String? orderBy;
+
+  /// Prices: null unless the user may see revenue (finance.view).
   final double? unitCost;
   final double? cost;
   final double? received;
@@ -78,6 +80,8 @@ class PurchaseOrder {
 
   /// The `createPurchaseOrder` action whose approval is the first approval.
   final String? actionId;
+
+  /// Null unless the user may see revenue (finance.view).
   final double? total;
   final double? leadTimeDays;
   final DateTime? orderedAt;

@@ -397,9 +397,16 @@ void main() {
     final po = await su.collection('purchaseOrders').create(body: {
       'hotel': hotelId, 'supplierName': 'adapter supplier', 'status': 'draft', 'action': action.id, 'leadTimeDays': 2,
       'lines': [
-        {'itemId': item.id, 'name': item.data['name'], 'unit': item.data['unit'], 'quantity': 10, 'suggested': 10, 'kind': 'reorder', 'unitCost': unitCost, 'cost': unitCost * 10},
+        {'itemId': item.id, 'name': item.data['name'], 'unit': item.data['unit'], 'quantity': 10, 'suggested': 10, 'kind': 'reorder'},
       ],
       'approvals': [],
+    });
+    // Prices live apart and are readable with finance.view only.
+    await su.collection('purchaseOrderCosts').create(body: {
+      'hotel': hotelId, 'purchaseOrder': po.id, 'total': unitCost * 10,
+      'lines': [
+        {'itemId': item.id, 'unitCost': unitCost, 'cost': unitCost * 10},
+      ],
     });
     await su.collection('aiActions').update(action.id, body: {'params': {'purchaseOrderId': po.id}});
     addTearDown(() async {
@@ -419,11 +426,17 @@ void main() {
     mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id && o.status == PurchaseOrderStatus.awaitingApproval));
     final waiting = mine.firstWhere((o) => o.id == po.id);
     expect(waiting.lines.single.quantity, 6);
+    // The inventory manager has no finance.view: no amounts.
+    expect(waiting.total, isNull);
+    expect(waiting.lines.single.unitCost, isNull);
     expect(waiting.needsSecondApproval, isTrue);
     expect(waiting.approvals.single.step, 1);
     await expectLater(orders.secondApproval(po.id, approve: true), throwsA(isA<PermissionDeniedFailure>()));
 
     final gm = await _Session.signIn(nid(AppRole.generalManager));
+    // The GM sees revenue, so also the order's prices (after the edit: 6 units).
+    final gmView = await firstWhere(PocketBasePurchaseOrdersRepository(gm.pb).watchOrders(hotelId), (l) => l.any((o) => o.id == po.id));
+    expect(gmView.firstWhere((o) => o.id == po.id).total, unitCost * 6);
     await PocketBasePurchaseOrdersRepository(gm.pb).secondApproval(po.id, approve: true);
     mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id && o.status == PurchaseOrderStatus.approved));
     expect(mine.firstWhere((o) => o.id == po.id).expectedAt, isNotNull);

@@ -96,6 +96,8 @@ void main() {
     await _open(tester, Routes.inventory);
     final po = store.purchaseOrders.get('po-demo-1')!;
     expect(po.status, PurchaseOrderStatus.draft);
+    // No finance.view: the card shows no amount.
+    expect(find.textContaining('جمع:'), findsNothing);
     final line = po.lines.first;
 
     // Edit a quantity.
@@ -112,6 +114,8 @@ void main() {
 
     await _switchUser(tester, AppRole.generalManager);
     await _open(tester, Routes.inventory);
+    // The GM sees revenue, and so the order's total.
+    expect(find.textContaining('جمع:'), findsOneWidget);
     await _tapVisible(tester, find.byKey(const Key('po.po-demo-1.second.approve')));
     expect(store.purchaseOrders.get('po-demo-1')!.status, PurchaseOrderStatus.approved);
     expect(store.purchaseOrders.get('po-demo-1')!.approvals.map((a) => a.step), [1, 2]);

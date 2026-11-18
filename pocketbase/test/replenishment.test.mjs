@@ -7,7 +7,11 @@ import { randomBytes } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { createRequire } from "node:module";
+
 import { errorOf, login, post, signed, superuser } from "./helpers.mjs";
+
+const core = createRequire(import.meta.url)("../pb_hooks/lib/core.js");
 
 const PASSWORD = `Rp-${randomBytes(6).toString("hex")}-a1`;
 const DAY_MS = 864e5;
@@ -70,6 +74,7 @@ afterAll(async () => {
 
 const as = (role) => login(users[role].nid, PASSWORD);
 const draftOf = async () => su.collection("purchaseOrders").getFirstListItem(`hotel = "${H}" && status = "draft"`);
+const costsOf = async (poId) => su.collection("purchaseOrderCosts").getFirstListItem(`purchaseOrder = "${poId}"`);
 
 describe("F5 purchase suggestions", () => {
   it("nightly: a plan per item, one insight and one draft order per supplier, bread follows its par level", async () => {
@@ -89,17 +94,54 @@ describe("F5 purchase suggestions", () => {
     const po = await draftOf();
     expect(po).toMatchObject({ supplier: supplier.id, action: action.id, leadTimeDays: 3 });
     expect(po.lines.map((l) => l.itemId)).toEqual([items["SH-1"].id]);
-    expect(po.total).toBe(po.lines[0].quantity * 50_000);
+    // The order has no prices; they are apart, in purchaseOrderCosts.
+    expect(po.total).toBeUndefined();
+    expect(JSON.stringify(po.lines)).not.toMatch(/cost/i);
+    const costs = await costsOf(po.id);
+    expect(costs.total).toBe(po.lines[0].quantity * 50_000);
+    expect(costs.lines).toEqual([{ itemId: items["SH-1"].id, unitCost: 50_000, cost: po.lines[0].quantity * 50_000 }]);
     expect(action.params.purchaseOrderId).toBe(po.id);
     // The next night keeps one action and one draft (same insight cycle).
     await analytics({ insights: true });
     expect((await su.collection("purchaseOrders").getList(1, 5, { filter: `hotel = "${H}"` })).totalItems).toBe(1);
   });
 
-  it("costs are visible with inventory.view only; the draft is edited by inventory.manage only", async () => {
+  it("orders with inventory.view; their prices exactly when revenue is visible (financeView), for every role", async () => {
     const po = await draftOf();
     expect((await (await as("energyManager")).collection("purchaseOrders").getList(1, 5)).totalItems).toBe(0);
     expect((await (await as("housekeepingManager")).collection("purchaseOrders").getList(1, 5)).totalItems).toBe(1);
+    // One revenue row to compare with (phase 0.5: dailyFinance needs finance.view).
+    const rev = await su.collection("dailyFinance").create({ hotel: H, day: "2026-01-01", roomRevenue: 1, totalRevenue: 1, source: "seed" });
+    const extra = [];
+    try {
+      const seen = [];
+      for (const [i, role] of core.ROLES.filter((r) => r !== "superAdmin").entries()) {
+        let pb;
+        if (users[role]) pb = await as(role);
+        else {
+          const id = nid(String(700000000 + i * 1111));
+          const u = await su.collection("users").create({
+            nationalId: id, fullName: `آزمون ${role}`, role, hotels: [H], primaryHotel: H, status: "active", password: PASSWORD, passwordConfirm: PASSWORD,
+          });
+          extra.push(u.id);
+          pb = await login(id, PASSWORD);
+        }
+        const me = pb.authStore.record;
+        const prices = (await pb.collection("purchaseOrderCosts").getList(1, 5)).totalItems;
+        const revenue = (await pb.collection("dailyFinance").getList(1, 5, { filter: `id = "${rev.id}"` })).totalItems;
+        seen.push([role, me.financeView, prices > 0, revenue > 0]);
+      }
+      if (process.env.ZH_TEST_VERBOSE) console.table(seen.map(([role, financeView, prices, revenue]) => ({ role, financeView, prices, revenue })));
+      for (const [role, financeView, prices, revenue] of seen) {
+        expect([role, prices], "prices follow financeView").toEqual([role, financeView]);
+        expect([role, prices], "prices follow revenue").toEqual([role, revenue]);
+      }
+      // Both outcomes occur (the comparison is not vacuous).
+      expect(new Set(seen.map((s) => s[1]))).toEqual(new Set([true, false]));
+    } finally {
+      await su.collection("dailyFinance").delete(rev.id);
+      for (const id of extra) await su.collection("users").delete(id);
+    }
     const denied = await errorOf(post(await as("housekeepingManager"), `/api/zarin/purchase-orders/${po.id}/lines`, { lines: [{ itemId: items["SH-1"].id, quantity: 1 }] }));
     expect(denied.code).toBe("missing_permission");
     const inv = await as("inventoryManager");
@@ -107,7 +149,9 @@ describe("F5 purchase suggestions", () => {
     expect(unknown.code).toBe("unknown_line");
     // 400 × 50,000 = 20,000,000: exactly the hotel's limit.
     const edited = await post(inv, `/api/zarin/purchase-orders/${po.id}/lines`, { lines: [{ itemId: items["SH-1"].id, quantity: 400 }] });
-    expect(edited).toMatchObject({ total: 20_000_000, editedByName: "آزمون inventoryManager" });
+    expect(edited).toMatchObject({ editedByName: "آزمون inventoryManager" });
+    expect(JSON.stringify(edited)).not.toMatch(/cost|total/i);
+    expect((await costsOf(po.id)).total).toBe(20_000_000);
     const action = await su.collection("aiActions").getOne(po.action);
     expect(action.params.lines[0].quantity).toBe(400);
     // An edited draft is no longer refreshed by the nightly plan.
@@ -165,7 +209,8 @@ describe("F5 purchase suggestions", () => {
     const po = await draftOf();
     await post(await as("inventoryManager"), `/api/zarin/purchase-orders/${po.id}/lines`, { lines: [{ itemId: items["SH-1"].id, quantity: 600 }] });
     await post(await as("inventoryManager"), `/api/zarin/actions/${po.action}/decide`, { decision: "approve" });
-    expect(await su.collection("purchaseOrders").getOne(po.id)).toMatchObject({ status: "awaitingApproval", needsSecondApproval: true, total: 30_000_000 });
+    expect(await su.collection("purchaseOrders").getOne(po.id)).toMatchObject({ status: "awaitingApproval", needsSecondApproval: true });
+    expect((await costsOf(po.id)).total).toBe(30_000_000);
     const notYou = await errorOf(post(await as("inventoryManager"), `/api/zarin/purchase-orders/${po.id}/approve`, { decision: "approve" }));
     expect(notYou.code).toBe("second_approval_not_allowed");
     const gm = await as("generalManager");

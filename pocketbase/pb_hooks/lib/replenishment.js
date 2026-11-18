@@ -21,8 +21,9 @@
  *   cancel        POST /api/zarin/purchase-orders/{id}/cancel   inventory.manage
  *   overdue       GET /v1/hotels/{id}/purchase-orders/overdue (signed, n8n reminder)
  *
- * Purchase orders carry costs; like inventoryItems.unitCost they are readable
- * with inventory.view. Insights and actions carry quantities only.
+ * Orders are readable with inventory.view; their prices are in
+ * purchaseOrderCosts, readable with finance.view only (like dailyFinance).
+ * Insights, actions and n8n events carry quantities only.
  */
 const z = require(`${__hooks}/lib/zarin.js`);
 const core = z.core;
@@ -93,21 +94,37 @@ function stateForRules(app, hotelId, now) {
 }
 
 // ------------------------------------------------------------ draft orders
-function linesWithCost(app, hotelId, lines) {
-  return lines.map((l) => {
+/** Order lines (no prices) and, apart, their costs from the items' unit cost. */
+function priced(app, hotelId, lines) {
+  const out = { lines: [], costs: [], total: 0 };
+  for (const l of lines) {
     const item = z.find(app, "inventoryItems", String(l.itemId));
     if (item.getString("hotel") !== hotelId) throw z.bad("cross_hotel_reference", { field: "inventoryItems" });
     const unitCost = num(item, "unitCost");
     const quantity = Number(l.quantity);
-    return {
+    out.lines.push({
       itemId: item.id, name: item.getString("name"), unit: item.getString("unit"), quantity,
       suggested: l.suggested === undefined ? quantity : Number(l.suggested), kind: l.kind || "reorder", orderBy: l.orderBy || null,
-      unitCost, cost: round2(unitCost * quantity),
-    };
-  });
+    });
+    out.costs.push({ itemId: item.id, unitCost, cost: round2(unitCost * quantity) });
+  }
+  out.total = round2(out.costs.reduce((s, c) => s + c.cost, 0));
+  return out;
 }
 
-const totalOf = (lines) => round2(lines.reduce((s, l) => s + (l.cost || 0), 0));
+/** Writes (or replaces) the order's prices in purchaseOrderCosts. */
+function saveCosts(app, po, p) {
+  const rec = z.findFirst(app, "purchaseOrderCosts", "purchaseOrder = {:po}", { po: po.id })
+    || new Record(z.col(app, "purchaseOrderCosts"), { hotel: po.getString("hotel"), purchaseOrder: po.id });
+  rec.load({ lines: p.costs, total: p.total });
+  app.save(rec);
+}
+
+/** The order's total from its stored prices (the server's own reading, for the limit). */
+function totalOf(app, po) {
+  const rec = z.findFirst(app, "purchaseOrderCosts", "purchaseOrder = {:po}", { po: po.id });
+  return rec ? rec.getFloat("total") : priced(app, po.getString("hotel"), z.jsonOf(po, "lines") || []).total;
+}
 
 function leadTimeFor(app, lines) {
   let lead = 0;
@@ -122,14 +139,16 @@ function leadTimeFor(app, lines) {
 function attachDraft(app, action) {
   const hotelId = action.getString("hotel");
   const params = z.jsonOf(action, "params") || {};
-  const lines = linesWithCost(app, hotelId, params.lines || []);
+  const p = priced(app, hotelId, params.lines || []);
+  const lines = p.lines;
   const supplierId = params.supplierId && z.findFirst(app, "suppliers", "hotel = {:h} && id = {:id}", { h: hotelId, id: String(params.supplierId) }) ? String(params.supplierId) : "";
   const po = new Record(z.col(app, "purchaseOrders"), {
     hotel: hotelId, supplier: supplierId, supplierName: String(params.supplierName || "").slice(0, 120), status: "draft",
-    action: action.id, lines, total: totalOf(lines), leadTimeDays: leadTimeFor(app, lines), approvals: [], needsSecondApproval: false,
+    action: action.id, lines, leadTimeDays: leadTimeFor(app, lines), approvals: [], needsSecondApproval: false,
     idempotencyKey: `action:${action.id}`,
   });
   app.save(po);
+  saveCosts(app, po, p);
   action.set("params", Object.assign({}, params, { purchaseOrderId: po.id }));
   app.save(action);
   return po;
@@ -144,9 +163,11 @@ function refreshDrafts(app, hotelId) {
     const insight = action.getString("insight") ? z.findFirst(app, "aiInsights", "id = {:id}", { id: action.getString("insight") }) : null;
     const subject = insight ? ((z.jsonOf(insight, "expectedImpact") || {}).subject || {}) : {};
     if (!Array.isArray(subject.lines) || !subject.lines.length) continue;
-    const lines = linesWithCost(app, hotelId, subject.lines);
-    po.load({ lines, total: totalOf(lines), leadTimeDays: leadTimeFor(app, lines) });
+    const p = priced(app, hotelId, subject.lines);
+    const lines = p.lines;
+    po.load({ lines, leadTimeDays: leadTimeFor(app, lines) });
     app.save(po);
+    saveCosts(app, po, p);
     action.set("params", Object.assign({}, z.jsonOf(action, "params") || {}, {
       lines: lines.map((l) => ({ itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, kind: l.kind, orderBy: l.orderBy })),
     }));
@@ -199,12 +220,12 @@ function executeOrder(tx, c, action, params, now) {
   if (po.getString("status") !== "draft") throw z.bad("purchase_order_not_draft", { status: po.getString("status") });
   const lines = z.jsonOf(po, "lines") || [];
   if (!lines.length) throw z.bad("purchase_order_empty");
-  const total = totalOf(lines);
+  const total = totalOf(tx, po);
   const limit = settingsLimit(tx, po.getString("hotel"));
   const byGm = SECOND_APPROVERS.indexOf(c.role) >= 0;
   const second = !byGm && !(limit !== null && total <= limit);
   const approvals = (z.jsonOf(po, "approvals") || []).concat([{ step: 1, by: c.id, byName: c.name, role: c.role, at: z.pbDate(now), decision: "approve" }]);
-  po.load({ approvals, total, needsSecondApproval: second });
+  po.load({ approvals, needsSecondApproval: second });
   if (second) {
     po.set("status", "awaitingApproval");
     z.notify(tx, {
@@ -217,7 +238,7 @@ function executeOrder(tx, c, action, params, now) {
   }
   tx.save(po);
   if (!second) emitApproved(tx, po);
-  z.audit(tx, po.getString("hotel"), { action: "purchaseOrders.approve", collection: "purchaseOrders", id: po.id, actor: z.actorOf(c), changes: { step: 1, total, second } });
+  z.audit(tx, po.getString("hotel"), { action: "purchaseOrders.approve", collection: "purchaseOrders", id: po.id, actor: z.actorOf(c), changes: { step: 1, second } });
   return { collection: "purchaseOrders", id: po.id, status: po.getString("status") };
 }
 
@@ -245,17 +266,19 @@ function editLines(e) {
   }
   // Only the draft's own items: a draft is edited, not turned into another order.
   for (const id of Object.keys(wanted)) if (!current.some((l) => l.itemId === id)) throw z.bad("unknown_line", { itemId: id });
-  const next = linesWithCost(e.app, hotelId, current
+  const p = priced(e.app, hotelId, current
     .map((l) => Object.assign({}, l, { quantity: wanted[l.itemId] === undefined ? l.quantity : wanted[l.itemId] }))
     .filter((l) => l.quantity > 0));
+  const next = p.lines;
   if (!next.length) throw z.bad("purchase_order_empty");
   const changes = current.map((l) => ({ itemId: l.itemId, from: l.quantity, to: wanted[l.itemId] === undefined ? l.quantity : wanted[l.itemId] }))
     .filter((x) => x.from !== x.to);
   e.app.runInTransaction((tx) => {
     const r = z.find(tx, "purchaseOrders", po.id);
     if (r.getString("status") !== "draft") throw z.bad("purchase_order_not_draft");
-    r.load({ lines: next, total: totalOf(next), editedBy: c.id, editedByName: c.name });
+    r.load({ lines: next, editedBy: c.id, editedByName: c.name });
     tx.save(r);
+    saveCosts(tx, r, p);
     const action = r.getString("action") ? z.findFirst(tx, "aiActions", "id = {:id}", { id: r.getString("action") }) : null;
     if (action) {
       action.set("params", Object.assign({}, z.jsonOf(action, "params") || {}, {
