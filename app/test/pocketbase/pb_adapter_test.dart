@@ -89,7 +89,10 @@ void main() {
     final tasks = PocketBaseHousekeepingRepository(s.pb);
     final rooms = PocketBaseRoomsRepository(s.pb);
 
-    final mine = await tasks.watchTasks(hotelId, day: DateTime.now(), assigneeId: s.user.uid).first;
+    // The seed files today's tasks under the hotel's (Tehran) day. A phone set to Iran time gets
+    // the same day from DateTime.now(); this machine may run on UTC, so ask for the hotel's day
+    // (between 20:30 and 24:00 UTC the two differ).
+    final mine = await tasks.watchTasks(hotelId, day: DayKey.hotelToday(DateTime.now()), assigneeId: s.user.uid).first;
     final task = mine.firstWhere((t) => t.roomNumber == '107' && t.status == TaskStatus.pending);
     final roomUpdates = rooms.watchRoom(hotelId, task.roomId).asBroadcastStream();
     expect((await roomUpdates.first)!.status, RoomStatus.vacantDirty);
