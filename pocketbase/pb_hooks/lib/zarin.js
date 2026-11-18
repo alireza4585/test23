@@ -230,7 +230,7 @@ function hotelSettings(app, hotelId) {
  *                       Action Center (typed actions, decide, outcomes)
  *   morningBriefing     daily cross-department briefing per role (F4)
  */
-const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing", "replenishment"];
+const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing", "replenishment", "assistantV2"];
 
 function features(app, hotelId) {
   const s = jsonOf(find(app, "hotels", hotelId), "settings") || {};

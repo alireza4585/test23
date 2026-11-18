@@ -754,6 +754,8 @@ function ask(e) {
   const locale = b.locale === "en" ? "en" : "fa";
   const now = new Date();
   consumeQuota(e.app, c.id, now);
+  // AI phase 2 (F3): typed read-only tools with sources instead of one snapshot.
+  if (z.feature(e.app, hotelId, "assistantV2")) return require(`${__hooks}/lib/assistant.js`).ask(e, c, hotelId, question, locale, b.threadId, now);
 
   const r = redactor(e.app, hotelId);
   const ctx = buildContext(e.app, hotelId, now, accessOf(c), r);
@@ -882,5 +884,5 @@ function purgeConversations(app, now) {
 module.exports = {
   ask, narrate, contextFor, buildContext, ruleAnswer, num, accessOf, redactor, clean, redactIds,
   numbersIn, factsOf, unsupportedNumbers, budget, recordUsage, purgeConversations, chatUrl,
-  complete, llmConfigured, scrub, dataBlock, envInt,
+  complete, llmConfigured, scrub, dataBlock, envInt, topicOf, threadHistory,
 };

@@ -10,6 +10,7 @@
  *   GET  /api/zarin/me
  *   POST /api/zarin/me/active-hotel           switch the hotel the caller works in (permissions follow it)
  *   POST /api/zarin/purchase-orders/{id}/lines|approve|receive|cancel   F5 purchase orders [replenishment]
+ *   POST /api/zarin/ai/conversations/{id}/action   an assistant answer → proposed F1 action [assistantV2, recommendationLoop]
  *   POST /api/zarin/users                     provision a user (RBAC: canAssign)
  *   POST /api/zarin/users/{id}/status|password|role
  *   POST /api/zarin/sessions                  register this device
@@ -29,7 +30,8 @@
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
  *                     POST /api/zarin/admin/hotels/{id}/analytics,
  *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke],
- *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user)
+ *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user),
+ *                     POST /api/zarin/admin/ai/trace (assistant v2: tool calls and results of one answer)
  * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js),
  *                     including POST /v1/hotels/{id}/weather (daily temperature, second path to lib/weather.js)
  *                     and POST /v1/hotels/{id}/purchase-orders/{po}/sent, GET …/purchase-orders/overdue (F5, n8n 05)
@@ -48,6 +50,7 @@ routerAdd("POST", "/api/zarin/purchase-orders/{id}/lines", (e) => require(`${__h
 routerAdd("POST", "/api/zarin/purchase-orders/{id}/approve", (e) => require(`${__hooks}/lib/replenishment.js`).secondApproval(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/purchase-orders/{id}/receive", (e) => require(`${__hooks}/lib/replenishment.js`).receive(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/purchase-orders/{id}/cancel", (e) => require(`${__hooks}/lib/replenishment.js`).cancel(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/ai/conversations/{id}/action", (e) => require(`${__hooks}/lib/assistant.js`).toAction(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/me/active-hotel", (e) => require(`${__hooks}/lib/users.js`).setActiveHotel(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users", (e) => require(`${__hooks}/lib/users.js`).createUser(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users/{id}/status", (e) => require(`${__hooks}/lib/users.js`).setStatus(e), $apis.requireAuth("users"));
@@ -78,6 +81,7 @@ routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__
 // ------------------------------------------------- integration API (HMAC)
 routerAdd("GET", "/v1/health", (e) => require(`${__hooks}/lib/integration.js`).health(e));
 routerAdd("POST", "/api/zarin/admin/ai/context", (e) => require(`${__hooks}/lib/ai.js`).contextFor(e), $apis.requireSuperuserAuth());
+routerAdd("POST", "/api/zarin/admin/ai/trace", (e) => require(`${__hooks}/lib/assistant.js`).trace(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/integration-keys", (e) => require(`${__hooks}/lib/integration.js`).createKey(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/integration-keys/{keyId}/revoke", (e) => require(`${__hooks}/lib/integration.js`).revokeKey(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/v1/maintenance/purge", (e) => require(`${__hooks}/lib/integration.js`).purge(e));
