@@ -77,6 +77,14 @@ export {
   scoreDay,
 } from "../../firebase/functions/src/analytics/energy-model";
 export { ACTION_TYPES, EDITABLE_PARAMS, proposeActions } from "../../firebase/functions/src/analytics/actions";
+export {
+  DEFAULT_LEAD_DAYS,
+  HISTORY_DAYS,
+  forecastUsage,
+  mase,
+  planItem,
+  planReplenishment,
+} from "../../firebase/functions/src/analytics/replenishment";
 export { bootstrapMeanDiff } from "../../firebase/functions/src/analytics/stats";
 export {
   briefingText,

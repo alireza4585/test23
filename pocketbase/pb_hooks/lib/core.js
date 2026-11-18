@@ -29,9 +29,11 @@ __export(index_exports, {
   CUSUM_H: () => CUSUM_H,
   DATA_ERROR_HIGH_RATIO: () => DATA_ERROR_HIGH_RATIO,
   DATA_ERROR_LOW_RATIO: () => DATA_ERROR_LOW_RATIO,
+  DEFAULT_LEAD_DAYS: () => DEFAULT_LEAD_DAYS,
   DEFAULT_SETTINGS: () => DEFAULT_SETTINGS,
   EDITABLE_PARAMS: () => EDITABLE_PARAMS,
   EVALUATION_WINDOW_DAYS: () => EVALUATION_WINDOW_DAYS,
+  HISTORY_DAYS: () => HISTORY_DAYS,
   MATURE_MODEL_DAYS: () => MATURE_MODEL_DAYS,
   MAX_CVRMSE: () => MAX_CVRMSE,
   MAX_CVRMSE_MONTHLY: () => MAX_CVRMSE_MONTHLY,
@@ -73,6 +75,7 @@ __export(index_exports, {
   fitBaseline: () => fitBaseline,
   fitEnergyModel: () => fitEnergyModel,
   forecastSeries: () => forecastSeries,
+  forecastUsage: () => forecastUsage,
   generateInsights: () => generateInsights,
   implausibleDays: () => implausibleDays,
   iranFixedHolidays: () => iranFixedHolidays,
@@ -80,10 +83,13 @@ __export(index_exports, {
   isRole: () => isRole,
   isValidNationalId: () => isValidNationalId,
   jalaliToDay: () => jalaliToDay,
+  mase: () => mase,
   maskNationalId: () => maskNationalId,
   measureEnergy: () => measure,
   measureWithModel: () => measureWithModel,
   normalizeNationalId: () => normalizeNationalId,
+  planItem: () => planItem,
+  planReplenishment: () => planReplenishment,
   predictDay: () => predictDay,
   proposeActions: () => proposeActions,
   rolesWith: () => rolesWith,
@@ -529,7 +535,7 @@ function generateInsights(input) {
   return [
     ...modelled ? [] : energyIntensityRule(input),
     ...energyModelRule(input),
-    ...stockoutForecastRule(input),
+    ...input.replenishment ? replenishmentRule(input) : stockoutForecastRule(input),
     ...housekeepingEfficiencyRule(input),
     ...repeatFailureRule(input),
     ...outOfOrderRevenueRule(input),
@@ -691,6 +697,64 @@ function stockoutForecastRule(input) {
   }
   return out;
 }
+function nameKey(name) {
+  let h = 2166136261;
+  for (const ch of name) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0).toString(36);
+}
+function replenishmentRule(input) {
+  var _a;
+  const state = input.replenishment;
+  if (!state) return [];
+  const plans = new Map(state.plans.map((p) => [p.itemId, p]));
+  const out = [];
+  for (const g of state.bySupplier) {
+    if (!g.lines.length) continue;
+    const supplier = g.supplierName || "\u062A\u0623\u0645\u06CC\u0646\u200C\u06A9\u0646\u0646\u062F\u0647\u0654 \u0646\u0627\u0645\u0634\u062E\u0635";
+    const urgent = g.lines.some((l) => l.kind === "reorder" && l.orderBy <= input.today);
+    const soonest = g.lines.reduce((d, l) => l.stockoutDay && (!d || l.stockoutDay < d) ? l.stockoutDay : d, null);
+    const reorder = g.lines.filter((l) => l.kind === "reorder").length;
+    const par = g.lines.length - reorder;
+    const parts = [reorder ? `${fmt(reorder)} \u0642\u0644\u0645 \u0628\u0647 \u0646\u0642\u0637\u0647\u0654 \u0633\u0641\u0627\u0631\u0634 \u0631\u0633\u06CC\u062F\u0647` : "", par ? `${fmt(par)} \u0642\u0644\u0645 \u0628\u0627 \u062A\u062D\u0648\u06CC\u0644 \u0631\u0648\u0632\u0627\u0646\u0647 \u06A9\u0645\u062A\u0631 \u0627\u0632 \u0633\u0637\u062D par \u0627\u0633\u062A` : ""].filter(Boolean);
+    out.push({
+      id: `replenishment_${(_a = g.supplierId) != null ? _a : `n${nameKey(supplier)}`}`,
+      rule: "replenishment",
+      category: "inventory",
+      title: `\u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0633\u0641\u0627\u0631\u0634 \u0627\u0632 \xAB${supplier}\xBB: ${fmt(g.lines.length)} \u0642\u0644\u0645`,
+      summary: `${parts.join(" \u0648 ")}.` + (soonest ? ` \u0646\u062E\u0633\u062A\u06CC\u0646 \u0627\u062A\u0645\u0627\u0645 \u067E\u06CC\u0634\u200C\u0628\u06CC\u0646\u06CC\u200C\u0634\u062F\u0647: ${soonest}.` : ""),
+      recommendation: "\u067E\u06CC\u0634\u200C\u0646\u0648\u06CC\u0633 \u0633\u0641\u0627\u0631\u0634 \u0631\u0627 \u062F\u0631 \u0635\u0641\u062D\u0647\u0654 \u0627\u0646\u0628\u0627\u0631 \u0628\u0631\u0631\u0633\u06CC\u060C \u062F\u0631 \u0635\u0648\u0631\u062A \u0646\u06CC\u0627\u0632 \u0645\u0642\u062F\u0627\u0631\u0647\u0627 \u0631\u0627 \u0627\u0635\u0644\u0627\u062D \u0648 \u062A\u0623\u06CC\u06CC\u062F \u06A9\u0646\u06CC\u062F.",
+      confidence: 0.8,
+      priority: urgent ? "high" : "medium",
+      evidence: g.lines.slice(0, 8).map((l) => {
+        var _a2, _b, _c, _d, _e, _f;
+        const p = plans.get(l.itemId);
+        const lead = p ? `${fmt(p.leadTime.days)} \u0631\u0648\u0632 (${LEAD_SOURCE[p.leadTime.source]})` : "\u2014";
+        return l.kind === "par" ? `${l.name}: \u0645\u0648\u062C\u0648\u062F\u06CC ${fmt((_a2 = p == null ? void 0 : p.onHand) != null ? _a2 : 0)} ${l.unit}\u060C \u0633\u0637\u062D par ${fmt((_b = p == null ? void 0 : p.reorderPoint) != null ? _b : 0)}\u060C \u0633\u0641\u0627\u0631\u0634 ${fmt(l.quantity)} ${l.unit} \u0628\u0631\u0627\u06CC \u062A\u062D\u0648\u06CC\u0644 \u0641\u0631\u062F\u0627` : `${l.name}: \u0645\u0635\u0631\u0641 \u0631\u0648\u0632\u0627\u0646\u0647 ${fmt((_c = p == null ? void 0 : p.forecast.rate) != null ? _c : 0, 1)} ${l.unit}\u060C \u0645\u0648\u062C\u0648\u062F\u06CC ${fmt((_d = p == null ? void 0 : p.onHand) != null ? _d : 0)} \u0648 \u062F\u0631 \u0631\u0627\u0647 ${fmt((_e = p == null ? void 0 : p.onOrder) != null ? _e : 0)}\u060C \u0646\u0642\u0637\u0647\u0654 \u0633\u0641\u0627\u0631\u0634 ${fmt((_f = p == null ? void 0 : p.reorderPoint) != null ? _f : 0)}\u060C \u0632\u0645\u0627\u0646 \u062A\u0623\u0645\u06CC\u0646 ${lead}\u061B \u0633\u0641\u0627\u0631\u0634 ${fmt(l.quantity)} ${l.unit} \u062A\u0627 ${l.orderBy}`;
+      }),
+      route: "/inventory",
+      audienceRoles: ["inventoryManager", "generalManager"],
+      expectedImpact: {
+        metric: "daysOfCover",
+        unit: "days",
+        baseline: round1(Math.min(...g.lines.map((l) => {
+          var _a2, _b;
+          return (_b = (_a2 = plans.get(l.itemId)) == null ? void 0 : _a2.daysOfCover) != null ? _b : 0;
+        }))),
+        expected: 7,
+        method: "stockout",
+        subject: { itemId: g.lines[0].itemId, itemIds: g.lines.map((l) => l.itemId), supplierId: g.supplierId, supplierName: g.supplierName, lines: g.lines }
+      }
+    });
+  }
+  return out;
+}
+var LEAD_SOURCE = {
+  learned: "\u0627\u0632 \u0633\u0641\u0627\u0631\u0634\u200C\u0647\u0627\u06CC \u0642\u0628\u0644\u06CC",
+  learnedLate: "\u0628\u0627 \u062A\u0623\u062E\u06CC\u0631\u0647\u0627\u06CC \u0627\u062E\u06CC\u0631 \u062A\u0623\u0645\u06CC\u0646\u200C\u06A9\u0646\u0646\u062F\u0647",
+  item: "\u062A\u0646\u0638\u06CC\u0645 \u0642\u0644\u0645",
+  supplier: "\u062A\u0646\u0638\u06CC\u0645 \u062A\u0623\u0645\u06CC\u0646\u200C\u06A9\u0646\u0646\u062F\u0647",
+  assumed: "\u0641\u0631\u0636 \u067E\u06CC\u0634\u200C\u0641\u0631\u0636"
+};
 function housekeepingEfficiencyRule(input) {
   var _a;
   const target = (_a = input.settings.targetCleanMinutes.checkoutClean) != null ? _a : 35;
@@ -1093,8 +1157,8 @@ function holtWinters(y, h) {
   for (const a of [0.1, 0.3, 0.5]) {
     for (const b of [0, 0.05]) {
       for (const g of [0.05, 0.15, 0.3]) {
-        const r2 = hwRun(y, a, b, g);
-        if (!best || r2.sse < best.sse) best = r2;
+        const r3 = hwRun(y, a, b, g);
+        if (!best || r3.sse < best.sse) best = r3;
       }
     }
   }
@@ -1793,17 +1857,19 @@ var exclusionMonth = jalaliMonth;
 var MAX_EXCLUDED_DAYS_PER_MONTH = 5;
 
 // ../firebase/functions/src/analytics/actions.ts
-var ACTION_TYPES = ["createTicket", "createTask", "notifyRole", "adjustBaseline"];
+var ACTION_TYPES = ["createTicket", "createTask", "notifyRole", "adjustBaseline", "createPurchaseOrder"];
 var TICKET_CATEGORIES = ["hvac", "electrical", "plumbing", "furniture", "appliance", "itNetwork", "structural", "other"];
 var EDITABLE_PARAMS = {
   createTicket: ["title", "priority", "category"],
   createTask: ["priority", "notes"],
   notifyRole: ["body"],
-  adjustBaseline: []
+  adjustBaseline: [],
+  // Quantities are edited on the draft purchase order (its own route), not here.
+  createPurchaseOrder: []
 };
 var cut = (s, n) => s.length > n ? `${s.slice(0, n - 1)}\u2026` : s;
 function proposeActions(insight) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e, _f;
   const impact = (_a = insight.expectedImpact) != null ? _a : void 0;
   const subject = (_b = impact == null ? void 0 : impact.subject) != null ? _b : {};
   const high = insight.priority === "high";
@@ -1858,6 +1924,22 @@ function proposeActions(insight) {
       return [notify("housekeeping", ["housekeepingManager"], insight, impact)];
     case "stockout":
       return [notify("inventory", ["inventoryManager"], insight, impact)];
+    case "replenishment": {
+      const lines = Array.isArray(subject.lines) ? subject.lines : [];
+      if (!lines.length) return [];
+      return [{
+        type: "createPurchaseOrder",
+        department: "inventory",
+        title: cut(`\u0633\u0641\u0627\u0631\u0634 \u062E\u0631\u06CC\u062F \u0627\u0632 \xAB${String(subject.supplierName || "\u062A\u0623\u0645\u06CC\u0646\u200C\u06A9\u0646\u0646\u062F\u0647\u0654 \u0646\u0627\u0645\u0634\u062E\u0635")}\xBB: ${lines.length} \u0642\u0644\u0645`, 200),
+        priority: insight.priority,
+        params: {
+          supplierId: (_e = subject.supplierId) != null ? _e : null,
+          supplierName: (_f = subject.supplierName) != null ? _f : null,
+          lines: lines.map((l) => ({ itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, kind: l.kind, orderBy: l.orderBy }))
+        },
+        expectedImpact: impact
+      }];
+    }
     case "outOfOrderRevenue":
     case "weekdayOccupancy":
       return [notify("operations", ["generalManager"], insight, impact)];
@@ -1876,8 +1958,204 @@ function notify(department, roles, insight, impact) {
   };
 }
 
+// ../firebase/functions/src/analytics/replenishment.ts
+var HISTORY_DAYS = 56;
+var MIN_HISTORY_DAYS2 = 14;
+var SERVICE_Z = 1.645;
+var DEFAULT_LEAD_DAYS = 3;
+var MIN_LEAD_SAMPLES = 2;
+var REVIEW_DAYS = 7;
+var INTERMITTENT_ADI = 1.32;
+var LOOKAHEAD_DAYS = 2;
+var DAILY_DELIVERY_SHARE = 0.5;
+var ALPHAS = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5];
+var CROSTON_ALPHAS = [0.05, 0.1, 0.15, 0.2];
+var r2 = (v) => round2(v, 2);
+function dailyUsage(movements, itemId, from, to) {
+  const n = daysBetween(from, to) + 1;
+  const out = new Array(Math.max(0, n)).fill(0);
+  for (const m of movements) {
+    if (m.itemId !== itemId || m.type !== "issue" && m.type !== "waste") continue;
+    const i = daysBetween(from, m.day);
+    if (i >= 0 && i < n) out[i] += Math.abs(m.delta);
+  }
+  return out;
+}
+function ses(series, alpha) {
+  let level = series[0];
+  const errors = [];
+  for (let i = 1; i < series.length; i++) {
+    errors.push(series[i] - level);
+    level = alpha * series[i] + (1 - alpha) * level;
+  }
+  return { level, errors };
+}
+function croston(series, alpha) {
+  let z = null;
+  let p = null;
+  let gap = 1;
+  const errors = [];
+  const estimate = () => z === null || p === null ? 0 : z / p * (1 - alpha / 2);
+  for (const y of series) {
+    errors.push(y - estimate());
+    if (y > 0) {
+      z = z === null ? y : alpha * y + (1 - alpha) * z;
+      p = p === null ? gap : alpha * gap + (1 - alpha) * p;
+      gap = 1;
+    } else {
+      gap++;
+    }
+  }
+  const first = series.findIndex((y) => y > 0);
+  return { rate: estimate(), errors: errors.slice(Math.max(1, first + 1)) };
+}
+var rms = (xs) => xs.length ? Math.sqrt(xs.reduce((s, e) => s + e * e, 0) / xs.length) : 0;
+var meanAbs = (xs) => xs.length ? xs.reduce((s, e) => s + Math.abs(e), 0) / xs.length : 0;
+function forecastUsage(series) {
+  const used = series.filter((y) => y > 0).length;
+  if (series.length < 2 || used === 0) return { method: "none", rate: 0, sigma: 0, alpha: null, adi: null, mae: null };
+  const adi = series.length / used;
+  let best = null;
+  for (const a of adi > INTERMITTENT_ADI ? CROSTON_ALPHAS : ALPHAS) {
+    const f = adi > INTERMITTENT_ADI ? (() => {
+      const c = croston(series, a);
+      return { method: "croston", rate: c.rate, errors: c.errors };
+    })() : (() => {
+      const s = ses(series, a);
+      return { method: "ses", rate: s.level, errors: s.errors };
+    })();
+    const sigma = rms(f.errors);
+    if (!best || sigma < best.sigma) best = { method: f.method, rate: f.rate, sigma, alpha: a, adi, mae: meanAbs(f.errors) };
+  }
+  const b = best;
+  return { ...b, rate: r2(Math.max(0, b.rate)), sigma: r2(b.sigma), adi: r2(adi), mae: b.mae === null ? null : r2(b.mae) };
+}
+function mase(actual, forecast, history) {
+  const naive = [];
+  for (let i = 1; i < history.length; i++) naive.push(Math.abs(history[i] - history[i - 1]));
+  const scale = mean(naive);
+  if (!(scale > 0) || !actual.length) return null;
+  return r2(meanAbs(actual.map((a, i) => a - forecast[i])) / scale);
+}
+function leadTimeOf(item, supplier, orders) {
+  const received = orders.filter((o) => o.status === "received" && o.orderedDay && o.receivedDay && (o.itemId === item.id || !!item.supplierId && o.supplierId === item.supplierId)).sort((a, b) => a.receivedDay < b.receivedDay ? -1 : 1);
+  const samples = received.map((o) => Math.max(0, daysBetween(o.orderedDay, o.receivedDay)));
+  if (samples.length >= MIN_LEAD_SAMPLES) {
+    const late = received.slice(-2).every((o) => o.expectedDay && o.receivedDay > o.expectedDay);
+    return late ? { days: Math.ceil(quantile(samples, 0.9)), source: "learnedLate", samples: samples.length } : { days: Math.ceil(quantile(samples, 0.5)), source: "learned", samples: samples.length };
+  }
+  if (item.leadTimeDays && item.leadTimeDays > 0) return { days: item.leadTimeDays, source: "item", samples: samples.length };
+  if ((supplier == null ? void 0 : supplier.leadTimeDays) && supplier.leadTimeDays > 0) return { days: supplier.leadTimeDays, source: "supplier", samples: samples.length };
+  return { days: DEFAULT_LEAD_DAYS, source: "assumed", samples: samples.length };
+}
+function deliveryPatternOf(item, movements, today) {
+  if (item.deliveryPattern && item.deliveryPattern !== "auto") return { pattern: item.deliveryPattern, source: "setting" };
+  const from = shiftDay(today, -28);
+  const days = new Set(movements.filter((m) => m.itemId === item.id && m.type === "receive" && m.day >= from && m.day < today).map((m) => m.day));
+  return { pattern: days.size / 28 >= DAILY_DELIVERY_SHARE ? "daily" : "scheduled", source: "history" };
+}
+function planItem(item, supplier, movements, orders, today) {
+  var _a, _b;
+  const to = shiftDay(today, -1);
+  const from = shiftDay(today, -HISTORY_DAYS);
+  const mine = movements.filter((m) => m.itemId === item.id && m.day <= to);
+  const firstDay = mine.reduce((d, m) => d === null || m.day < d ? m.day : d, null);
+  const start = firstDay && firstDay > from ? firstDay : from;
+  const series = dailyUsage(mine, item.id, start, to);
+  const { pattern, source: patternSource } = deliveryPatternOf(item, movements, today);
+  const lead = leadTimeOf(item, supplier, orders);
+  const onOrder = orders.filter((o) => o.itemId === item.id && (o.status === "approved" || o.status === "sent" || o.status === "awaitingApproval")).reduce((s2, o) => s2 + o.quantity, 0);
+  const base = {
+    itemId: item.id,
+    pattern,
+    patternSource,
+    leadTime: lead,
+    onHand: item.quantity,
+    onOrder,
+    position: r2(item.quantity + onOrder)
+  };
+  if (series.length < MIN_HISTORY_DAYS2) {
+    return {
+      ...base,
+      ok: false,
+      reason: `insufficient_history: ${series.length} of ${MIN_HISTORY_DAYS2} days`,
+      forecast: { method: "none", rate: 0, sigma: 0, alpha: null, adi: null, mae: null },
+      safetyStock: 0,
+      reorderPoint: item.reorderLevel,
+      parLevel: (_a = item.parLevel) != null ? _a : null,
+      daysOfCover: null,
+      suggestion: null
+    };
+  }
+  const f = forecastUsage(series);
+  const cover = f.rate > 0 ? r2(item.quantity / f.rate) : null;
+  const stockoutDay = f.rate > 0 ? shiftDay(today, Math.floor(item.quantity / f.rate)) : null;
+  const cost = (q) => item.unitCost && item.unitCost > 0 ? r2(q * item.unitCost) : null;
+  const suggestion = (kind, quantity, orderBy) => {
+    var _a2, _b2, _c;
+    return {
+      itemId: item.id,
+      name: item.name,
+      unit: item.unit,
+      supplierId: (_a2 = item.supplierId) != null ? _a2 : null,
+      supplierName: (_c = (_b2 = item.supplierName) != null ? _b2 : supplier == null ? void 0 : supplier.name) != null ? _c : null,
+      kind,
+      quantity,
+      orderBy,
+      stockoutDay: kind === "reorder" ? stockoutDay : null,
+      estimatedCost: cost(quantity)
+    };
+  };
+  if (pattern === "daily") {
+    const ss1 = r2(SERVICE_Z * f.sigma);
+    const par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    const short = Math.ceil(par - item.quantity - onOrder);
+    return {
+      ...base,
+      ok: true,
+      reason: null,
+      forecast: f,
+      safetyStock: ss1,
+      reorderPoint: par,
+      parLevel: par,
+      daysOfCover: cover,
+      suggestion: short > 0 ? suggestion("par", short, today) : null
+    };
+  }
+  const ss = r2(SERVICE_Z * f.sigma * Math.sqrt(lead.days));
+  const rop = r2(f.rate * lead.days + ss);
+  const position = item.quantity + onOrder;
+  const slack = f.rate > 0 ? Math.floor((position - rop) / f.rate) : Infinity;
+  let s = null;
+  if (f.rate > 0 && slack <= LOOKAHEAD_DAYS) {
+    let q = Math.ceil(f.rate * (lead.days + REVIEW_DAYS) + ss - position);
+    q = Math.max(q, Math.ceil((_b = item.reorderQuantity) != null ? _b : 0));
+    if (item.shelfLifeDays && item.shelfLifeDays > 0) q = Math.min(q, Math.ceil(f.rate * item.shelfLifeDays));
+    if (q > 0) s = suggestion("reorder", q, shiftDay(today, Math.max(0, slack)));
+  }
+  return { ...base, ok: true, reason: null, forecast: f, safetyStock: ss, reorderPoint: rop, parLevel: null, daysOfCover: cover, suggestion: s };
+}
+function planReplenishment(input) {
+  var _a, _b, _c;
+  const suppliers = new Map(input.suppliers.map((s) => [s.id, s]));
+  const plans = input.items.map((it) => {
+    var _a2;
+    return planItem(it, it.supplierId ? (_a2 = suppliers.get(it.supplierId)) != null ? _a2 : null : null, input.movements, input.orders, input.today);
+  });
+  const groups = /* @__PURE__ */ new Map();
+  for (const p of plans) {
+    if (!p.suggestion) continue;
+    const key = (_b = p.suggestion.supplierId) != null ? _b : `name:${(_a = p.suggestion.supplierName) != null ? _a : ""}`;
+    const g = (_c = groups.get(key)) != null ? _c : { supplierId: p.suggestion.supplierId, supplierName: p.suggestion.supplierName, lines: [] };
+    g.lines.push(p.suggestion);
+    groups.set(key, g);
+  }
+  const bySupplier = [...groups.values()].map((g) => ({ ...g, lines: g.lines.sort((a, b) => a.orderBy < b.orderBy ? -1 : a.orderBy > b.orderBy ? 1 : 0) }));
+  return { plans, bySupplier };
+}
+
 // ../firebase/functions/src/analytics/briefing.ts
-var HISTORY_DAYS = 28;
+var HISTORY_DAYS2 = 28;
 var MIN_HISTORY_POINTS = 14;
 var ROBUST_Z = 3;
 var MAX_ITEMS = 7;
@@ -1937,7 +2215,7 @@ function buildItems(input) {
   var _a, _b, _c, _d, _e, _f;
   const { today, addDays } = input;
   const yesterday = addDays(today, -1);
-  const history = Array.from({ length: HISTORY_DAYS }, (_, i) => addDays(yesterday, -(i + 1)));
+  const history = Array.from({ length: HISTORY_DAYS2 }, (_, i) => addDays(yesterday, -(i + 1)));
   const items = [];
   const actionFor = (insightId) => {
     var _a2, _b2;
@@ -1960,8 +2238,8 @@ function buildItems(input) {
     let finding = `\u0627\u0634\u063A\u0627\u0644 \u062F\u06CC\u0631\u0648\u0632 ${fmt2(r1(occY), 1)}\u066A \u0628\u0648\u062F`;
     if (rz) {
       f.values.occupancyMedian = r1(rz.median);
-      f.windows.historyDays = HISTORY_DAYS;
-      finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)}\u066A`;
+      f.windows.historyDays = HISTORY_DAYS2;
+      finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS2} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)}\u066A`;
     }
     if (input.forecastOccupancy !== null && input.forecastOccupancy !== void 0) {
       f.values.occupancyForecastToday = r1(input.forecastOccupancy);
@@ -2022,8 +2300,8 @@ function buildItems(input) {
       finding = `\u0645\u0635\u0631\u0641 ${label} \u062F\u06CC\u0631\u0648\u0632 ${fmt2(Math.round(y))} ${unit} \u0628\u0648\u062F`;
       if (rz) {
         f.values[`${id}_median`] = Math.round(rz.median);
-        f.windows.historyDays = HISTORY_DAYS;
-        finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(Math.round(rz.median))} ${unit} (\u0628\u062F\u0648\u0646 \u062A\u0639\u062F\u06CC\u0644 \u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644)`;
+        f.windows.historyDays = HISTORY_DAYS2;
+        finding += `\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS2} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(Math.round(rz.median))} ${unit} (\u0628\u062F\u0648\u0646 \u062A\u0639\u062F\u06CC\u0644 \u062F\u0645\u0627 \u0648 \u0627\u0634\u063A\u0627\u0644)`;
       }
       anomalous = !!rz && Math.abs(rz.z) >= ROBUST_Z;
       severity = anomalous ? Math.abs(rz.z) : 0.3;
@@ -2063,7 +2341,7 @@ function buildItems(input) {
       f.values.checkoutCleanMinutes = r1(cY);
       f.values.checkoutCleanMedian = r1(rz.median);
       f.values.checkoutCleanTarget = (_c = input.settings.targetCleanMinutes.checkoutClean) != null ? _c : 35;
-      f.windows.historyDays = HISTORY_DAYS;
+      f.windows.historyDays = HISTORY_DAYS2;
       const absY = absent(yesterday, "housekeeping");
       const absDays = staffedDays("housekeeping");
       const absMedian = absDays.length ? quantile(absDays.map((d) => absent(d, "housekeeping")), 0.5) : null;
@@ -2079,7 +2357,7 @@ function buildItems(input) {
         kind: "anomaly",
         category: "housekeeping",
         title: "\u0632\u0645\u0627\u0646 \u0646\u0638\u0627\u0641\u062A \u0627\u062A\u0627\u0642\u200C\u0647\u0627\u06CC \u062A\u062E\u0644\u06CC\u0647 \u0628\u0627\u0644\u0627",
-        finding: `\u0645\u06CC\u0627\u0646\u06AF\u06CC\u0646 \u0646\u0638\u0627\u0641\u062A \u0627\u062A\u0627\u0642 \u062A\u062E\u0644\u06CC\u0647 \u062F\u06CC\u0631\u0648\u0632 ${fmt2(r1(cY), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0628\u0648\u062F\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0648 \u0647\u062F\u0641 ${fmt2(f.values.checkoutCleanTarget)} \u062F\u0642\u06CC\u0642\u0647.`,
+        finding: `\u0645\u06CC\u0627\u0646\u06AF\u06CC\u0646 \u0646\u0638\u0627\u0641\u062A \u0627\u062A\u0627\u0642 \u062A\u062E\u0644\u06CC\u0647 \u062F\u06CC\u0631\u0648\u0632 ${fmt2(r1(cY), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0628\u0648\u062F\u061B \u0645\u06CC\u0627\u0646\u0647\u0654 ${HISTORY_DAYS2} \u0631\u0648\u0632 \u06AF\u0630\u0634\u062A\u0647 ${fmt2(r1(rz.median), 1)} \u062F\u0642\u06CC\u0642\u0647 \u0648 \u0647\u062F\u0641 ${fmt2(f.values.checkoutCleanTarget)} \u062F\u0642\u06CC\u0642\u0647.`,
         cause,
         actionId: insight ? actionFor(insight.id) : null,
         route: "/housekeeping",

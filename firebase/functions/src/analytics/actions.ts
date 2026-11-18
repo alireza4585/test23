@@ -11,13 +11,16 @@
  *   adjustBaseline keep days out of an energy fit   generalManager / energyManager,
  *                  reason required, at most MAX_EXCLUDED_DAYS_PER_MONTH per
  *                  meter and Jalali month; never proposed automatically.
- * Financial actions are out of scope (drafts only, phase 2); nothing that
- * affects guests is executed automatically.
+ *   createPurchaseOrder (phase 2, F5) approve a draft purchase order   needs
+ *                  inventory.manage; above the hotel's purchase limit the
+ *                  general manager approves a second time. Items and
+ *                  quantities only: costs stay on the purchase order.
+ * Nothing that affects guests is executed automatically.
  */
 import type { ActionDepartment } from "../domain/rbac";
 import type { ExpectedImpact, InsightCategory } from "./rules-engine";
 
-export const ACTION_TYPES = ["createTicket", "createTask", "notifyRole", "adjustBaseline"] as const;
+export const ACTION_TYPES = ["createTicket", "createTask", "notifyRole", "adjustBaseline", "createPurchaseOrder"] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
 
 export interface ActionDraft {
@@ -47,6 +50,8 @@ export const EDITABLE_PARAMS: Record<ActionType, string[]> = {
   createTask: ["priority", "notes"],
   notifyRole: ["body"],
   adjustBaseline: [],
+  // Quantities are edited on the draft purchase order (its own route), not here.
+  createPurchaseOrder: [],
 };
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -107,6 +112,22 @@ export function proposeActions(insight: InsightLike): ActionDraft[] {
       return [notify("housekeeping", ["housekeepingManager"], insight, impact)];
     case "stockout":
       return [notify("inventory", ["inventoryManager"], insight, impact)];
+    case "replenishment": {
+      const lines = Array.isArray(subject.lines) ? (subject.lines as Record<string, unknown>[]) : [];
+      if (!lines.length) return [];
+      return [{
+        type: "createPurchaseOrder",
+        department: "inventory",
+        title: cut(`سفارش خرید از «${String(subject.supplierName || "تأمین‌کنندهٔ نامشخص")}»: ${lines.length} قلم`, 200),
+        priority: insight.priority,
+        params: {
+          supplierId: subject.supplierId ?? null,
+          supplierName: subject.supplierName ?? null,
+          lines: lines.map((l) => ({ itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, kind: l.kind, orderBy: l.orderBy })),
+        },
+        expectedImpact: impact,
+      }];
+    }
     case "outOfOrderRevenue":
     case "weekdayOccupancy":
       return [notify("operations", ["generalManager"], insight, impact)];

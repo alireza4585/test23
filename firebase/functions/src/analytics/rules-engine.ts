@@ -1,3 +1,4 @@
+import type { ItemPlan, Suggestion } from "./replenishment";
 import {
   EnergyReadingRow,
   HotelSettings,
@@ -48,7 +49,8 @@ export interface ExpectedImpact {
   expected: number;
   monthlyIrr?: number;
   method: "energyBaseline" | "durationAvg" | "ticketCount" | "stockout" | "oooRooms" | "occupancyGap";
-  subject?: Record<string, string | string[]>;
+  /** What the insight is about (item, rooms, meter …); for F5 also the order lines. */
+  subject?: Record<string, unknown>;
 }
 
 export interface EngineInput {
@@ -68,6 +70,17 @@ export interface EngineInput {
    * hotel's energyBaseline flag is on and a model has scored recent days.
    */
   energyModel?: EnergyModelState[];
+  /**
+   * Purchase suggestions (F5), present only when the hotel's replenishment
+   * flag is on: they replace the 14-day stock-out rule.
+   */
+  replenishment?: ReplenishmentState;
+}
+
+/** planReplenishment's output as the server passes it to the engine. */
+export interface ReplenishmentState {
+  plans: Pick<ItemPlan, "itemId" | "ok" | "pattern" | "forecast" | "leadTime" | "reorderPoint" | "onHand" | "onOrder" | "daysOfCover" | "suggestion">[];
+  bySupplier: { supplierId: string | null; supplierName: string | null; lines: Suggestion[] }[];
 }
 
 /** Recent scores of one meter type against its stored model (pb_hooks/lib/energy.js). */
@@ -104,7 +117,7 @@ export function generateInsights(input: EngineInput): InsightDraft[] {
   return [
     ...(modelled ? [] : energyIntensityRule(input)),
     ...energyModelRule(input),
-    ...stockoutForecastRule(input),
+    ...(input.replenishment ? replenishmentRule(input) : stockoutForecastRule(input)),
     ...housekeepingEfficiencyRule(input),
     ...repeatFailureRule(input),
     ...outOfOrderRevenueRule(input),
@@ -280,6 +293,62 @@ export function stockoutForecastRule(input: EngineInput): InsightDraft[] {
   }
   return out;
 }
+
+/** Hash of a supplier name, for a stable insight id when the item has no supplier record. */
+function nameKey(name: string): string {
+  let h = 2166136261;
+  for (const ch of name) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * F5: one insight per supplier with the items to order (or top up to par).
+ * Quantities and dates only; costs stay on the draft purchase order.
+ */
+export function replenishmentRule(input: EngineInput): InsightDraft[] {
+  const state = input.replenishment;
+  if (!state) return [];
+  const plans = new Map(state.plans.map((p) => [p.itemId, p]));
+  const out: InsightDraft[] = [];
+  for (const g of state.bySupplier) {
+    if (!g.lines.length) continue;
+    const supplier = g.supplierName || "تأمین‌کنندهٔ نامشخص";
+    const urgent = g.lines.some((l) => l.kind === "reorder" && l.orderBy <= input.today);
+    const soonest = g.lines.reduce((d, l) => (l.stockoutDay && (!d || l.stockoutDay < d) ? l.stockoutDay : d), null as string | null);
+    const reorder = g.lines.filter((l) => l.kind === "reorder").length;
+    const par = g.lines.length - reorder;
+    const parts = [reorder ? `${fmt(reorder)} قلم به نقطهٔ سفارش رسیده` : "", par ? `${fmt(par)} قلم با تحویل روزانه کمتر از سطح par است` : ""].filter(Boolean);
+    out.push({
+      id: `replenishment_${g.supplierId ?? `n${nameKey(supplier)}`}`,
+      rule: "replenishment",
+      category: "inventory",
+      title: `پیشنهاد سفارش از «${supplier}»: ${fmt(g.lines.length)} قلم`,
+      summary: `${parts.join(" و ")}.` + (soonest ? ` نخستین اتمام پیش‌بینی‌شده: ${soonest}.` : ""),
+      recommendation: "پیش‌نویس سفارش را در صفحهٔ انبار بررسی، در صورت نیاز مقدارها را اصلاح و تأیید کنید.",
+      confidence: 0.8,
+      priority: urgent ? "high" : "medium",
+      evidence: g.lines.slice(0, 8).map((l) => {
+        const p = plans.get(l.itemId);
+        const lead = p ? `${fmt(p.leadTime.days)} روز (${LEAD_SOURCE[p.leadTime.source]})` : "—";
+        return l.kind === "par"
+          ? `${l.name}: موجودی ${fmt(p?.onHand ?? 0)} ${l.unit}، سطح par ${fmt(p?.reorderPoint ?? 0)}، سفارش ${fmt(l.quantity)} ${l.unit} برای تحویل فردا`
+          : `${l.name}: مصرف روزانه ${fmt(p?.forecast.rate ?? 0, 1)} ${l.unit}، موجودی ${fmt(p?.onHand ?? 0)} و در راه ${fmt(p?.onOrder ?? 0)}، نقطهٔ سفارش ${fmt(p?.reorderPoint ?? 0)}، زمان تأمین ${lead}؛ سفارش ${fmt(l.quantity)} ${l.unit} تا ${l.orderBy}`;
+      }),
+      route: "/inventory",
+      audienceRoles: ["inventoryManager", "generalManager"],
+      expectedImpact: {
+        metric: "daysOfCover", unit: "days", baseline: round1(Math.min(...g.lines.map((l) => plans.get(l.itemId)?.daysOfCover ?? 0))), expected: 7,
+        method: "stockout",
+        subject: { itemId: g.lines[0].itemId, itemIds: g.lines.map((l) => l.itemId), supplierId: g.supplierId, supplierName: g.supplierName, lines: g.lines },
+      },
+    });
+  }
+  return out;
+}
+
+const LEAD_SOURCE: Record<string, string> = {
+  learned: "از سفارش‌های قبلی", learnedLate: "با تأخیرهای اخیر تأمین‌کننده", item: "تنظیم قلم", supplier: "تنظیم تأمین‌کننده", assumed: "فرض پیش‌فرض",
+};
 
 /** Checkout cleans running over target → productivity loss. */
 export function housekeepingEfficiencyRule(input: EngineInput): InsightDraft[] {

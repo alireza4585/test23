@@ -26,13 +26,13 @@ describe("Action Center (F1)", () => {
   });
 
   it("never proposes adjustBaseline automatically", () => {
-    for (const rule of ["energyModel", "energyIntensity", "repeatFailure", "outOfOrderRooms", "hkEfficiency", "stockout", "outOfOrderRevenue", "weekdayOccupancy"]) {
+    for (const rule of ["energyModel", "energyIntensity", "repeatFailure", "outOfOrderRooms", "hkEfficiency", "stockout", "outOfOrderRevenue", "weekdayOccupancy", "replenishment"]) {
       for (const a of proposeActions({ ...base, rule, category: "energy", expectedImpact: { metric: "x", unit: "u", baseline: 1, expected: 0, method: "oooRooms", subject: { rooms: ["1"] } } })) {
         expect(a.type).not.toBe("adjustBaseline");
       }
     }
     expect(EDITABLE_PARAMS.adjustBaseline).toEqual([]);
-    expect([...ACTION_TYPES]).toEqual(["createTicket", "createTask", "notifyRole", "adjustBaseline"]);
+    expect([...ACTION_TYPES]).toEqual(["createTicket", "createTask", "notifyRole", "adjustBaseline", "createPurchaseOrder"]);
   });
 
   it("department managers decide only their own department; baseline changes only GM and energy", () => {
