@@ -347,7 +347,9 @@ if (isMain) {
   const { stockoutWarning: c1, dailyPar: c2, forecast: c3 } = res.criteria;
   const n = res.noise;
   const forced = items.filter((i) => i.deliveryPattern === "daily").map((i) => i.name);
+  const shelfFromRules = items.filter((i) => num(pick(data.items.find((x) => x.sku === i.id) ?? {}, "shelfLifeDays", "shelf_life_days")) === null && i.shelfLifeDays !== null);
   console.log(`F5 backtest ${res.firstDay} … ${res.lastDay} (${res.weeks} weeks), ${res.items} items${forced.length ? `; par path forced for ${forced.length}: ${forced.join(", ")}` : ""}`);
+  if (shelfFromRules.length) console.log(`shelf life from --shelf-life for ${shelfFromRules.length} items: ${shelfFromRules.map((i) => `${i.name}=${i.shelfLifeDays}`).join(", ")}`);
   console.log(`1. stock-out warning ≥ ${MIN_WARNING_DAYS} days: ${c1.status} — ${c1.itemsRunningOut} items run out, ${c1.episodes} episodes, ${c1.measurable} measurable: ${c1.passed}/${c1.measurable} warned in time (old rule ${c1.oldRulePassed}/${c1.measurable}); median lead ${c1.medianLead} days; lead 3–7: ${c1.leadBands["3–7"]}, 8–14: ${c1.leadBands["8–14"]}, >14: ${c1.leadBands[">14"]}; unmeasurable ${c1.unmeasurable.length}`);
   console.log(`   par-path items: ${c1.parPath.passed}/${c1.parPath.measurable} warned in time vs old rule ${c1.parPath.oldRulePassed}/${c1.parPath.measurable} — ${c1.parPath.notWorseThanOldRule ? "not worse" : "WORSE"} than the old rule (${c1.parPath.items} items on the par path)`);
   for (const e of c1.failed) console.log(`   ✗ ${e.item}: ran out ${e.stockout}, warned ${e.leadDays} day(s) before`);
