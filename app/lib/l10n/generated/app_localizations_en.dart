@@ -2139,4 +2139,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get poInvalidQuantity => 'Invalid quantity';
+
+  @override
+  String get unitCostHint =>
+      'Only roles that see revenue see unit costs and stock value.';
 }

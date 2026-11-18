@@ -3859,6 +3859,12 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'مقدار نامعتبر است'**
   String get poInvalidQuantity;
+
+  /// No description provided for @unitCostHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'فقط نقش‌هایی که درآمد را می‌بینند قیمت و ارزش موجودی را می‌بینند.'**
+  String get unitCostHint;
 }
 
 class _AppLocalizationsDelegate

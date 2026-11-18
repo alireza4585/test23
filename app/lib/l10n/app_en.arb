@@ -897,5 +897,6 @@
   "poSuggested": "Suggested: {quantity}",
   "poOrderBy": "Order by {day}",
   "poNeedsSecond": "Above the hotel's limit, or no limit is set: the general manager (not the first approver) must approve it.",
-  "poInvalidQuantity": "Invalid quantity"
+  "poInvalidQuantity": "Invalid quantity",
+  "unitCostHint": "Only roles that see revenue see unit costs and stock value."
 }

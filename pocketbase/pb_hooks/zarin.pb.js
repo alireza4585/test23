@@ -118,6 +118,8 @@ onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onTicketCreate(e),
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onTicketUpdate(e), "maintenanceTickets");
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onItemCreate(e), "inventoryItems");
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onItemUpdate(e), "inventoryItems");
+// Unit cost (hidden field) only for finance.view, in lists, views and realtime alike.
+onRecordEnrich((e) => require(`${__hooks}/lib/finance.js`).enrichItem(e), "inventoryItems");
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onEnergyWrite(e), "energyReadings");
 onRecordUpdateRequest((e) => require(`${__hooks}/lib/ops.js`).onEnergyWrite(e), "energyReadings");
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onOperationsWrite(e), "dailyOperations");

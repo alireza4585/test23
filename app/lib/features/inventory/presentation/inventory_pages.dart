@@ -437,7 +437,10 @@ class _NewInventoryItemPageState extends ConsumerState<NewInventoryItemPage> {
             TextFormField(
               controller: _cost,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: '${l10n.unitCost} (${l10n.optional})'),
+              decoration: InputDecoration(
+                labelText: '${l10n.unitCost} (${l10n.optional})',
+                helperText: l10n.unitCostHint,
+              ),
             ),
             const SizedBox(height: Insets.md),
             TextFormField(

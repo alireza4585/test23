@@ -250,7 +250,8 @@ class ReportGenerator {
                 i.name,
                 '${fmt.number(i.quantity)} ${i.unit}',
                 fmt.number(i.reorderLevel),
-                fmt.money(i.stockValue ?? 0),
+                // Unit costs are finance.view only: no value rather than a 0.
+                i.stockValue == null ? '—' : fmt.money(i.stockValue!),
                 i.isLowStock ? l10n.lowStock : '',
               ],
           ],

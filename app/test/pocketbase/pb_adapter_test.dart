@@ -447,6 +447,22 @@ void main() {
     expect(((await su.collection('inventoryItems').getOne(item.id)).data['quantity'] as num).toDouble(), before + 4);
   }, skip: skip ?? (suEmail == null || suPassword == null ? 'set ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD (test server only)' : null));
 
+  test('unit cost and stock value only with finance.view; the item form still records it', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final inv = await _Session.signIn(nid(AppRole.inventoryManager));
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final items = await PocketBaseInventoryRepository(inv.pb).watchItems(inv.user.hotelId).first;
+    expect(items.every((i) => i.unitCost == null && i.stockValue == null), isTrue);
+    expect((await PocketBaseInventoryRepository(gm.pb).watchItems(gm.user.hotelId).first).any((i) => (i.unitCost ?? 0) > 0), isTrue);
+    final id = await PocketBaseInventoryRepository(inv.pb).createItem(
+      inv.user.hotelId,
+      InventoryItemDraft(name: 'آزمون قیمت', sku: 'UC-${DateTime.now().millisecondsSinceEpoch}', category: InventoryCategory.other, unit: 'عدد', reorderLevel: 1, unitCost: 4321),
+      inv.user.asActor,
+    );
+    addTearDown(() => gm.pb.collection('inventoryItems').delete(id));
+    expect((await PocketBaseInventoryRepository(gm.pb).watchItem(gm.user.hotelId, id).first)!.unitCost, 4321);
+  }, skip: skip);
+
   test('a provisioned user must change the temporary password and stays signed in', () async {
     final hr = await _Session.signIn('0089123451');
     await PocketBaseUserAdminRepository(hr.pb).createUser(

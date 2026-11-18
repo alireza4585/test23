@@ -144,6 +144,18 @@ void main() {
     expect(store.purchaseOrders.get('po-demo-1')!.status, PurchaseOrderStatus.cancelled);
   });
 
+  testWidgets('unit cost and stock value only for roles that see revenue', (tester) async {
+    final store = seededStore();
+    final item = store.items.all.firstWhere((i) => (i.unitCost ?? 0) > 0);
+    await pumpZarinApp(tester, store: store);
+    await signIn(tester, _nid(AppRole.inventoryManager));
+    await _open(tester, Routes.item(item.id));
+    expect(find.text('ارزش موجودی'), findsNothing);
+    await _switchUser(tester, AppRole.generalManager);
+    await _open(tester, Routes.item(item.id));
+    expect(find.text('ارزش موجودی'), findsOneWidget);
+  });
+
   testWidgets('F5: without the replenishment flag there is no order section', (tester) async {
     final store = seededStore();
     final h = store.hotels.get(DemoSeed.hotelId)!;

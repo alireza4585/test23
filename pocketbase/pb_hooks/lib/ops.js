@@ -419,6 +419,7 @@ function applyMovement(tx, c, item, type, delta, reason) {
 function onItemCreate(e) {
   if (e.hasSuperuserAuth()) return e.next();
   const c = z.caller(e);
+  require(`${__hooks}/lib/finance.js`).acceptUnitCost(e, c);
   e.record.set("lastMovement", "");
   e.record.set("updatedBy", c.id);
   if (e.record.collection().fields.getByName("replenishment")) e.record.set("replenishment", null);
@@ -430,6 +431,7 @@ function onItemUpdate(e) {
   const c = z.caller(e);
   const body = e.requestInfo().body || {};
   if ("quantity" in body || "lastMovement" in body) throw z.bad("use_stock_movement");
+  require(`${__hooks}/lib/finance.js`).acceptUnitCost(e, c);
   // The nightly replenishment plan (F5) is the server's: a client value is ignored.
   if ("replenishment" in body && e.record.collection().fields.getByName("replenishment")) {
     e.record.set("replenishment", e.record.original().get("replenishment"));

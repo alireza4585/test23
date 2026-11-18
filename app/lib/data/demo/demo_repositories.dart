@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../../core/domain/actor.dart';
 import '../../core/error/app_failure.dart';
+import '../../core/security/app_permission.dart';
 import '../../core/security/role_policy.dart';
 import '../../core/utils/day_key.dart';
 import '../../core/utils/iran_national_id.dart';
@@ -449,12 +450,33 @@ class DemoInventoryRepository implements InventoryRepository {
   final DemoAutomation _automation;
 
   @override
-  Stream<List<InventoryItem>> watchItems(String hotelId) =>
-      _store.items.watch(sort: (a, b) => a.name.compareTo(b.name));
+  Stream<List<InventoryItem>> watchItems(String hotelId) => _store.items
+      .watch(sort: (a, b) => a.name.compareTo(b.name))
+      .map((items) => _seesCosts ? items : [for (final i in items) _withoutCost(i)]);
 
   @override
   Stream<InventoryItem?> watchItem(String hotelId, String itemId) =>
-      _store.items.watchOne(itemId);
+      _store.items.watchOne(itemId).map((i) => i == null || _seesCosts ? i : _withoutCost(i));
+
+  /// As the server: unit costs (and so stock value) only with finance.view.
+  bool get _seesCosts {
+    final uid = _store.signedInUid;
+    final me = uid == null ? null : _store.accountByUid(uid);
+    return me != null && RolePolicy.resolve(me.role).contains(AppPermission.financeView);
+  }
+
+  static InventoryItem _withoutCost(InventoryItem i) => InventoryItem(
+    id: i.id,
+    name: i.name,
+    sku: i.sku,
+    category: i.category,
+    unit: i.unit,
+    quantity: i.quantity,
+    reorderLevel: i.reorderLevel,
+    reorderQuantity: i.reorderQuantity,
+    location: i.location,
+    updatedAt: i.updatedAt,
+  );
 
   @override
   Stream<List<StockMovement>> watchMovements(

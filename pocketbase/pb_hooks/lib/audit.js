@@ -29,11 +29,22 @@ function exported(record) {
   return out;
 }
 
+// Fields whose values stay out of the log (finance.view only, 1761000000): the
+// change itself is recorded, its value is not.
+const MASKED = { inventoryItems: ["unitCost"] };
+
 function write(e, action, before, after, hotelId) {
   const name = e.record.collection().name;
+  const changes = z.diff(before, after);
+  for (const f of MASKED[name] || []) {
+    delete changes[f];
+    const was = action === "create" ? null : e.record.original().get(f);
+    const now = action === "delete" ? null : e.record.get(f);
+    if (JSON.stringify(was) !== JSON.stringify(now)) changes[f] = { changed: true };
+  }
   z.audit(e.app, hotelId ?? hotelOf(e.record), {
     action: `${name}.${action}`, collection: name, id: e.record.id, actor: actor(e),
-    changes: z.diff(before, after), source: "client",
+    changes, source: "client",
   });
 }
 
@@ -47,7 +58,8 @@ function update(e) {
   const before = exported(e.record.original());
   e.next();
   const after = exported(e.record);
-  if (Object.keys(z.diff(before, after)).length) write(e, "update", before, after);
+  const masked = (MASKED[e.record.collection().name] || []).some((f) => JSON.stringify(e.record.original().get(f)) !== JSON.stringify(e.record.get(f)));
+  if (masked || Object.keys(z.diff(before, after)).length) write(e, "update", before, after);
 }
 
 function remove(e) {

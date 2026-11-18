@@ -81,7 +81,48 @@ function writeMetrics(app, hotelId, day, m) {
 function withoutFinance(m) {
   const copy = JSON.parse(JSON.stringify(m));
   for (const k of METRICS) delete copy[k];
+  // Stock value is quantity × unit cost: finance.view only (1761000000).
+  if (copy.inventory) delete copy.inventory.stockValue;
   return copy;
+}
+
+/**
+ * inventoryItems.unitCost is a hidden field (1761000000): shown again to
+ * callers with finance.view in the item's hotel (the dailyFinance condition).
+ */
+function enrichItem(e) {
+  const info = e.requestInfo ? e.requestInfo : null;
+  const auth = info && info.auth;
+  if (auth && auth.collection().name === "users" && e.record.collection().fields.getByName("unitCost")) {
+    const role = auth.getString("role");
+    const sameHotel = role === "superAdmin" || auth.getString("activeHotel") === e.record.getString("hotel");
+    if (sameHotel && auth.getBool("financeView")) e.record.unhide("unitCost");
+  }
+  e.next();
+}
+
+/**
+ * PocketBase drops hidden fields from a client's body, so unitCost is read
+ * from the raw JSON body: callers with inventory.manage may write it without
+ * reading it (like finance.record), as the APK's item form does.
+ */
+function acceptUnitCost(e, c) {
+  const field = e.record.collection().fields.getByName("unitCost");
+  if (!field) return;
+  let body = e.requestInfo().body || {};
+  if (field.hidden) {
+    try {
+      const req = e.request || (e.requestEvent && e.requestEvent.request);
+      body = JSON.parse(toString(req.body)) || {};
+    } catch (_) {
+      body = {}; // not JSON (multipart): the unit cost is left as it was
+    }
+  }
+  if (!body || typeof body !== "object" || !("unitCost" in body)) return;
+  z.requirePerm(c, "inventory.manage");
+  const v = body.unitCost === null || body.unitCost === "" ? 0 : Number(body.unitCost);
+  if (!isFinite(v) || v < 0 || v > 1e12) throw z.bad("invalid_unit_cost");
+  e.record.set("unitCost", v);
 }
 
 function amount(v) {
@@ -138,4 +179,4 @@ function recordDaily(e) {
   return e.json(200, { day, financeRecorded: recorded });
 }
 
-module.exports = { REVENUE, METRICS, moveRevenue, revenueByDay, writeMetrics, withoutFinance, recordDaily };
+module.exports = { REVENUE, METRICS, moveRevenue, revenueByDay, writeMetrics, withoutFinance, recordDaily, enrichItem, acceptUnitCost };
