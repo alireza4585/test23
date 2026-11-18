@@ -865,10 +865,8 @@ function contextFor(e) {
   if (z.arr(user.getStringSlice("hotels")).indexOf(hotelId) < 0 && user.getString("role") !== "superAdmin") {
     throw z.bad("not_hotel_member");
   }
-  const perms = {};
-  for (const p of z.arr(e.app.findRecordsByIds("permissions", z.arr(user.getStringSlice("permissions"))))) {
-    if (p) perms[p.getString("code")] = true;
-  }
+  // The permissions the user would have with this hotel active (AI phase 2).
+  const perms = z.permissionCodes(e.app, z.permissionIdsFor(e.app, user.getString("role"), hotelId));
   const c = { perms };
   const ctx = buildContext(e.app, hotelId, new Date(), accessOf(c), redactor(e.app, hotelId));
   return e.json(200, { role: user.getString("role"), context: ctx });

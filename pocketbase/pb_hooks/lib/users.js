@@ -3,11 +3,17 @@
 const z = require(`${__hooks}/lib/zarin.js`);
 const core = z.core;
 
-/** Model hook: permissions always follow role template (+ hotel override). */
+/**
+ * Model hook: permissions always follow the role template, narrowed by the
+ * override of the user's active hotel (AI phase 2). The active hotel must be
+ * one of the user's hotels; otherwise it falls back to the primary hotel, then
+ * to the first membership.
+ */
 function syncPermissions(app, user) {
   const role = user.getString("role");
   if (!role) return;
-  const hotelId = user.getString("primaryHotel") || z.arr(user.getStringSlice("hotels"))[0] || "";
+  const hotelId = activeHotelOf(user);
+  if (user.collection().fields.getByName("activeHotel") && user.getString("activeHotel") !== hotelId) user.set("activeHotel", hotelId);
   const ids = z.permissionIdsFor(app, role, hotelId);
   user.set("permissions", ids);
   // Mirrors finance.view for API rules that also test another permission.
@@ -17,6 +23,37 @@ function syncPermissions(app, user) {
   const nid = user.getString("nationalId");
   if (nid && !user.getString("nationalIdMasked")) user.set("nationalIdMasked", core.maskNationalId(nid));
   if (!user.getString("status")) user.set("status", "active");
+}
+
+/** The user's active hotel: activeHotel if still a membership, else primary, else first. */
+function activeHotelOf(user) {
+  const member = z.arr(user.getStringSlice("hotels"));
+  const active = user.getString("activeHotel");
+  if (active && member.indexOf(active) >= 0) return active;
+  const primary = user.getString("primaryHotel");
+  if (primary && member.indexOf(primary) >= 0) return primary;
+  return member[0] || "";
+}
+
+/**
+ * POST /api/zarin/me/active-hotel {hotelId} — switch the hotel the caller
+ * works in. Permissions are recomputed for it at once (the model hook), and the
+ * API rules show only its records from the next request on.
+ */
+function setActiveHotel(e) {
+  const c = z.caller(e);
+  const b = e.requestInfo().body || {};
+  const hotelId = String(b.hotelId || "");
+  if (!hotelId) throw z.bad("hotel_required");
+  if (c.hotels.indexOf(hotelId) < 0) throw z.forbidden("not_hotel_member");
+  const user = z.find(e.app, "users", c.id);
+  const before = user.getString("activeHotel");
+  if (before !== hotelId) {
+    user.set("activeHotel", hotelId);
+    e.app.save(user);
+    z.audit(e.app, hotelId, { action: "users.activeHotel", collection: "users", id: c.id, actor: z.actorOf(c), changes: { from: before, to: hotelId } });
+  }
+  return e.json(200, profile(e.app, z.find(e.app, "users", c.id)));
 }
 
 /** Self-service profile updates: password change and locale only. */
@@ -41,6 +78,7 @@ function profile(app, user) {
     permissions: codes,
     hotels: z.arr(user.getStringSlice("hotels")),
     primaryHotel: user.getString("primaryHotel"),
+    activeHotel: user.getString("activeHotel"),
     staffId: user.getString("staffId"),
     status: user.getString("status"),
     mustChangePassword: user.getBool("mustChangePassword"),
@@ -221,6 +259,6 @@ function resyncRole(app, override) {
 }
 
 module.exports = {
-  syncPermissions, guardSelfUpdate, profile, me, createUser, setStatus, resetPassword,
+  syncPermissions, activeHotelOf, setActiveHotel, guardSelfUpdate, profile, me, createUser, setStatus, resetPassword,
   updateRole, registerSession, revokeSessions, resyncRole,
 };

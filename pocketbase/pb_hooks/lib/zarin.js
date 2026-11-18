@@ -127,6 +127,7 @@ function caller(e) {
     role,
     name: user.getString("fullName"),
     hotels: arr(user.getStringSlice("hotels")),
+    activeHotel: user.getString("activeHotel"),
     perms: permissionCodes(e.app, arr(user.getStringSlice("permissions"))),
     isSuperAdmin: role === "superAdmin",
   };
@@ -140,9 +141,16 @@ function requirePerm(c, permission) {
   if (!has(c, permission)) throw forbidden("missing_permission", { permission });
 }
 
+/**
+ * The caller may act on [hotelId]: a member, and (AI phase 2) it is the
+ * caller's active hotel, whose override the caller's permissions come from.
+ * A member working in another hotel gets hotel_not_active and must switch first.
+ */
 function requireHotel(c, hotelId) {
   if (!hotelId) throw bad("hotel_required");
-  if (!c.isSuperAdmin && c.hotels.indexOf(hotelId) < 0) throw forbidden("not_hotel_member");
+  if (c.isSuperAdmin) return hotelId;
+  if (c.hotels.indexOf(hotelId) < 0) throw forbidden("not_hotel_member");
+  if (c.activeHotel && c.activeHotel !== hotelId) throw forbidden("hotel_not_active", { activeHotel: c.activeHotel });
   return hotelId;
 }
 

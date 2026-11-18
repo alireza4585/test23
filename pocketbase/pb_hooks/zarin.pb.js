@@ -8,6 +8,7 @@
  *
  * Routes (app, auth required):
  *   GET  /api/zarin/me
+ *   POST /api/zarin/me/active-hotel           switch the hotel the caller works in (permissions follow it)
  *   POST /api/zarin/users                     provision a user (RBAC: canAssign)
  *   POST /api/zarin/users/{id}/status|password|role
  *   POST /api/zarin/sessions                  register this device
@@ -41,6 +42,7 @@
 
 // ------------------------------------------------------------- app routes
 routerAdd("GET", "/api/zarin/me", (e) => require(`${__hooks}/lib/users.js`).me(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/me/active-hotel", (e) => require(`${__hooks}/lib/users.js`).setActiveHotel(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users", (e) => require(`${__hooks}/lib/users.js`).createUser(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users/{id}/status", (e) => require(`${__hooks}/lib/users.js`).setStatus(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/users/{id}/password", (e) => require(`${__hooks}/lib/users.js`).resetPassword(e), $apis.requireAuth("users"));
