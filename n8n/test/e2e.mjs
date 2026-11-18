@@ -16,7 +16,7 @@
 //
 // Uses ports 5688 (n8n), 5689 (HTTP mocks) and 2526 (SMTP).
 import { execFileSync, spawn } from "node:child_process";
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { createWriteStream, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
@@ -405,6 +405,51 @@ try {
     await settled();
     check("05 repeat run the same day: no duplicate reminder", (await late()) === 1);
     await su.collection("hotels").update(pbServer.hotelId, { settings: before.settings });
+  }
+
+  // ------------- F5 on a hotel this n8n does not serve (production: the trial hotel is not in
+  // ZARIN_HOTEL_IDS): its approved order reaches no supplier and is never marked sent.
+  {
+    const trial = await su.collection("hotels").create({
+      name: "E2E trial", status: "trial", settings: { features: { recommendationLoop: true, replenishment: true } },
+    });
+    const pw = `T-${randomBytes(8).toString("hex")}-a1`;
+    // A checksum-valid synthetic national ID, built here (none is written in the repository).
+    const nine = String(100000000 + (Date.now() % 800000000)).slice(0, 9);
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += Number(nine[i]) * (10 - i);
+    const nid = `${nine}${sum % 11 < 2 ? sum % 11 : 11 - (sum % 11)}`;
+    const gmUser = await su.collection("users").create({
+      nationalId: nid, fullName: "E2E trial GM", role: "generalManager", hotels: [trial.id], primaryHotel: trial.id, status: "active", password: pw, passwordConfirm: pw,
+    });
+    const supplier = await su.collection("suppliers").create({
+      hotel: trial.id, name: "E2E trial supplier", email: "trial-supplier@example.ir", baleChatId: "trial-chat", leadTimeDays: 2, active: true,
+    });
+    const item = await su.collection("inventoryItems").create({ hotel: trial.id, name: "E2E-trial-item", sku: "E2E-T1", category: "guestAmenities", unit: "عدد", quantity: 5, reorderLevel: 10 });
+    const action = await su.collection("aiActions").create({
+      hotel: trial.id, category: "inventory", department: "inventory", type: "createPurchaseOrder", status: "proposed", priority: "high",
+      title: "E2E trial order", reason: "e2e", source: "rules", params: {}, idempotencyKey: "e2e-trial-po",
+    });
+    const po = await su.collection("purchaseOrders").create({
+      hotel: trial.id, supplier: supplier.id, supplierName: supplier.name, status: "draft", action: action.id, leadTimeDays: 2, approvals: [],
+      lines: [{ itemId: item.id, name: "E2E-trial-item", unit: "عدد", quantity: 10, suggested: 10, kind: "reorder" }],
+    });
+    await su.collection("aiActions").update(action.id, { params: { purchaseOrderId: po.id } });
+    const runs = (await executions(WORKFLOWS[0], "success")).length;
+    const gm = new PocketBase(PB);
+    gm.autoCancellation(false);
+    await gm.collection("users").authWithPassword(nid, pw);
+    await gm.send(`/api/zarin/actions/${action.id}/decide`, { method: "POST", body: { decision: "approve" } });
+    const event = await su.collection("outbox").getFirstListItem(`hotel = "${trial.id}" && type = "purchaseOrder.approved"`).catch(() => null);
+    await flush();
+    await until(async () => (await executions(WORKFLOWS[0], "success")).length > runs);
+    await settled();
+    const reached = mails.some((m) => m.to.includes("trial-supplier@example.ir")) || toBale("trial-chat").length > 0;
+    const status = (await su.collection("purchaseOrders").getOne(po.id)).status;
+    check("01 order of a hotel not in ZARIN_HOTEL_IDS: event sent, no supplier reached, not marked sent",
+      !!event && !reached && status === "approved", `event ${event ? "yes" : "no"}, reached ${reached}, status ${status}`);
+    await su.collection("users").delete(gmUser.id);
+    await su.collection("hotels").delete(trial.id);
   }
 
   // ------------- 01 signed event of a hotel not in ZARIN_HOTEL_IDS: dropped
