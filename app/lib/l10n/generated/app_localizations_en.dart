@@ -1969,6 +1969,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'createTask': 'Housekeeping task',
       'notifyRole': 'Notification',
       'adjustBaseline': 'Keep days out of the energy model',
+      'createPurchaseOrder': 'Purchase order',
       'other': '$type',
     });
     return '$_temp0';
@@ -2035,4 +2036,107 @@ class AppLocalizationsEn extends AppLocalizations {
   String showAll(int count) {
     return 'Show all $count';
   }
+
+  @override
+  String get assistantSources => 'Sources';
+
+  @override
+  String get assistantToAction => 'Turn into an action';
+
+  @override
+  String get assistantToActionTitle =>
+      'Which department should follow this up?';
+
+  @override
+  String get assistantToActionHint =>
+      'A proposed action goes to the Action Center; nothing runs until that department\'s manager approves it.';
+
+  @override
+  String get assistantActionProposed => 'Action proposed';
+
+  @override
+  String get poSectionTitle => 'Proposed orders';
+
+  @override
+  String get poSectionHint =>
+      'From forecast usage and each supplier\'s lead time; nothing is ordered until it is approved.';
+
+  @override
+  String poStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'draft': 'Draft',
+      'awaitingApproval': 'Awaiting GM approval',
+      'approved': 'Approved',
+      'sent': 'Sent',
+      'received': 'Received',
+      'cancelled': 'Cancelled',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String poLines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poTotal(String amount) {
+    return 'Total: $amount';
+  }
+
+  @override
+  String poExpected(String date) {
+    return 'Expected: $date';
+  }
+
+  @override
+  String get poOverdue => 'Delivery is overdue';
+
+  @override
+  String get poEdit => 'Edit quantities';
+
+  @override
+  String get poApprove => 'Approve order';
+
+  @override
+  String get poReject => 'Reject';
+
+  @override
+  String get poSecondApprove => 'Second approval';
+
+  @override
+  String get poReceive => 'Record receipt';
+
+  @override
+  String get poCancel => 'Cancel order';
+
+  @override
+  String get poNoteHint => 'Reason (at least 3 characters)';
+
+  @override
+  String get poSaved => 'Order updated';
+
+  @override
+  String poSuggested(String quantity) {
+    return 'Suggested: $quantity';
+  }
+
+  @override
+  String poOrderBy(String day) {
+    return 'Order by $day';
+  }
+
+  @override
+  String get poNeedsSecond =>
+      'Above the hotel\'s limit, or no limit is set: the general manager (not the first approver) must approve it.';
+
+  @override
+  String get poInvalidQuantity => 'Invalid quantity';
 }

@@ -10,6 +10,8 @@ import '../../features/briefing/domain/briefing.dart';
 import '../../features/energy/domain/energy_baseline.dart';
 import '../../features/energy/domain/energy_model.dart';
 import '../../features/energy/domain/energy_reading.dart';
+import '../../features/inventory/domain/purchase_order.dart';
+import 'demo_phase2_repositories.dart';
 import 'demo_store.dart';
 
 /// Offline demo of the AI phase 1 features. It mirrors the server's rules
@@ -81,6 +83,15 @@ class DemoActionsRepository implements ActionsRepository {
       throw const PermissionDeniedFailure('baseline_adjust_not_allowed');
     }
     await _store.latency();
+    if (approve && a.type == ActionType.createPurchaseOrder) DemoPurchaseOrdersRepository.approveFromAction(_store, a, me);
+    if (!approve && a.type == ActionType.createPurchaseOrder) {
+      final po = _store.purchaseOrders.get(a.params['purchaseOrderId'] as String? ?? '');
+      if (po != null && po.status == PurchaseOrderStatus.draft) {
+        _store.purchaseOrders.put(
+          PurchaseOrder(id: po.id, supplierName: po.supplierName, status: PurchaseOrderStatus.cancelled, lines: po.lines, createdAt: po.createdAt, actionId: po.actionId, total: po.total, note: note),
+        );
+      }
+    }
     if (approve && a.type == ActionType.adjustBaseline) {
       for (final d in (a.params['days'] as List).cast<String>()) {
         _store.energyExclusions.put(

@@ -6,6 +6,7 @@ import '../features/energy/domain/energy_analysis.dart';
 import '../features/energy/domain/energy_model.dart';
 import '../features/energy/domain/energy_reading.dart';
 import '../features/forecast/domain/forecast.dart';
+import '../features/inventory/domain/purchase_order.dart';
 
 /// Features that exist only on the PocketBase backend (and the offline demo).
 /// The legacy Firebase backend reports them as unsupported instead of
@@ -74,4 +75,23 @@ class UnsupportedEnergyModelRepository implements EnergyModelRepository {
 
   @override
   Stream<EnergyModelView> watchModel(String hotelId, EnergyType type) => Stream.error(_why);
+}
+
+class UnsupportedPurchaseOrdersRepository implements PurchaseOrdersRepository {
+  const UnsupportedPurchaseOrdersRepository();
+
+  @override
+  Stream<List<PurchaseOrder>> watchOrders(String hotelId) => Stream.error(_why);
+
+  @override
+  Future<void> editLines(String orderId, Map<String, double> quantities) => Future.error(_why);
+
+  @override
+  Future<void> secondApproval(String orderId, {required bool approve, String note = ''}) => Future.error(_why);
+
+  @override
+  Future<void> receive(String orderId, Map<String, double> received) => Future.error(_why);
+
+  @override
+  Future<void> cancel(String orderId, String note) => Future.error(_why);
 }

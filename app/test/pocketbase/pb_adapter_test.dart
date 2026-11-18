@@ -25,6 +25,7 @@ import 'package:zarin_hooshmand/data/pocketbase/pb_engagement_repositories.dart'
 import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_operations_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_phase1_repositories.dart';
+import 'package:zarin_hooshmand/data/pocketbase/pb_phase2_repositories.dart';
 import 'package:zarin_hooshmand/features/actions/domain/ai_action.dart';
 import 'package:zarin_hooshmand/features/admin/domain/user_admin.dart';
 import 'package:zarin_hooshmand/features/ai/domain/ai_models.dart';
@@ -34,6 +35,7 @@ import 'package:zarin_hooshmand/features/energy/domain/energy_reading.dart';
 import 'package:zarin_hooshmand/features/forecast/domain/forecast.dart';
 import 'package:zarin_hooshmand/features/housekeeping/domain/housekeeping_task.dart';
 import 'package:zarin_hooshmand/features/inventory/domain/inventory_item.dart';
+import 'package:zarin_hooshmand/features/inventory/domain/purchase_order.dart';
 import 'package:zarin_hooshmand/features/maintenance/domain/maintenance_ticket.dart';
 import 'package:zarin_hooshmand/features/operations/domain/daily_operations.dart';
 import 'package:zarin_hooshmand/features/rooms/domain/room.dart';
@@ -334,6 +336,100 @@ void main() {
     // No briefing is stored until the morning run: the stream says so instead of failing.
     expect(await PocketBaseBriefingRepository(gm.pb).watchToday(hotelId, DayKey.of(today)).first, isNull);
   }, skip: skip);
+
+  test('AI phase 2: assistant v2 sources and convert to action', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final hotelId = gm.user.hotelId;
+    final hotel = await gm.pb.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    await gm.pb.collection('hotels').update(hotelId, body: {
+      'settings': {...settings, 'features': {'assistantV2': true, 'recommendationLoop': true}},
+    });
+    addTearDown(() => gm.pb.collection('hotels').update(hotelId, body: {'settings': settings}));
+
+    final assistant = PocketBaseAiAssistantRepository(gm.pb);
+    final reply = await assistant.ask(hotelId: hotelId, question: 'مصرف برق این هفته چطور بوده؟', history: const [], localeCode: 'fa');
+    expect(reply.conversationId, isNotNull);
+    expect(reply.sources.map((s) => s.route), contains('/energy'));
+    expect(reply.sources.every((s) => s.route.startsWith('/')), isTrue);
+    await assistant.convertToAction(reply.conversationId!, 'energy');
+    final actions = await firstWhere(
+      PocketBaseActionsRepository(gm.pb).watchActions(hotelId),
+      (l) => l.any((a) => a.params['conversationId'] == reply.conversationId),
+    );
+    final action = actions.firstWhere((a) => a.params['conversationId'] == reply.conversationId);
+    expect(action.type, ActionType.notifyRole);
+    expect(action.status, ActionStatus.proposed);
+    expect(action.department, ActionDepartment.energy);
+    await expectLater(assistant.convertToAction(reply.conversationId!, 'finance'), throwsA(isA<ValidationFailure>()));
+  }, skip: skip);
+
+  // Needs a superuser to plant a draft order (the nightly run makes them on a
+  // real hotel): ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD of the
+  // throw-away test server (pocketbase/scripts/test-server.mjs).
+  final suEmail = Platform.environment['ZH_PB_SUPERUSER_EMAIL'];
+  final suPassword = Platform.environment['ZH_PB_SUPERUSER_PASSWORD'];
+  test('AI phase 2: purchase order edit, first and second approval, receipt', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final su = PocketBase(_url!);
+    await su.collection('_superusers').authWithPassword(suEmail!, suPassword!);
+    final inv = await _Session.signIn(nid(AppRole.inventoryManager));
+    final hotelId = inv.user.hotelId;
+    final hotel = await su.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    await su.collection('hotels').update(hotelId, body: {
+      'settings': {...settings, 'features': {'replenishment': true, 'recommendationLoop': true}},
+    });
+    addTearDown(() => su.collection('hotels').update(hotelId, body: {'settings': settings}));
+
+    final item = (await su.collection('inventoryItems').getList(perPage: 1, filter: 'hotel = "$hotelId"')).items.single;
+    final before = (item.data['quantity'] as num).toDouble();
+    final unitCost = (item.data['unitCost'] as num?)?.toDouble() ?? 0;
+    final action = await su.collection('aiActions').create(body: {
+      'hotel': hotelId, 'category': 'inventory', 'department': 'inventory', 'type': 'createPurchaseOrder', 'status': 'proposed',
+      'priority': 'high', 'title': 'adapter test order', 'reason': 'adapter test', 'source': 'rules', 'params': {},
+      'idempotencyKey': 'adapter-test-po-${DateTime.now().microsecondsSinceEpoch}',
+    });
+    final po = await su.collection('purchaseOrders').create(body: {
+      'hotel': hotelId, 'supplierName': 'adapter supplier', 'status': 'draft', 'action': action.id, 'leadTimeDays': 2,
+      'lines': [
+        {'itemId': item.id, 'name': item.data['name'], 'unit': item.data['unit'], 'quantity': 10, 'suggested': 10, 'kind': 'reorder', 'unitCost': unitCost, 'cost': unitCost * 10},
+      ],
+      'approvals': [],
+    });
+    await su.collection('aiActions').update(action.id, body: {'params': {'purchaseOrderId': po.id}});
+    addTearDown(() async {
+      await su.collection('purchaseOrders').delete(po.id);
+      await su.collection('aiActions').delete(action.id);
+      await su.collection('inventoryItems').update(item.id, body: {'quantity': before});
+    });
+
+    final orders = PocketBasePurchaseOrdersRepository(inv.pb);
+    var mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id));
+    expect(mine.firstWhere((o) => o.id == po.id).status, PurchaseOrderStatus.draft);
+
+    await orders.editLines(po.id, {item.id: 6});
+    await expectLater(orders.editLines(po.id, {'not-a-line': 1}), throwsA(isA<ValidationFailure>()));
+    // The first approval is the action's; with no hotel limit the GM must approve too.
+    await PocketBaseActionsRepository(inv.pb).decide(action.id, approve: true);
+    mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id && o.status == PurchaseOrderStatus.awaitingApproval));
+    final waiting = mine.firstWhere((o) => o.id == po.id);
+    expect(waiting.lines.single.quantity, 6);
+    expect(waiting.needsSecondApproval, isTrue);
+    expect(waiting.approvals.single.step, 1);
+    await expectLater(orders.secondApproval(po.id, approve: true), throwsA(isA<PermissionDeniedFailure>()));
+
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    await PocketBasePurchaseOrdersRepository(gm.pb).secondApproval(po.id, approve: true);
+    mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id && o.status == PurchaseOrderStatus.approved));
+    expect(mine.firstWhere((o) => o.id == po.id).expectedAt, isNotNull);
+
+    await orders.receive(po.id, {item.id: 4});
+    mine = await firstWhere(orders.watchOrders(hotelId), (l) => l.any((o) => o.id == po.id && o.status == PurchaseOrderStatus.received));
+    expect(mine.firstWhere((o) => o.id == po.id).lines.single.received, 4);
+    expect(((await su.collection('inventoryItems').getOne(item.id)).data['quantity'] as num).toDouble(), before + 4);
+  }, skip: skip ?? (suEmail == null || suPassword == null ? 'set ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD (test server only)' : null));
 
   test('a provisioned user must change the temporary password and stays signed in', () async {
     final hr = await _Session.signIn('0089123451');

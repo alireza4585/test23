@@ -767,7 +767,7 @@
       }
     }
   },
-  "actionType": "{type, select, createTicket{Maintenance ticket} createTask{Housekeeping task} notifyRole{Notification} adjustBaseline{Keep days out of the energy model} other{{type}}}",
+  "actionType": "{type, select, createTicket{Maintenance ticket} createTask{Housekeeping task} notifyRole{Notification} adjustBaseline{Keep days out of the energy model} createPurchaseOrder{Purchase order} other{{type}}}",
   "@actionType": {
     "placeholders": {
       "type": {
@@ -873,5 +873,29 @@
         "type": "int"
       }
     }
-  }
+  },
+  "assistantSources": "Sources",
+  "assistantToAction": "Turn into an action",
+  "assistantToActionTitle": "Which department should follow this up?",
+  "assistantToActionHint": "A proposed action goes to the Action Center; nothing runs until that department's manager approves it.",
+  "assistantActionProposed": "Action proposed",
+  "poSectionTitle": "Proposed orders",
+  "poSectionHint": "From forecast usage and each supplier's lead time; nothing is ordered until it is approved.",
+  "poStatus": "{status, select, draft{Draft} awaitingApproval{Awaiting GM approval} approved{Approved} sent{Sent} received{Received} cancelled{Cancelled} other{{status}}}",
+  "poLines": "{count, plural, =1{1 item} other{{count} items}}",
+  "poTotal": "Total: {amount}",
+  "poExpected": "Expected: {date}",
+  "poOverdue": "Delivery is overdue",
+  "poEdit": "Edit quantities",
+  "poApprove": "Approve order",
+  "poReject": "Reject",
+  "poSecondApprove": "Second approval",
+  "poReceive": "Record receipt",
+  "poCancel": "Cancel order",
+  "poNoteHint": "Reason (at least 3 characters)",
+  "poSaved": "Order updated",
+  "poSuggested": "Suggested: {quantity}",
+  "poOrderBy": "Order by {day}",
+  "poNeedsSecond": "Above the hotel's limit, or no limit is set: the general manager (not the first approver) must approve it.",
+  "poInvalidQuantity": "Invalid quantity"
 }

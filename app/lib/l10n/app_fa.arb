@@ -1093,7 +1093,7 @@
       }
     }
   },
-  "actionType": "{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} other{{type}}}",
+  "actionType": "{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} createPurchaseOrder{سفارش خرید} other{{type}}}",
   "@actionType": {
     "placeholders": {
       "type": {
@@ -1199,5 +1199,71 @@
         "type": "int"
       }
     }
-  }
+  },
+  "assistantSources": "منابع",
+  "assistantToAction": "تبدیل به اقدام",
+  "assistantToActionTitle": "کدام بخش این پاسخ را پیگیری کند؟",
+  "assistantToActionHint": "یک اقدام پیشنهادی در مرکز اقدام ثبت می‌شود و تا مدیر همان بخش تأیید نکند اجرا نمی‌شود.",
+  "assistantActionProposed": "اقدام پیشنهادی ثبت شد",
+  "poSectionTitle": "سفارش‌های پیشنهادی",
+  "poSectionHint": "از پیش‌بینی مصرف و زمان تحویل هر تأمین‌کننده؛ تا تأیید نشود چیزی سفارش داده نمی‌شود.",
+  "poStatus": "{status, select, draft{پیش‌نویس} awaitingApproval{منتظر تأیید مدیرکل} approved{تأییدشده} sent{ارسال‌شده} received{دریافت‌شده} cancelled{لغوشده} other{{status}}}",
+  "@poStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "poLines": "{count, plural, =1{۱ قلم} other{{count} قلم}}",
+  "@poLines": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "poTotal": "جمع: {amount}",
+  "@poTotal": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "poExpected": "تحویل: {date}",
+  "@poExpected": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "poOverdue": "تحویل از موعد گذشته است",
+  "poEdit": "ویرایش مقادیر",
+  "poApprove": "تأیید سفارش",
+  "poReject": "رد",
+  "poSecondApprove": "تأیید دوم",
+  "poReceive": "ثبت دریافت",
+  "poCancel": "لغو سفارش",
+  "poNoteHint": "دلیل (حداقل ۳ حرف)",
+  "poSaved": "سفارش به‌روز شد",
+  "poSuggested": "پیشنهاد: {quantity}",
+  "@poSuggested": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "poOrderBy": "سفارش تا {day}",
+  "@poOrderBy": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "poNeedsSecond": "مبلغ از سقف هتل بیشتر است یا سقفی تعیین نشده؛ مدیرکل (فردی غیر از تأییدکنندهٔ اول) باید تأیید کند.",
+  "poInvalidQuantity": "مقدار نامعتبر است"
 }

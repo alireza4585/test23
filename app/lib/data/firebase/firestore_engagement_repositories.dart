@@ -226,6 +226,10 @@ class FunctionsAiAssistantRepository implements AiAssistantRepository {
       dataPoints: data.strings('dataPoints'),
     );
   });
+
+  /// Assistant v2 runs on PocketBase only.
+  @override
+  Future<void> convertToAction(String conversationId, String department) async => throw const UnsupportedFailure('assistant_v2');
 }
 
 // ----------------------------------------------------------------- reports

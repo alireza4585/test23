@@ -178,7 +178,24 @@ class PocketBaseAiAssistantRepository implements AiAssistantRepository {
       text: result['answer'] as String? ?? '',
       dataPoints: (result['dataPoints'] as List? ?? const []).whereType<String>().toList(),
       threadId: result['threadId'] as String?,
+      conversationId: result['conversationId'] as String?,
+      sources: [
+        for (final s in (result['sources'] as List? ?? const []).whereType<Map<String, dynamic>>())
+          if (s['sid'] is String && s['route'] is String && (s['route'] as String).startsWith('/'))
+            AnswerSource(
+              sid: s['sid'] as String,
+              type: s['type'] as String? ?? '',
+              label: s['label'] as String? ?? '',
+              route: s['route'] as String,
+              cited: s['cited'] == true,
+            ),
+      ],
     );
+  });
+
+  @override
+  Future<void> convertToAction(String conversationId, String department) => pbGuard(() async {
+    await _pb.send<Map<String, dynamic>>('/api/zarin/ai/conversations/$conversationId/action', method: 'POST', body: {'department': department});
   });
 }
 

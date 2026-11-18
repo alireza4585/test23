@@ -37,6 +37,14 @@ enum HotelFeature {
 
   /// Daily cross-department briefing per role (AI phase 1, F4).
   morningBriefing,
+
+  /// Supplier-grouped purchase-order proposals from forecast usage and
+  /// lead times (AI phase 2, F5). Needs [recommendationLoop] to approve them.
+  replenishment,
+
+  /// The assistant plans read-only tool calls and cites its sources
+  /// (AI phase 2, F3).
+  assistantV2,
 }
 
 /// Per-hotel operating parameters used by analytics and automations.

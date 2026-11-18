@@ -1,7 +1,7 @@
 /// Action Center (AI phase 1, F1): typed, approvable actions attached to
 /// recommendations. The server executes them after an approval; the app only
 /// shows them and sends the decision.
-enum ActionType { createTicket, createTask, notifyRole, adjustBaseline }
+enum ActionType { createTicket, createTask, notifyRole, adjustBaseline, createPurchaseOrder }
 
 enum ActionStatus { proposed, executed, failed, rejected, expired }
 

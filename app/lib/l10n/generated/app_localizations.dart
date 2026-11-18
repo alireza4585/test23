@@ -3647,7 +3647,7 @@ abstract class AppLocalizations {
   /// No description provided for @actionType.
   ///
   /// In fa, this message translates to:
-  /// **'{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} other{{type}}}'**
+  /// **'{type, select, createTicket{ثبت تیکت تعمیر} createTask{تسک خانه‌داری} notifyRole{اطلاع‌رسانی} adjustBaseline{کنار گذاشتن روز از مدل انرژی} createPurchaseOrder{سفارش خرید} other{{type}}}'**
   String actionType(String type);
 
   /// No description provided for @actionDepartment.
@@ -3715,6 +3715,150 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'نمایش هر {count} مورد'**
   String showAll(int count);
+
+  /// No description provided for @assistantSources.
+  ///
+  /// In fa, this message translates to:
+  /// **'منابع'**
+  String get assistantSources;
+
+  /// No description provided for @assistantToAction.
+  ///
+  /// In fa, this message translates to:
+  /// **'تبدیل به اقدام'**
+  String get assistantToAction;
+
+  /// No description provided for @assistantToActionTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'کدام بخش این پاسخ را پیگیری کند؟'**
+  String get assistantToActionTitle;
+
+  /// No description provided for @assistantToActionHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'یک اقدام پیشنهادی در مرکز اقدام ثبت می‌شود و تا مدیر همان بخش تأیید نکند اجرا نمی‌شود.'**
+  String get assistantToActionHint;
+
+  /// No description provided for @assistantActionProposed.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقدام پیشنهادی ثبت شد'**
+  String get assistantActionProposed;
+
+  /// No description provided for @poSectionTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'سفارش‌های پیشنهادی'**
+  String get poSectionTitle;
+
+  /// No description provided for @poSectionHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'از پیش‌بینی مصرف و زمان تحویل هر تأمین‌کننده؛ تا تأیید نشود چیزی سفارش داده نمی‌شود.'**
+  String get poSectionHint;
+
+  /// No description provided for @poStatus.
+  ///
+  /// In fa, this message translates to:
+  /// **'{status, select, draft{پیش‌نویس} awaitingApproval{منتظر تأیید مدیرکل} approved{تأییدشده} sent{ارسال‌شده} received{دریافت‌شده} cancelled{لغوشده} other{{status}}}'**
+  String poStatus(String status);
+
+  /// No description provided for @poLines.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, =1{۱ قلم} other{{count} قلم}}'**
+  String poLines(int count);
+
+  /// No description provided for @poTotal.
+  ///
+  /// In fa, this message translates to:
+  /// **'جمع: {amount}'**
+  String poTotal(String amount);
+
+  /// No description provided for @poExpected.
+  ///
+  /// In fa, this message translates to:
+  /// **'تحویل: {date}'**
+  String poExpected(String date);
+
+  /// No description provided for @poOverdue.
+  ///
+  /// In fa, this message translates to:
+  /// **'تحویل از موعد گذشته است'**
+  String get poOverdue;
+
+  /// No description provided for @poEdit.
+  ///
+  /// In fa, this message translates to:
+  /// **'ویرایش مقادیر'**
+  String get poEdit;
+
+  /// No description provided for @poApprove.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید سفارش'**
+  String get poApprove;
+
+  /// No description provided for @poReject.
+  ///
+  /// In fa, this message translates to:
+  /// **'رد'**
+  String get poReject;
+
+  /// No description provided for @poSecondApprove.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید دوم'**
+  String get poSecondApprove;
+
+  /// No description provided for @poReceive.
+  ///
+  /// In fa, this message translates to:
+  /// **'ثبت دریافت'**
+  String get poReceive;
+
+  /// No description provided for @poCancel.
+  ///
+  /// In fa, this message translates to:
+  /// **'لغو سفارش'**
+  String get poCancel;
+
+  /// No description provided for @poNoteHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'دلیل (حداقل ۳ حرف)'**
+  String get poNoteHint;
+
+  /// No description provided for @poSaved.
+  ///
+  /// In fa, this message translates to:
+  /// **'سفارش به‌روز شد'**
+  String get poSaved;
+
+  /// No description provided for @poSuggested.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیشنهاد: {quantity}'**
+  String poSuggested(String quantity);
+
+  /// No description provided for @poOrderBy.
+  ///
+  /// In fa, this message translates to:
+  /// **'سفارش تا {day}'**
+  String poOrderBy(String day);
+
+  /// No description provided for @poNeedsSecond.
+  ///
+  /// In fa, this message translates to:
+  /// **'مبلغ از سقف هتل بیشتر است یا سقفی تعیین نشده؛ مدیرکل (فردی غیر از تأییدکنندهٔ اول) باید تأیید کند.'**
+  String get poNeedsSecond;
+
+  /// No description provided for @poInvalidQuantity.
+  ///
+  /// In fa, this message translates to:
+  /// **'مقدار نامعتبر است'**
+  String get poInvalidQuantity;
 }
 
 class _AppLocalizationsDelegate

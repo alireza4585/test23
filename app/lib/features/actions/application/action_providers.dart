@@ -39,6 +39,7 @@ class ActionCenter {
       ActionType.createTask => user.can(AppPermission.housekeepingAssign),
       ActionType.notifyRole => true,
       ActionType.adjustBaseline => RolePolicy.baselineAdjustRoles.contains(user.role),
+      ActionType.createPurchaseOrder => user.can(AppPermission.inventoryManage),
     };
   }
 

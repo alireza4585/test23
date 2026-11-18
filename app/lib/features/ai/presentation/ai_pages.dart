@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_colors.dart';
@@ -7,6 +8,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/components.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../data/repository_providers.dart';
+import '../../actions/domain/ai_action.dart';
 import '../../actions/presentation/actions_tab.dart';
 import '../../hotel/application/hotel_providers.dart';
 import '../../hotel/domain/hotel.dart';
@@ -279,17 +282,25 @@ class _AssistantPageState extends ConsumerState<AssistantPage> {
   }
 }
 
-class _Bubble extends StatelessWidget {
+class _Bubble extends ConsumerWidget {
   const _Bubble({required this.message});
 
   final ChatMessage message;
 
+  /// The `[s1]` markers the v2 assistant cites with; the chips below replace them.
+  static final _sourceTag = RegExp(r'\s*\[s\d+\]');
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final l10n = context.l10n;
     final mine = message.role == ChatRole.user;
-    final text = message.isError ? context.l10n.assistantError : message.text;
+    final text = message.isError ? l10n.assistantError : message.text.replaceAll(_sourceTag, '');
+    final settings = ref.watch(hotelSettingsProvider);
+    final canConvert = message.conversationId != null &&
+        settings.has(HotelFeature.assistantV2) &&
+        settings.has(HotelFeature.recommendationLoop);
     return Align(
       alignment: mine ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
       child: Container(
@@ -303,12 +314,112 @@ class _Bubble extends StatelessWidget {
             color: message.isError ? context.status.danger : scheme.outlineVariant,
           ),
         ),
-        child: SelectableText(
-          text,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            height: 1.7,
-            color: mine ? scheme.onPrimaryContainer : scheme.onSurface,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SelectableText(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                height: 1.7,
+                color: mine ? scheme.onPrimaryContainer : scheme.onSurface,
+              ),
+            ),
+            if (message.sources.isNotEmpty) ...[
+              const SizedBox(height: Insets.sm),
+              Text(l10n.assistantSources, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              const SizedBox(height: Insets.xs),
+              Wrap(
+                spacing: Insets.xs,
+                runSpacing: Insets.xs,
+                children: [
+                  for (final s in message.sources)
+                    ActionChip(
+                      key: ValueKey('assistant.source.${s.sid}'),
+                      avatar: Icon(s.cited ? Icons.link : Icons.link_off, size: 16),
+                      label: Text(s.label.isEmpty ? s.type : s.label),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => context.push(s.route),
+                    ),
+                ],
+              ),
+            ],
+            if (canConvert) ...[
+              const SizedBox(height: Insets.xs),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton.icon(
+                  key: const ValueKey('assistant.toAction'),
+                  icon: const Icon(Icons.task_alt, size: 18),
+                  label: Text(l10n.assistantToAction),
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    showDragHandle: true,
+                    builder: (_) => _ToActionSheet(conversationId: message.conversationId!),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Picks the department that should follow the answer up. The server records
+/// a proposed notification; nothing happens until that department approves.
+class _ToActionSheet extends ConsumerStatefulWidget {
+  const _ToActionSheet({required this.conversationId});
+
+  final String conversationId;
+
+  @override
+  ConsumerState<_ToActionSheet> createState() => _ToActionSheetState();
+}
+
+class _ToActionSheetState extends ConsumerState<_ToActionSheet> {
+  bool _saving = false;
+
+  Future<void> _pick(ActionDepartment department) async {
+    final l10n = context.l10n;
+    setState(() => _saving = true);
+    try {
+      await ref.read(aiAssistantRepositoryProvider).convertToAction(widget.conversationId, department.name);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      showSuccess(context, l10n.assistantActionProposed);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showFailure(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(Insets.lg, 0, Insets.lg, Insets.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.assistantToActionTitle, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: Insets.xs),
+            Text(l10n.assistantToActionHint, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: Insets.sm),
+            for (final d in ActionDepartment.values)
+              ListTile(
+                key: ValueKey('assistant.toAction.${d.name}'),
+                enabled: !_saving,
+                title: Text(l10n.actionDepartment(d.name)),
+                trailing: const Icon(Icons.chevron_left),
+                onTap: () => _pick(d),
+              ),
+          ],
         ),
       ),
     );

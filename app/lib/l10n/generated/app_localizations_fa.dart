@@ -1963,6 +1963,7 @@ class AppLocalizationsFa extends AppLocalizations {
       'createTask': 'تسک خانه‌داری',
       'notifyRole': 'اطلاع‌رسانی',
       'adjustBaseline': 'کنار گذاشتن روز از مدل انرژی',
+      'createPurchaseOrder': 'سفارش خرید',
       'other': '$type',
     });
     return '$_temp0';
@@ -2029,4 +2030,106 @@ class AppLocalizationsFa extends AppLocalizations {
   String showAll(int count) {
     return 'نمایش هر $count مورد';
   }
+
+  @override
+  String get assistantSources => 'منابع';
+
+  @override
+  String get assistantToAction => 'تبدیل به اقدام';
+
+  @override
+  String get assistantToActionTitle => 'کدام بخش این پاسخ را پیگیری کند؟';
+
+  @override
+  String get assistantToActionHint =>
+      'یک اقدام پیشنهادی در مرکز اقدام ثبت می‌شود و تا مدیر همان بخش تأیید نکند اجرا نمی‌شود.';
+
+  @override
+  String get assistantActionProposed => 'اقدام پیشنهادی ثبت شد';
+
+  @override
+  String get poSectionTitle => 'سفارش‌های پیشنهادی';
+
+  @override
+  String get poSectionHint =>
+      'از پیش‌بینی مصرف و زمان تحویل هر تأمین‌کننده؛ تا تأیید نشود چیزی سفارش داده نمی‌شود.';
+
+  @override
+  String poStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'draft': 'پیش‌نویس',
+      'awaitingApproval': 'منتظر تأیید مدیرکل',
+      'approved': 'تأییدشده',
+      'sent': 'ارسال‌شده',
+      'received': 'دریافت‌شده',
+      'cancelled': 'لغوشده',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String poLines(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count قلم',
+      one: '۱ قلم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String poTotal(String amount) {
+    return 'جمع: $amount';
+  }
+
+  @override
+  String poExpected(String date) {
+    return 'تحویل: $date';
+  }
+
+  @override
+  String get poOverdue => 'تحویل از موعد گذشته است';
+
+  @override
+  String get poEdit => 'ویرایش مقادیر';
+
+  @override
+  String get poApprove => 'تأیید سفارش';
+
+  @override
+  String get poReject => 'رد';
+
+  @override
+  String get poSecondApprove => 'تأیید دوم';
+
+  @override
+  String get poReceive => 'ثبت دریافت';
+
+  @override
+  String get poCancel => 'لغو سفارش';
+
+  @override
+  String get poNoteHint => 'دلیل (حداقل ۳ حرف)';
+
+  @override
+  String get poSaved => 'سفارش به‌روز شد';
+
+  @override
+  String poSuggested(String quantity) {
+    return 'پیشنهاد: $quantity';
+  }
+
+  @override
+  String poOrderBy(String day) {
+    return 'سفارش تا $day';
+  }
+
+  @override
+  String get poNeedsSecond =>
+      'مبلغ از سقف هتل بیشتر است یا سقفی تعیین نشده؛ مدیرکل (فردی غیر از تأییدکنندهٔ اول) باید تأیید کند.';
+
+  @override
+  String get poInvalidQuantity => 'مقدار نامعتبر است';
 }

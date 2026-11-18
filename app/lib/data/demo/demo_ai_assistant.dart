@@ -1,9 +1,12 @@
+import '../../core/error/app_failure.dart';
 import '../../core/security/app_permission.dart';
 import '../../core/security/role_policy.dart';
 import '../../core/utils/day_key.dart';
+import '../../features/actions/domain/ai_action.dart';
 import '../../features/ai/domain/ai_models.dart';
 import '../../features/energy/domain/energy_analytics.dart';
 import '../../features/energy/domain/energy_reading.dart';
+import '../../features/hotel/domain/hotel.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
 import '../../features/maintenance/domain/maintenance_ticket.dart';
 import 'demo_store.dart';
@@ -35,25 +38,89 @@ class DemoAiAssistantRepository implements AiAssistantRepository {
     bool has(List<String> words) => words.any(q.contains);
 
     final AssistantReply reply;
+    final List<(String, String, String)> tools; // (type, label, route), like the server's tool sources
     if (has(['اتلاف', 'هدر', 'waste', 'بیشترین', 'most'])) {
       reply = _waste(fa);
+      tools = [('energy', fa ? 'مصرف انرژی' : 'Energy use', '/energy'), ('insight', fa ? 'بینش‌ها' : 'Insights', '/insights')];
     } else if (has(['برق', 'انرژی', 'electric', 'energy', 'گاز', 'آب', 'water', 'gas'])) {
       reply = _energy(fa);
+      tools = [('energy', fa ? 'مصرف انرژی' : 'Energy use', '/energy'), ('insight', fa ? 'بینش‌ها' : 'Insights', '/insights')];
     } else if (has(['تعمیر', 'خرابی', 'تیکت', 'maintenance', 'ticket', 'repair'])) {
       reply = _maintenance(fa);
+      tools = [('ticket', fa ? 'خرابی‌های باز' : 'Open tickets', '/maintenance')];
     } else if (has(['موجودی', 'انبار', 'inventory', 'stock', 'اتمام'])) {
       reply = _inventory(fa);
+      tools = [('item', fa ? 'موجودی انبار' : 'Inventory', '/inventory')];
     } else if (has(['نظافت', 'housekeeping', 'clean', 'اتاق'])) {
       reply = _housekeeping(fa);
+      tools = [('rooms', fa ? 'وضعیت اتاق‌ها' : 'Room board', '/rooms')];
     } else if (has(['اشغال', 'درآمد', 'occupancy', 'revenue', 'adr', 'revpar'])) {
       reply = _revenue(fa);
+      tools = [('kpi', fa ? 'شاخص‌ها' : 'KPIs', '/home')];
     } else {
       reply = _summary(fa);
+      tools = [('kpi', fa ? 'شاخص‌ها' : 'KPIs', '/home'), ('insight', fa ? 'بینش‌ها' : 'Insights', '/insights')];
     }
-    if (!fa) return reply;
-    return AssistantReply(
-      text: _persianDigits(reply.text),
-      dataPoints: [for (final d in reply.dataPoints) _persianDigits(d)],
+    var text = reply.text;
+    var dataPoints = reply.dataPoints;
+    var sources = const <AnswerSource>[];
+    String? conversationId;
+    final v2 = _store.hotels.get(hotelId)?.settings.has(HotelFeature.assistantV2) ?? false;
+    if (v2) {
+      // As the v2 server: facts cite their source; the chips open it.
+      sources = [
+        for (final (i, t) in tools.indexed) AnswerSource(sid: 's${i + 1}', type: t.$1, label: t.$2, route: t.$3, cited: i == 0),
+      ];
+      text = '$text [s1]';
+      dataPoints = const [];
+      conversationId = _store.nextId('conv');
+      _answers[conversationId] = (question: question.trim(), answer: reply.text);
+    }
+    if (fa) {
+      text = _persianDigits(text);
+      dataPoints = [for (final d in dataPoints) _persianDigits(d)];
+    }
+    return AssistantReply(text: text, dataPoints: dataPoints, sources: sources, conversationId: conversationId);
+  }
+
+  final Map<String, ({String question, String answer})> _answers = {};
+
+  static const _departmentRoles = {
+    'energy': ['energyManager'],
+    'maintenance': ['maintenanceManager'],
+    'housekeeping': ['housekeepingManager'],
+    'inventory': ['inventoryManager'],
+    'restaurant': ['restaurantManager'],
+    'operations': ['operationsManager', 'generalManager'],
+  };
+
+  /// As the server: one proposed notifyRole per answer and department; it
+  /// waits in the Action Center for that department's manager.
+  @override
+  Future<void> convertToAction(String conversationId, String department) async {
+    final answer = _answers[conversationId];
+    if (answer == null) throw const NotFoundFailure();
+    final roles = _departmentRoles[department];
+    if (roles == null) throw const ValidationFailure('invalid_department');
+    await _store.latency();
+    final id = 'act-assistant-$conversationId-$department';
+    if (_store.actions.get(id) != null) return;
+    final title = answer.question.length > 120 ? answer.question.substring(0, 120) : answer.question;
+    _store.actions.put(
+      AiAction(
+        id: id,
+        type: ActionType.notifyRole,
+        status: ActionStatus.proposed,
+        department: ActionDepartment.values.byName(department),
+        category: switch (department) {
+          'energy' || 'maintenance' || 'housekeeping' || 'inventory' => department,
+          _ => 'staffing',
+        },
+        title: 'پیگیری از دستیار: $title',
+        reason: 'پیشنهاد از پاسخ دستیار',
+        params: {'roles': roles, 'title': title, 'body': answer.answer, 'conversationId': conversationId},
+        createdAt: _store.clock.now(),
+      ),
     );
   }
 

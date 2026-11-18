@@ -131,6 +131,8 @@ class AssistantController extends Notifier<ChatState> {
             role: ChatRole.assistant,
             text: answer,
             at: ref.read(clockProvider).now(),
+            sources: reply.sources,
+            conversationId: reply.conversationId,
           ),
         ],
       );

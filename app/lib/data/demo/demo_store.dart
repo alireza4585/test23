@@ -13,6 +13,7 @@ import '../../features/energy/domain/energy_reading.dart';
 import '../../features/hotel/domain/hotel.dart';
 import '../../features/housekeeping/domain/housekeeping_task.dart';
 import '../../features/inventory/domain/inventory_item.dart';
+import '../../features/inventory/domain/purchase_order.dart';
 import '../../features/maintenance/domain/maintenance_ticket.dart';
 import '../../features/notifications/domain/notification_models.dart';
 import '../../features/operations/domain/daily_operations.dart';
@@ -97,6 +98,7 @@ class DemoStore {
   final sessions = DemoCollection<Scoped<UserSession>>((s) => s.id);
   final calendarEvents = DemoCollection<CalendarEvent>((e) => e.id);
   final actions = DemoCollection<AiAction>((a) => a.id);
+  final purchaseOrders = DemoCollection<PurchaseOrder>((p) => p.id);
   final energyExclusions = DemoCollection<({String type, EnergyExclusion exclusion})>(
     (x) => '${x.type}_${DayKey.of(x.exclusion.day)}',
   );

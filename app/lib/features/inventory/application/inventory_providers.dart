@@ -4,7 +4,10 @@ import '../../../core/error/app_failure.dart';
 import '../../../core/security/app_permission.dart';
 import '../../../data/repository_providers.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../hotel/application/hotel_providers.dart';
+import '../../hotel/domain/hotel.dart';
 import '../domain/inventory_item.dart';
+import '../domain/purchase_order.dart';
 
 final inventoryItemsProvider = StreamProvider<List<InventoryItem>>((ref) {
   final user = ref.watch(sessionUserProvider);
@@ -83,3 +86,13 @@ class InventoryActions {
 final inventoryActionsProvider = Provider<InventoryActions>(
   InventoryActions.new,
 );
+
+/// Supplier orders proposed by the replenishment run (AI phase 2, F5).
+final purchaseOrdersProvider = StreamProvider<List<PurchaseOrder>>((ref) {
+  final user = ref.watch(sessionUserProvider);
+  final on = ref.watch(hotelSettingsProvider).has(HotelFeature.replenishment);
+  if (!on || user == null || !user.hasHotel || !user.can(AppPermission.inventoryView)) {
+    return Stream.value(const []);
+  }
+  return ref.watch(purchaseOrdersRepositoryProvider).watchOrders(user.hotelId);
+});

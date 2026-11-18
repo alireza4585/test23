@@ -204,16 +204,42 @@ class ChatMessage {
     required this.text,
     required this.at,
     this.isError = false,
+    this.sources = const [],
+    this.conversationId,
   });
 
   final ChatRole role;
   final String text;
   final DateTime at;
   final bool isError;
+
+  /// Where the answer's facts come from (assistant v2): chips that open the record.
+  final List<AnswerSource> sources;
+
+  /// The server-side record of this answer (assistant v2), for "convert to action".
+  final String? conversationId;
+}
+
+/// One source of an assistant v2 answer: a record or a page the facts come from.
+class AnswerSource {
+  const AnswerSource({required this.sid, required this.type, required this.label, required this.route, this.cited = false});
+
+  /// The id the answer cites, e.g. "s2".
+  final String sid;
+
+  /// kpi | energy | ticket | item | insight | rooms | staff
+  final String type;
+  final String label;
+
+  /// In-app route to open, e.g. /maintenance/abc.
+  final String route;
+
+  /// Cited in the answer text (the rest were only consulted).
+  final bool cited;
 }
 
 class AssistantReply {
-  const AssistantReply({required this.text, this.dataPoints = const [], this.threadId});
+  const AssistantReply({required this.text, this.dataPoints = const [], this.threadId, this.sources = const [], this.conversationId});
 
   final String text;
 
@@ -223,6 +249,10 @@ class AssistantReply {
   /// Server-side conversation thread (PocketBase); send it with the next
   /// question to continue the conversation.
   final String? threadId;
+
+  /// Assistant v2 (AI phase 2): the sources, cited first.
+  final List<AnswerSource> sources;
+  final String? conversationId;
 }
 
 /// Natural-language assistant. The Firebase implementation calls the
@@ -238,4 +268,8 @@ abstract interface class AiAssistantRepository {
     required String localeCode,
     String? threadId,
   });
+
+  /// Proposes the answer [conversationId] as an Action Center action for the
+  /// manager of [department] (assistant v2). Nothing runs until they approve.
+  Future<void> convertToAction(String conversationId, String department);
 }

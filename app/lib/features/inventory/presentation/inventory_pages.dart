@@ -13,6 +13,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../auth/application/auth_providers.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_item.dart';
+import 'purchase_orders_section.dart';
 
 double? _parseNumber(String v) => double.tryParse(
   v.trim().replaceAll(',', '').replaceAllMapped(RegExp('[۰-۹]'), (m) => '${m[0]!.codeUnitAt(0) - 0x06F0}'),
@@ -58,6 +59,7 @@ class _InventoryPageState extends ConsumerState<InventoryPage> {
           return PageBody(
             maxWidth: 900,
             children: [
+              const PurchaseOrdersSection(),
               TextField(
                 decoration: InputDecoration(
                   hintText: l10n.search,

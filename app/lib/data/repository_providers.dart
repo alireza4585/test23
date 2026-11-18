@@ -14,6 +14,7 @@ import '../features/forecast/domain/forecast.dart';
 import '../features/hotel/domain/hotel.dart';
 import '../features/housekeeping/domain/housekeeping_task.dart';
 import '../features/inventory/domain/inventory_item.dart';
+import '../features/inventory/domain/purchase_order.dart';
 import '../features/maintenance/domain/maintenance_ticket.dart';
 import '../features/notifications/domain/notification_models.dart';
 import '../features/operations/domain/daily_operations.dart';
@@ -25,6 +26,7 @@ import 'demo/demo_ai_assistant.dart';
 import 'demo/demo_auth_repository.dart';
 import 'demo/demo_intelligence_repositories.dart';
 import 'demo/demo_phase1_repositories.dart';
+import 'demo/demo_phase2_repositories.dart';
 import 'demo/demo_repositories.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_engagement_repositories.dart';
@@ -34,6 +36,7 @@ import 'pocketbase/pb_engagement_repositories.dart';
 import 'pocketbase/pb_intelligence_repositories.dart';
 import 'pocketbase/pb_operations_repositories.dart';
 import 'pocketbase/pb_phase1_repositories.dart';
+import 'pocketbase/pb_phase2_repositories.dart';
 import 'unsupported_repositories.dart';
 
 /// Composition root for the data layer.
@@ -210,5 +213,15 @@ final energyModelRepositoryProvider = Provider<EnergyModelRepository>(
     final PocketBaseBackend b => PocketBaseEnergyModelRepository(b.client),
     FirebaseBackend() => const UnsupportedEnergyModelRepository(),
     final DemoBackend b => DemoEnergyModelRepository(b.store),
+  },
+);
+
+// ------------------------------------------- AI phase 2 (PocketBase + demo)
+
+final purchaseOrdersRepositoryProvider = Provider<PurchaseOrdersRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBasePurchaseOrdersRepository(b.client),
+    FirebaseBackend() => const UnsupportedPurchaseOrdersRepository(),
+    final DemoBackend b => DemoPurchaseOrdersRepository(b.store),
   },
 );
