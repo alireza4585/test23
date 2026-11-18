@@ -22,8 +22,61 @@ _FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 calls = {"n": 0}
 
 
+def _numbers(value, path="", out=None):
+    """(path, number) pairs of a JSON value, for quoting tool results."""
+    out = [] if out is None else out
+    if isinstance(value, bool) or value is None:
+        return out
+    if isinstance(value, (int, float)):
+        out.append((path, value))
+    elif isinstance(value, dict):
+        for k, v in value.items():
+            _numbers(v, f"{path}.{k}" if path else k, out)
+    elif isinstance(value, list):
+        for i, v in enumerate(value[:5]):
+            _numbers(v, f"{path}[{i}]", out)
+    return out
+
+
+def plan_for(messages: list) -> str:
+    """Assistant v2 plan step: always asks for KPIs, inventory and staffing too (probing permissions)."""
+    q = str(messages[-1].get("content", ""))
+    calls_ = [{"tool": "getKpis", "args": {"days": 7}}, {"tool": "getInventory", "args": {}}, {"tool": "getStaffing", "args": {}}]
+    if re.search(r"برق|انرژی|آب|گاز|electric|energy", q):
+        calls_.insert(0, {"tool": "getEnergy", "args": {}})
+    elif re.search(r"خرابی|تیکت|SLA|تأسیسات", q):
+        calls_.insert(0, {"tool": "listOpenTickets", "args": {}})
+    return json.dumps({"calls": calls_[:4]})
+
+
+def tool_answer(messages: list) -> str:
+    """Assistant v2 answer step: quotes numbers from <tool_results> with their source, sometimes invents one."""
+    data = {}
+    for msg in reversed(messages):
+        m = re.search(r"<tool_results>\s*(\{.*\})\s*</tool_results>", str(msg.get("content", "")), re.S)
+        if m:
+            data = json.loads(m.group(1))
+            break
+    picks = []
+    for res in data.get("results", []):
+        result = res.get("result") or {}
+        sid = result.get("source") or next((x.get("source") for x in (result.get("items") or result.get("tickets") or []) if isinstance(x, dict)), None)
+        for path, n in _numbers(result)[:2]:
+            if "source" not in path:
+                picks.append(f"{path}: {n}" + (f" [{sid}]" if sid else ""))
+    text = "بر اساس داده‌ها: " + "، ".join(picks[:4]) if picks else "دادهٔ کافی برای این پرسش وجود ندارد."
+    if calls["n"] % 4 in (0, 1):
+        text += " همچنین حدود 987654 ریال صرفه‌جویی ممکن است."  # invented on purpose
+    return text
+
+
 def answer_for(messages: list) -> str:
     calls["n"] += 1
+    system = str(messages[0].get("content", "")) if messages else ""
+    if "You choose which read-only hotel data tools" in system:
+        return plan_for(messages)
+    if "<tool_results>" in str(messages[-1].get("content", "")) or any("<tool_results>" in str(m.get("content", "")) for m in messages):
+        return tool_answer(messages)
     data = {}
     for msg in reversed(messages):
         m = re.search(r"<hotel_data>\s*(\{.*\})\s*</hotel_data>", str(msg.get("content", "")), re.S)

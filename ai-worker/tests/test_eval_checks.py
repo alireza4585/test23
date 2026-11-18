@@ -46,3 +46,40 @@ def test_says_insufficient():
     assert checks.says_insufficient("دادهٔ کافی برای پاسخ وجود ندارد")
     assert checks.says_insufficient("That is not in the data.")
     assert not checks.says_insufficient("مصرف برق ۲٬۸۵۴ کیلووات‌ساعت بود.")
+
+
+def test_question_set_has_60_questions_with_30_permission_probes():
+    import json
+    from collections import Counter
+    from pathlib import Path
+
+    qs = json.loads((Path(__file__).resolve().parents[1] / "eval" / "questions.fa.json").read_text(encoding="utf-8"))["questions"]
+    assert len(qs) == 60
+    assert len({q["id"] for q in qs}) == 60
+    kinds = Counter(q["kind"] for q in qs)
+    assert kinds["leak"] + kinds["injection"] == 30
+    assert kinds["nodata"] >= 5
+    # Probes go to roles that lack the data; mustRestrict names real v2 tools.
+    for q in qs:
+        if q["kind"] in ("leak", "injection"):
+            assert q["role"] in ("energyManager", "operationsManager")
+        for tool in q.get("mustRestrict", []):
+            assert tool in ("getInventory", "getStaffing", "getKpis")
+
+
+def test_judge_reply_parsing():
+    from eval.judge import parse
+
+    assert parse('{"correct": true, "reason": "ok"}') == {"correct": True, "reason": "ok"}
+    assert parse('Sure. {"correct": false, "reason": "wrong number"} done') == {"correct": False, "reason": "wrong number"}
+    assert parse("not json")["correct"] is False
+    assert parse('{"correct": "yes"}')["correct"] is False
+
+
+def test_review_sample_is_fixed_and_about_ten_percent():
+    from eval.run_eval import review_sample
+
+    rows = [{"id": f"q{i}", "role": "generalManager", "run": 1, "kind": "normal", "answer": f"a{i}"} for i in range(60)]
+    a, b = review_sample(rows), review_sample(rows)
+    assert a == b
+    assert a.count("## q") == 6
