@@ -2054,6 +2054,15 @@ function deliveryPatternOf(item, movements, today) {
   const days = new Set(movements.filter((m) => m.itemId === item.id && m.type === "receive" && m.day >= from && m.day < today).map((m) => m.day));
   return { pattern: days.size / 28 >= DAILY_DELIVERY_SHARE ? "daily" : "scheduled", source: "history" };
 }
+function deliveryIntervalOf(itemId, movements, today) {
+  const from = shiftDay(today, -28);
+  const days = [...new Set(movements.filter((m) => m.itemId === itemId && m.type === "receive" && m.delta > 0 && m.day < today).map((m) => m.day))].sort();
+  const lastReceipt = days.length ? days[days.length - 1] : null;
+  const recent = days.filter((d) => d >= from);
+  const gaps = [];
+  for (let i = 1; i < recent.length; i++) gaps.push(daysBetween(recent[i - 1], recent[i]));
+  return { interval: gaps.length ? Math.max(1, Math.round(quantile(gaps, 0.5))) : 1, lastReceipt };
+}
 function planItem(item, supplier, movements, orders, today) {
   var _a, _b;
   const to = shiftDay(today, -1);
@@ -2107,16 +2116,42 @@ function planItem(item, supplier, movements, orders, today) {
     };
   };
   if (pattern === "daily") {
-    const ss1 = r2(SERVICE_Z * f.sigma);
-    let par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * 1 + ss1);
+    const { interval, lastReceipt } = deliveryIntervalOf(item.id, movements, today);
+    const since = lastReceipt ? daysBetween(lastReceipt, today) : null;
+    let toNext = since === null ? 1 : interval - since;
+    if (toNext < 0) toNext = lead.days;
+    const position2 = item.quantity + onOrder;
+    const ssInterval = r2(SERVICE_Z * f.sigma * Math.sqrt(interval));
+    let par = item.parLevel && item.parLevel > 0 ? item.parLevel : r2(f.rate * interval + ssInterval);
     if (!(item.parLevel && item.parLevel > 0) && item.shelfLifeDays && item.shelfLifeDays > 0) par = Math.min(par, r2(f.rate * item.shelfLifeDays));
-    const short = Math.ceil(par - item.quantity - onOrder);
+    const ssNext = r2(SERVICE_Z * f.sigma * Math.sqrt(Math.max(toNext, 0)));
+    const leftAtNext = position2 - f.rate * toNext;
+    const extra = { deliveryInterval: interval, nextDeliveryDays: toNext };
+    if (f.rate > 0 && toNext > 0 && leftAtNext < ssNext) {
+      let q = Math.max(Math.ceil(par - leftAtNext), Math.ceil(ssNext - leftAtNext));
+      if (item.shelfLifeDays && item.shelfLifeDays > 0) q = Math.min(q, Math.floor(f.rate * item.shelfLifeDays - Math.max(0, leftAtNext)));
+      q = Math.max(q, 1);
+      return {
+        ...base,
+        ...extra,
+        ok: true,
+        reason: null,
+        forecast: f,
+        safetyStock: ssNext,
+        reorderPoint: r2(f.rate * toNext + ssNext),
+        parLevel: par,
+        daysOfCover: cover,
+        suggestion: suggestion("reorder", q, today)
+      };
+    }
+    const short = Math.ceil(par - Math.max(0, leftAtNext));
     return {
       ...base,
+      ...extra,
       ok: true,
       reason: null,
       forecast: f,
-      safetyStock: ss1,
+      safetyStock: ssInterval,
       reorderPoint: par,
       parLevel: par,
       daysOfCover: cover,

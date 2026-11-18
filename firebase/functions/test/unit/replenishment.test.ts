@@ -111,6 +111,31 @@ describe("replenishment (F5)", () => {
     expect(low.suggestion!.quantity).toBe(Math.ceil(low.parLevel! - 10));
   });
 
+  it("par path, deliveries every 4 days: a stock-out risk before the next delivery is a warning", () => {
+    const bread = item({ id: "bread", name: "نان", supplierId: "bakery", supplierName: "نانوایی", deliveryPattern: "daily" });
+    const moves = [...usage("bread", 56, 50)];
+    // Delivered every 4 days, the last one yesterday: the next is in 3 days.
+    for (let i = 29; i >= 1; i -= 4) moves.push({ itemId: "bread", type: "receive", delta: 200, day: shiftDay(TODAY, -i) });
+    const low = planItem({ ...bread, quantity: 60 }, null, moves, [], TODAY);
+    expect(low).toMatchObject({ pattern: "daily", deliveryInterval: 4, nextDeliveryDays: 3 });
+    expect(low.suggestion).toMatchObject({ kind: "reorder" });
+    // The order covers the days until then and reaches par.
+    expect(60 + low.suggestion!.quantity).toBeGreaterThanOrEqual(low.forecast.rate * 3);
+    // Enough until the next delivery: no warning (a top-up at most).
+    const ok = planItem({ ...bread, quantity: 400 }, null, moves, [], TODAY);
+    expect(ok.suggestion?.kind ?? null).not.toBe("reorder");
+  });
+
+  it("par path: an overdue delivery (supplier delay) is planned with the lead time", () => {
+    const milk = item({ id: "milk", name: "شیر", deliveryPattern: "daily", leadTimeDays: 2 });
+    const moves = [...usage("milk", 56, 20)];
+    // Every 4 days, but the last one was 7 days ago.
+    for (let i = 31; i >= 7; i -= 4) moves.push({ itemId: "milk", type: "receive", delta: 80, day: shiftDay(TODAY, -i) });
+    const p = planItem({ ...milk, quantity: 30 }, null, moves, [], TODAY);
+    expect(p.nextDeliveryDays).toBe(2);
+    expect(p.suggestion?.kind).toBe("reorder");
+  });
+
   it("a short shelf life caps the order quantity", () => {
     const milk = item({ id: "milk", name: "شیر", quantity: 30, shelfLifeDays: 4, deliveryPattern: "scheduled" });
     const p = planItem(milk, null, usage("milk", 56, 20), [], TODAY);
