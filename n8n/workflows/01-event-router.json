@@ -149,6 +149,29 @@
               },
               "renameOutput": true,
               "outputKey": "action"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "id": "0cf1b2a4-6288-54d0-a29e-a1e8a70cc637",
+                    "leftValue": "={{ $json.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "purchaseOrder.approved"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "purchaseOrder"
             }
           ]
         },
@@ -601,7 +624,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// AI phase 1 (F1): a high-priority action is waiting for a decision. The event carries no\n// staff-typed text and no numbers: department, type and a pointer to the Action Center only.\nconst e = $input.first().json;\nconst d = e.data || {};\nconst department = { energy: 'انرژی', maintenance: 'تأسیسات', housekeeping: 'خانه‌داری', inventory: 'انبار', operations: 'عملیات' }[d.department] || 'عملیات';\nconst type = { createTicket: 'ثبت تیکت تعمیر', createTask: 'ایجاد کار', notifyRole: 'اطلاع به نقش', adjustBaseline: 'کنار گذاشتن روز از مدل انرژی' }[d.type] || 'اقدام';\n// Each department's group; anything else (operations, revenue) goes to management.\nconst chat = { energy: $env.BALE_ENERGY_CHAT_ID, maintenance: $env.BALE_MAINTENANCE_CHAT_ID }[d.department] || $env.BALE_MANAGEMENT_CHAT_ID || '';\nconst head = e.type === 'action.reminder' ? '⏰ یادآوری: اقدام پیشنهادی هنوز منتظر تصمیم است' : '🟠 اقدام پیشنهادی با اولویت بالا منتظر تصمیم است';\nreturn [{ json: { ...e, chat, text: `${head}\\nبخش: ${department} · نوع: ${type}\\nبرای تأیید یا رد، در اپ به «مرکز اقدام» بروید. (شناسه: ${d.actionId || '—'})` } }];"
+        "jsCode": "// AI phase 1 (F1): a high-priority action is waiting for a decision. The event carries no\n// staff-typed text and no numbers: department, type and a pointer to the Action Center only.\nconst e = $input.first().json;\nconst d = e.data || {};\nconst department = { energy: 'انرژی', maintenance: 'تأسیسات', housekeeping: 'خانه‌داری', inventory: 'انبار', operations: 'عملیات' }[d.department] || 'عملیات';\nconst type = { createTicket: 'ثبت تیکت تعمیر', createTask: 'ایجاد کار', notifyRole: 'اطلاع به نقش', adjustBaseline: 'کنار گذاشتن روز از مدل انرژی', createPurchaseOrder: 'سفارش خرید' }[d.type] || 'اقدام';\n// Each department's group; anything else (operations, revenue) goes to management.\nconst chat = { energy: $env.BALE_ENERGY_CHAT_ID, maintenance: $env.BALE_MAINTENANCE_CHAT_ID }[d.department] || $env.BALE_MANAGEMENT_CHAT_ID || '';\nconst head = e.type === 'action.reminder' ? '⏰ یادآوری: اقدام پیشنهادی هنوز منتظر تصمیم است' : '🟠 اقدام پیشنهادی با اولویت بالا منتظر تصمیم است';\nreturn [{ json: { ...e, chat, text: `${head}\\nبخش: ${department} · نوع: ${type}\\nبرای تأیید یا رد، در اپ به «مرکز اقدام» بروید. (شناسه: ${d.actionId || '—'})` } }];"
       },
       "id": "b716685e-7235-5294-8c5f-31fa79159656",
       "name": "Format action",
@@ -684,6 +707,228 @@
         1180,
         780
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// AI phase 2 (F5): an approved purchase order goes to its supplier. The event carries\n// what the supplier needs (items, units, quantities, expected day) and no prices.\n// Item and supplier names are typed by staff: escaped for the e-mail's HTML.\nconst e = $input.first().json;\nconst d = e.data || {};\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst lines = (Array.isArray(d.lines) ? d.lines : []).slice(0, 100);\nconst expected = d.expectedAt ? String(d.expectedAt).slice(0, 10) : '';\nconst text = [\n  `سفارش خرید از ${d.hotelName || 'هتل'}`,\n  ...lines.map((l) => `• ${l.name}: ${l.quantity} ${l.unit || ''}`.trim()),\n  expected ? `تحویل مورد انتظار: ${expected}` : '',\n  `شمارهٔ سفارش: ${d.purchaseOrderId || '—'}`,\n].filter(Boolean).join('\\n');\nconst rows = lines.map((l) => `<tr><td>${esc(l.name)}</td><td>${esc(l.quantity)}</td><td>${esc(l.unit)}</td></tr>`).join('');\nconst html = `<div dir=\"rtl\" style=\"font-family:Tahoma\"><h3>سفارش خرید — ${esc(d.hotelName)}</h3>`\n  + `<p>تأمین‌کنندهٔ گرامی ${esc(d.supplierName)}، لطفاً اقلام زیر را ارسال کنید.</p>`\n  + `<table border=\"1\" cellpadding=\"6\" style=\"border-collapse:collapse\"><tr><th>کالا</th><th>مقدار</th><th>واحد</th></tr>${rows}</table>`\n  + (expected ? `<p>تحویل مورد انتظار: ${esc(expected)}</p>` : '')\n  + `<p>شمارهٔ سفارش: ${esc(d.purchaseOrderId)}</p></div>`;\nreturn [{ json: {\n  hotelId: e.hotelId, purchaseOrderId: d.purchaseOrderId || '', supplierEmail: d.supplierEmail || '', supplierChat: d.supplierBaleChatId || '',\n  subject: `سفارش خرید ${d.hotelName || ''} — ${d.purchaseOrderId || ''}`.trim(), html, text,\n} }];"
+      },
+      "id": "1181784a-84d9-573d-8928-cdadadac1dfe",
+      "name": "Format purchase order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "da8e353e-376f-58da-b2ba-d986d0149879",
+              "leftValue": "={{ $env.ZARIN_MAIL_FROM || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "8f40cb9a-93c9-5a8f-8939-f816016fa2af",
+              "leftValue": "={{ $json.supplierEmail || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a46f5027-570a-5e89-8791-ac5b5fe27833",
+      "name": "E-mail configured? · supplier",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        1020
+      ],
+      "notes": "Skips e-mail while ZARIN_MAIL_FROM or the supplier's e-mail is empty."
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ZARIN_MAIL_FROM }}",
+        "toEmail": "={{ $json.supplierEmail }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "fa5f8811-8d08-5de5-ac6b-b55ed0ffdf78",
+      "name": "Purchase order e-mail · supplier",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1180,
+        1020
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API.\n// With ZARIN_KEY_ID and ZARIN_KEY_SECRET set (a scoped key from `npm run integration-key`):\n//   HMAC-SHA256(keySecret, `${timestamp}.${nonce}.${body}`), a fresh nonce per request (v2).\n// Otherwise the shared secret: HMAC-SHA256(ZARIN_INTEGRATION_SECRET, `${timestamp}.${body}`) (v1).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nconst keyId = $env.ZARIN_KEY_ID || '';\nconst keySecret = $env.ZARIN_KEY_SECRET || '';\nconst scoped = Boolean(keyId && keySecret);\nconst sign = (json) => {\n  const body = json.requestBody ? JSON.stringify(json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const nonce = scoped ? crypto.randomBytes(16).toString('hex') : '';\n  const signature = crypto\n    .createHmac('sha256', scoped ? keySecret : $env.ZARIN_INTEGRATION_SECRET)\n    .update(scoped ? `${timestamp}.${nonce}.${body}` : `${timestamp}.${body}`)\n    .digest('hex');\n  return { ...json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature, zarinKeyId: scoped ? keyId : '', zarinNonce: nonce };\n};\n// Marks the order \"sent\" in Zarin only when the email really went out\n// (a switched-off node passes its input through without sending).\nconst po = $('Format purchase order').first().json;\nreturn $input.all().filter(({ json }) => Boolean(json.messageId || (Array.isArray(json.accepted) && json.accepted.length))).map(() => ({ json: sign({\n  hotelId: po.hotelId, purchaseOrderId: po.purchaseOrderId, requestBody: { via: 'email' },\n}) }));"
+      },
+      "id": "154b1d23-f81c-5e27-b505-63419cc6bdc9",
+      "name": "Delivered? Sign 'sent' · e-mail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "68dc133a-6d86-5fe1-9883-d0545cbfe5c0",
+              "leftValue": "={{ $env.BALE_BOT_TOKEN || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "31153a43-5c68-557f-8aed-d59e8403a42f",
+              "leftValue": "={{ $json.supplierChat || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ff634bfd-d8cf-5f93-b718-b6e9b4e098aa",
+      "name": "Bale configured? · supplier",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        1180
+      ],
+      "notes": "Skips Bale while BALE_BOT_TOKEN or the supplier's Bale chat id is empty."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $json.supplierChat, text: $json.text }) }}"
+      },
+      "id": "7eba5081-7ce3-5cf8-85dc-12c4495cd78f",
+      "name": "Bale · supplier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API.\n// With ZARIN_KEY_ID and ZARIN_KEY_SECRET set (a scoped key from `npm run integration-key`):\n//   HMAC-SHA256(keySecret, `${timestamp}.${nonce}.${body}`), a fresh nonce per request (v2).\n// Otherwise the shared secret: HMAC-SHA256(ZARIN_INTEGRATION_SECRET, `${timestamp}.${body}`) (v1).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nconst keyId = $env.ZARIN_KEY_ID || '';\nconst keySecret = $env.ZARIN_KEY_SECRET || '';\nconst scoped = Boolean(keyId && keySecret);\nconst sign = (json) => {\n  const body = json.requestBody ? JSON.stringify(json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const nonce = scoped ? crypto.randomBytes(16).toString('hex') : '';\n  const signature = crypto\n    .createHmac('sha256', scoped ? keySecret : $env.ZARIN_INTEGRATION_SECRET)\n    .update(scoped ? `${timestamp}.${nonce}.${body}` : `${timestamp}.${body}`)\n    .digest('hex');\n  return { ...json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature, zarinKeyId: scoped ? keyId : '', zarinNonce: nonce };\n};\n// Marks the order \"sent\" in Zarin only when the bale really went out\n// (a switched-off node passes its input through without sending).\nconst po = $('Format purchase order').first().json;\nreturn $input.all().filter(({ json }) => json.ok === true).map(() => ({ json: sign({\n  hotelId: po.hotelId, purchaseOrderId: po.purchaseOrderId, requestBody: { via: 'bale' },\n}) }));"
+      },
+      "id": "cff4ac91-4bfb-5f77-b030-7b7983af3cd4",
+      "name": "Delivered? Sign 'sent' · Bale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/purchase-orders/{{ $json.purchaseOrderId }}/sent",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "x-zarin-key-id",
+              "value": "={{ $json.zarinKeyId }}"
+            },
+            {
+              "name": "x-zarin-nonce",
+              "value": "={{ $json.zarinNonce }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}"
+      },
+      "id": "b42d4efd-a95a-58a4-948f-5172534df270",
+      "name": "POST purchase order sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1660,
+        1100
+      ]
     }
   ],
   "connections": {
@@ -742,6 +987,13 @@
         [
           {
             "node": "Format action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format purchase order",
             "type": "main",
             "index": 0
           }
@@ -862,6 +1114,88 @@
           }
         ]
       ]
+    },
+    "Format purchase order": {
+      "main": [
+        [
+          {
+            "node": "E-mail configured? · supplier",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bale configured? · supplier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-mail configured? · supplier": {
+      "main": [
+        [
+          {
+            "node": "Purchase order e-mail · supplier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Purchase order e-mail · supplier": {
+      "main": [
+        [
+          {
+            "node": "Delivered? Sign 'sent' · e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivered? Sign 'sent' · e-mail": {
+      "main": [
+        [
+          {
+            "node": "POST purchase order sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · supplier": {
+      "main": [
+        [
+          {
+            "node": "Bale · supplier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale · supplier": {
+      "main": [
+        [
+          {
+            "node": "Delivered? Sign 'sent' · Bale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delivered? Sign 'sent' · Bale": {
+      "main": [
+        [
+          {
+            "node": "POST purchase order sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -873,6 +1207,6 @@
   "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": false,
-    "notes": "Receives signed domain events from Cloud Functions (N8N_WEBHOOK_URL) and fans them out to Bale groups, SMS (Kavenegar) and e-mail."
+    "notes": "Receives signed domain events from Cloud Functions (N8N_WEBHOOK_URL) and fans them out to Bale groups, SMS (Kavenegar) and e-mail; approved purchase orders go to their supplier (e-mail / Bale) and are marked sent."
   }
 }

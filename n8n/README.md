@@ -18,9 +18,10 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 
 | فایل | Trigger | کار |
 |---|---|---|
-| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`. رویدادِ هتلی که در `ZARIN_HOTEL_IDS` نیست (مثلاً هتل آزمایشی روی همان بک‌اند) دور ریخته می‌شود: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله <br>• `action.proposed` و `action.reminder` (اقدام با اولویت بالا در مرکز اقدام، فاز ۱) → گروه بلهٔ همان بخش (انرژی یا تأسیسات، و برای بقیه گروه مدیریت). پیام فقط بخش، نوع و شناسهٔ اقدام را دارد. `briefing.ready` عمداً route نمی‌شود |
+| `01-event-router.json` | Webhook `POST /webhook/zarin-events` | بررسی امضا، سپس Route بر اساس `type`. رویدادِ هتلی که در `ZARIN_HOTEL_IDS` نیست (مثلاً هتل آزمایشی روی همان بک‌اند) دور ریخته می‌شود: <br>• `alert.raised` → گروه مدیریت در بله، و اگر critical باشد پیامک به مدیر کشیک <br>• `maintenance.ticket.created` با اولویت high/critical → گروه تأسیسات در بله <br>• `inventory.lowStock` → ایمیل درخواست خرید به تدارکات <br>• `energy.anomaly` → گروه انرژی در بله <br>• `action.proposed` و `action.reminder` (اقدام با اولویت بالا در مرکز اقدام، فاز ۱) → گروه بلهٔ همان بخش (انرژی یا تأسیسات، و برای بقیه گروه مدیریت). پیام فقط بخش، نوع و شناسهٔ اقدام را دارد <br>• `purchaseOrder.approved` (سفارش خرید تأییدشده، فاز ۲) → ایمیل و/یا بلهٔ همان تأمین‌کننده (اقلام، مقدار و روز تحویل، **بدون قیمت**)، و پس از ارسال واقعی، `POST /v1/hotels/{id}/purchase-orders/{po}/sent` امضاشده. اگر هیچ کانالی تنظیم نشده یا تأمین‌کننده ایمیل/شناسهٔ بله ندارد، سفارش «تأییدشده» می‌ماند و باید دستی فرستاده شود. `briefing.ready` عمداً route نمی‌شود |
 | `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. اگر هتل پرچم `morningBriefing` داشته باشد، گزارش صبحگاهی ذخیره‌شدهٔ GM جای متن کوتاه را در ایمیل و گروه مدیریت می‌گیرد، و گزارش مدیر انرژی و مدیر تأسیسات (اگر موردی داشته باشد و مالی نباشد) به گروه همان بخش می‌رود ([سند ۱۸](../docs/18-ai-phase-1.md#۵-n8n)). |
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. همان مجموعهٔ تیکت‌های دیرکرد تا ۴ ساعت دوباره اعلان نمی‌شود (`dedupeKey` در بدنهٔ اعلان) و پیامک فقط وقتی می‌رود که اعلان واقعاً ارسال شده باشد. |
+| `05-purchase-order-followup.json` | هر روز ساعت ۱۰:۱۷ (به وقت تهران) | `GET /v1/hotels/{id}/purchase-orders/overdue`. سفارش‌های تأییدشده یا ارسال‌شده‌ای که از روز تحویل مورد انتظار گذشته‌اند ← اعلان درون‌برنامه‌ای به مدیر انبار و GM، و پیام در گروه مدیریت بله. هر روز فقط یک بار برای همان مجموعهٔ سفارش‌ها (`dedupeKey`) ([سند ۲۰](../docs/20-ai-phase-2.md)). |
 | `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
 
 ## کانال‌ها: یکی‌یکی فعال کنید
@@ -29,15 +30,15 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 
 | کانال | متغیرها | نودهای گیت | کار اضافه |
 |---|---|---|---|
-| بله | `BALE_BOT_TOKEN` به‌علاوهٔ `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID` یا `BALE_ENERGY_CHAT_ID` | `Bale configured? · management / maintenance / energy / action` در ۰۱، و `· management` در ۰۲. گزارش‌های بخش در ۰۲ (`Department briefings`) بدون `BALE_BOT_TOKEN` یا شناسهٔ گروه همان بخش رد می‌شوند | — |
+| بله | `BALE_BOT_TOKEN` به‌علاوهٔ `BALE_MANAGEMENT_CHAT_ID`، `BALE_MAINTENANCE_CHAT_ID` یا `BALE_ENERGY_CHAT_ID` (برای تأمین‌کننده: فیلد `baleChatId` در رکورد `suppliers`) | `Bale configured? · management / maintenance / energy / action / supplier` در ۰۱، و `· management` در ۰۲ و ۰۵. گزارش‌های بخش در ۰۲ (`Department briefings`) بدون `BALE_BOT_TOKEN` یا شناسهٔ گروه همان بخش رد می‌شوند | — |
 | پیامک (کاوه‌نگار) | `KAVENEGAR_API_KEY` به‌علاوهٔ `ONCALL_MANAGER_MOBILE` یا `MAINTENANCE_MANAGER_MOBILE` | `SMS configured? · on-call` در ۰۱، و `· maintenance` در ۰۳ | — |
-| ایمیل | `ZARIN_MAIL_FROM` به‌علاوهٔ `PROCUREMENT_EMAIL` یا `ZARIN_REPORT_RECIPIENTS` | `E-mail configured? · procurement` در ۰۱، و `· GM & owner` در ۰۲ | Credential SMTP و روشن کردن نود ایمیل (پایین) |
+| ایمیل | `ZARIN_MAIL_FROM` به‌علاوهٔ `PROCUREMENT_EMAIL` یا `ZARIN_REPORT_RECIPIENTS` (برای تأمین‌کننده: فیلد `email` در رکورد `suppliers`) | `E-mail configured? · procurement / supplier` در ۰۱، و `· GM & owner` در ۰۲ | Credential SMTP و روشن کردن نود ایمیل (پایین) |
 
 هر گروه بله جداگانه بررسی می‌شود. مثلاً اگر فقط `BALE_ENERGY_CHAT_ID` خالی باشد، فقط پیام انرژی رد می‌شود.
 
-**روشن کردن ایمیل.** نودهای *Purchase request e-mail* (۰۱) و *E-mail GM & owner* (۰۲) در فایل‌ها خاموش (Deactivated) هستند. دلیلش این است که n8n workflowی را که نود ایمیلش Credential ندارد منتشر نمی‌کند و خطای «1 node has issues» می‌دهد. وقتی SMTP آماده شد:
+**روشن کردن ایمیل.** نودهای *Purchase request e-mail* و *Purchase order e-mail · supplier* (۰۱) و *E-mail GM & owner* (۰۲) در فایل‌ها خاموش (Deactivated) هستند. دلیلش این است که n8n workflowی را که نود ایمیلش Credential ندارد منتشر نمی‌کند و خطای «1 node has issues» می‌دهد. وقتی SMTP آماده شد:
 1. در Credentials یک Credential از نوع SMTP بسازید (مشخصات در پایین).
-2. در هر دو workflow روی نود ایمیل دوبار کلیک کنید و این Credential را انتخاب کنید.
+2. در هر دو workflow روی هر نود ایمیل دوبار کلیک کنید و این Credential را انتخاب کنید.
 3. نود را روشن کنید: آن را انتخاب کنید و کلید `D` را بزنید، یا راست‌کلیک ← Activate. سپس workflow را Save کنید و اگر قبلاً منتشر شده، دوباره Publish کنید.
 
 `import-workflows.mjs` در به‌روزرسانی‌های بعدی، Credential و روشن بودن این نودها را نگه می‌دارد.
@@ -79,6 +80,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `action.executed` | `actionId, type, department, executedRef` |
 | `action.measured` | `actionId, status, improved` |
 | `briefing.ready` | `day, roles` |
+| `purchaseOrder.approved` | `purchaseOrderId, supplierName, supplierEmail, supplierBaleChatId, hotelName, expectedAt, lines[{name, unit, quantity}]` (بدون قیمت و مبلغ) |
 
 ارسال رویداد به‌صورت *fire-and-forget* است. اگر n8n در دسترس نباشد، عملیات اصلی (مثل ثبت تیکت) شکست نمی‌خورد. در PocketBase، رویدادها در صف `outbox` می‌مانند و هر دقیقه دوباره ارسال می‌شوند (حداکثر ۸ بار). هر ارسال پیش از فرستادن، رویداد را برای خودش رزرو می‌کند، پس اگر cron و `POST /v1/outbox/flush` هم‌زمان اجرا شوند، رویداد تکراری ارسال نمی‌شود. هشدار و اعلان درون‌برنامه‌ای همیشه توسط خود بک‌اند ساخته می‌شوند و n8n فقط کانال‌های **بیرونی** را اضافه می‌کند.
 
@@ -110,7 +112,7 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
 
 3. **Credentials** (پس از import، روی نودهای مربوط انتخاب کنید):
    - **Header Auth**: نود *Meter gateway webhook*، مثلاً `X-Meter-Key: <random>`. همین کلید را به گیت‌وی کنتور بدهید. n8n بدون این Credential اجازهٔ فعال کردن workflow ۰۴ را نمی‌دهد.
-   - **SMTP** (اختیاری): نودهای *E-mail GM & owner* و *Purchase request e-mail*. این نودها خاموش import می‌شوند و پس از انتخاب Credential باید روشن شوند (بخش «کانال‌ها» در بالا).
+   - **SMTP** (اختیاری): نودهای *E-mail GM & owner*، *Purchase request e-mail* و *Purchase order e-mail · supplier*. این نودها خاموش import می‌شوند و پس از انتخاب Credential باید روشن شوند (بخش «کانال‌ها» در بالا).
 
 4. **اتصال بک‌اند به n8n**
 
@@ -137,7 +139,7 @@ x-zarin-signature: hex( HMAC_SHA256(INTEGRATION_SECRET, "<timestamp>.<rawBody>")
    npm run deploy
    ```
 
-5. **Activate.** هر چهار workflow را فعال کنید. آدرس `…/webhook/…` (production) فقط وقتی workflow فعال است پاسخ می‌دهد.
+5. **Activate.** هر پنج workflow را فعال کنید (۰۵ فقط برای هتلی لازم است که پرچم `replenishment` دارد؛ بدون سفارش دیرکرد، کاری نمی‌کند). آدرس `…/webhook/…` (production) فقط وقتی workflow فعال است پاسخ می‌دهد.
 
 ## n8n روی لیارا
 
@@ -190,10 +192,10 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 
 ## تست انتها‌به‌انتها (اختیاری)
 
-`test/e2e.mjs` هر چهار workflow را روی یک n8n واقعی (نسخهٔ 2.35.7) و یک PocketBase محلیِ seedشده اجرا می‌کند. بله، کاوه‌نگار و SMTP با سرویس‌های ساختگی محلی جایگزین می‌شوند، پس هیچ پیامی واقعاً ارسال نمی‌شود. این موارد بررسی می‌شوند:
+`test/e2e.mjs` هر پنج workflow را روی یک n8n واقعی (نسخهٔ 2.35.7) و یک PocketBase محلیِ seedشده اجرا می‌کند. بله، کاوه‌نگار و SMTP با سرویس‌های ساختگی محلی جایگزین می‌شوند، پس هیچ پیامی واقعاً ارسال نمی‌شود. این موارد بررسی می‌شوند:
 
-- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، اقدام پیشنهادی و یادآوری به گروه بخش، رد شدن رویداد جعلی، و دور ریختن رویداد هتلی که در `ZARIN_HOTEL_IDS` نیست.
-- گزارش صبحگاهی RTL در ۰۲ (با گزارش ذخیره‌شدهٔ GM در ایمیل و گروه مدیریت، و گزارش‌های بخش در گروه‌های خودشان)، Escalation در ۰۳، و Header Auth و ثبت قرائت در ۰۴.
+- مسیرهای ۰۱: هشدار به بله، پیامک critical، ایمیل خرید، اقدام پیشنهادی و یادآوری به گروه بخش، سفارش خرید تأییدشده به ایمیل و بلهٔ تأمین‌کننده (بدون قیمت) و علامت «ارسال‌شده» با API امضاشده، رد شدن رویداد جعلی، و دور ریختن رویداد هتلی که در `ZARIN_HOTEL_IDS` نیست.
+- گزارش صبحگاهی RTL در ۰۲ (با گزارش ذخیره‌شدهٔ GM در ایمیل و گروه مدیریت، و گزارش‌های بخش در گروه‌های خودشان)، Escalation در ۰۳، Header Auth و ثبت قرائت در ۰۴، و یادآوری سفارش دیرکرد در ۰۵ (بدون تکرار در همان روز).
 - نبودِ ارسال تکراری.
 - اجرای دوبارهٔ `import-workflows.mjs` بدون از دست رفتن Credentialها.
 - هیچ اجرای ناموفقی در n8n ثبت نشود.
@@ -202,8 +204,8 @@ curl -sS -X POST "$N8N/webhook-test/zarin-events" \
 ```bash
 (cd pocketbase && npm install && ./scripts/get-pocketbase.sh)
 cd n8n/test && npm install      # Node 22.22+، نصب n8n حدود ۱ گیگابایت
-npm run e2e                     # همهٔ کانال‌ها تنظیم شده (۲۱ بررسی)
-npm run e2e:no-channels         # هیچ کانالی تنظیم نشده: همهٔ اجراها باید موفق باشند (۱۶ بررسی)
+npm run e2e                     # همهٔ کانال‌ها تنظیم شده (۳۵ بررسی)
+npm run e2e:no-channels         # هیچ کانالی تنظیم نشده: همهٔ اجراها باید موفق باشند (۲۳ بررسی)
 ```
 
 **روی نسخهٔ لیارا (Docker).** با `N8N_IMAGE`، n8n از ایمیج Docker همان نسخه اجرا می‌شود، نه از بستهٔ نصب‌شده. هر دو حالت روی 2.26.2 (همان نسخهٔ لیارا) سبز است:

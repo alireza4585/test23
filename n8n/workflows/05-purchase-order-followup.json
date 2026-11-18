@@ -1,0 +1,341 @@
+{
+  "name": "Zarin · 05 · Purchase-order follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 10,
+              "triggerAtMinute": 17
+            }
+          ]
+        }
+      },
+      "id": "e1850fae-a728-5674-a4e4-a8fcae86b93a",
+      "name": "Every day 10:17",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per hotel served by this n8n instance (comma-separated env var).\nreturn ($env.ZARIN_HOTEL_IDS || '').split(',').map((h) => h.trim()).filter(Boolean)\n  .map((hotelId) => ({ json: { hotelId } }));"
+      },
+      "id": "a1101836-08f3-509f-8e0f-5a572be5984c",
+      "name": "Hotels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API.\n// With ZARIN_KEY_ID and ZARIN_KEY_SECRET set (a scoped key from `npm run integration-key`):\n//   HMAC-SHA256(keySecret, `${timestamp}.${nonce}.${body}`), a fresh nonce per request (v2).\n// Otherwise the shared secret: HMAC-SHA256(ZARIN_INTEGRATION_SECRET, `${timestamp}.${body}`) (v1).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nconst keyId = $env.ZARIN_KEY_ID || '';\nconst keySecret = $env.ZARIN_KEY_SECRET || '';\nconst scoped = Boolean(keyId && keySecret);\nconst sign = (json) => {\n  const body = json.requestBody ? JSON.stringify(json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const nonce = scoped ? crypto.randomBytes(16).toString('hex') : '';\n  const signature = crypto\n    .createHmac('sha256', scoped ? keySecret : $env.ZARIN_INTEGRATION_SECRET)\n    .update(scoped ? `${timestamp}.${nonce}.${body}` : `${timestamp}.${body}`)\n    .digest('hex');\n  return { ...json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature, zarinKeyId: scoped ? keyId : '', zarinNonce: nonce };\n};\nreturn $input.all().map((item) => ({ json: sign(item.json) }));"
+      },
+      "id": "c21a47d7-0641-542e-be02-c9da04d200a2",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/purchase-orders/overdue",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "x-zarin-key-id",
+              "value": "={{ $json.zarinKeyId }}"
+            },
+            {
+              "name": "x-zarin-nonce",
+              "value": "={{ $json.zarinNonce }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "75bc52b9-864a-5a6c-a0b4-c70b461d590b",
+      "name": "GET overdue purchase orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Purchase orders past their expected day (approved or sent, not received). The API answers\n// with an array, which n8n splits into one item per order: grouped back per hotel here.\n// One in-app notification per hotel to the inventory manager and the GM; the dedupe key holds\n// the day and the late orders, so a repeat run the same day is skipped by the backend.\nconst day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tehran' });\nconst byHotel = new Map();\nfor (const [i, item] of $input.all().entries()) {\n  const o = item.json;\n  if (!o || !o.purchaseOrderId) continue; // an empty answer\n  const hotelId = $('Sign request').itemMatching(i).json.hotelId;\n  if (!byHotel.has(hotelId)) byHotel.set(hotelId, []);\n  byHotel.get(hotelId).push(o);\n}\nconst out = [];\nfor (const [hotelId, late] of byHotel) {\n  const lines = late.slice(0, 5).map((o) => `• ${o.supplierName || '—'}: ${o.daysLate} روز تأخیر (${(o.lines || []).length} قلم)`);\n  out.push({ json: {\n    hotelId,\n    baleText: `📦 ${late.length} سفارش خرید از موعد تحویل گذشته\\n${lines.join('\\n')}`,\n    requestBody: {\n      roles: ['inventoryManager', 'generalManager'],\n      title: `${late.length} سفارش خرید دیر کرده است`,\n      body: lines.join('\\n'),\n      severity: 'warning',\n      category: 'inventory',\n      route: '/inventory',\n      dedupeKey: `po-overdue:${day}:${late.map((o) => o.purchaseOrderId).sort().join(',')}`,\n      dedupeHours: 20,\n    },\n  } });\n}\nreturn out;"
+      },
+      "id": "8d615f6f-196e-578d-9600-8c5beff07c2e",
+      "name": "Reminder payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API.\n// With ZARIN_KEY_ID and ZARIN_KEY_SECRET set (a scoped key from `npm run integration-key`):\n//   HMAC-SHA256(keySecret, `${timestamp}.${nonce}.${body}`), a fresh nonce per request (v2).\n// Otherwise the shared secret: HMAC-SHA256(ZARIN_INTEGRATION_SECRET, `${timestamp}.${body}`) (v1).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nconst keyId = $env.ZARIN_KEY_ID || '';\nconst keySecret = $env.ZARIN_KEY_SECRET || '';\nconst scoped = Boolean(keyId && keySecret);\nconst sign = (json) => {\n  const body = json.requestBody ? JSON.stringify(json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const nonce = scoped ? crypto.randomBytes(16).toString('hex') : '';\n  const signature = crypto\n    .createHmac('sha256', scoped ? keySecret : $env.ZARIN_INTEGRATION_SECRET)\n    .update(scoped ? `${timestamp}.${nonce}.${body}` : `${timestamp}.${body}`)\n    .digest('hex');\n  return { ...json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature, zarinKeyId: scoped ? keyId : '', zarinNonce: nonce };\n};\nreturn $input.all().map((item) => ({ json: sign(item.json) }));"
+      },
+      "id": "a10c4b48-115f-5e81-aa4b-96692bef17cc",
+      "name": "Sign notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/hotels/{{ $json.hotelId }}/notifications",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "x-zarin-key-id",
+              "value": "={{ $json.zarinKeyId }}"
+            },
+            {
+              "name": "x-zarin-nonce",
+              "value": "={{ $json.zarinNonce }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}"
+      },
+      "id": "74939c43-febb-5a80-9f16-13da43f3ab66",
+      "name": "POST in-app notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "6d8af010-a03b-57a8-826c-8f4a242afb19",
+              "leftValue": "={{ $json.skipped === true ? '' : ($env.BALE_BOT_TOKEN || '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "97780b65-7852-523d-8aa3-e9416b062a89",
+              "leftValue": "={{ $env.BALE_MANAGEMENT_CHAT_ID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b95491fe-ed3b-5511-83fb-9bac56b5e74a",
+      "name": "Bale configured? · management",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "notes": "Skips Bale while BALE_BOT_TOKEN or BALE_MANAGEMENT_CHAT_ID is empty, and when the backend skipped a repeat."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tapi.bale.ai/bot{{ $env.BALE_BOT_TOKEN }}/sendMessage",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ chat_id: $env.BALE_MANAGEMENT_CHAT_ID, text: $('Reminder payload').item.json.baleText }) }}"
+      },
+      "id": "8271d639-0c57-5d75-a41a-0bd49812384d",
+      "name": "Bale · management group",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 10:17": {
+      "main": [
+        [
+          {
+            "node": "Hotels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hotels": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "GET overdue purchase orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET overdue purchase orders": {
+      "main": [
+        [
+          {
+            "node": "Reminder payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder payload": {
+      "main": [
+        [
+          {
+            "node": "Sign notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign notification": {
+      "main": [
+        [
+          {
+            "node": "POST in-app notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST in-app notification": {
+      "main": [
+        [
+          {
+            "node": "Bale configured? · management",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bale configured? · management": {
+      "main": [
+        [
+          {
+            "node": "Bale · management group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "Daily: approved or sent purchase orders past their expected day → in-app notification to the inventory manager and GM (and the Bale management group)."
+  }
+}

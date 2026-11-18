@@ -1,4 +1,4 @@
-// End-to-end run of the four Zarin workflows on a real n8n against a local,
+// End-to-end run of the five Zarin workflows on a real n8n against a local,
 // seeded PocketBase. Bale, Kavenegar and SMTP are replaced by local mocks,
 // so nothing leaves the machine. Also re-runs scripts/import-workflows.mjs
 // against the live instance to check that updates keep credentials.
@@ -36,8 +36,8 @@ const N8N_PORT = 5688;
 const MOCK_PORT = 5689;
 const SMTP_PORT = 2526;
 const N8N = `http://127.0.0.1:${N8N_PORT}`;
-const WORKFLOWS = ["01-event-router", "02-daily-management-briefing", "03-maintenance-sla-escalation", "04-smart-meter-ingestion"];
-const EMAIL_NODES = { "01-event-router": "Purchase request e-mail", "02-daily-management-briefing": "E-mail GM & owner" };
+const WORKFLOWS = ["01-event-router", "02-daily-management-briefing", "03-maintenance-sla-escalation", "04-smart-meter-ingestion", "05-purchase-order-followup"];
+const EMAIL_NODES = { "01-event-router": ["Purchase request e-mail", "Purchase order e-mail · supplier"], "02-daily-management-briefing": ["E-mail GM & owner"] };
 
 const results = [];
 const check = (name, ok, detail = "") => {
@@ -345,6 +345,64 @@ try {
   const reading = await until(async () => (await energy.collection("energyReadings").getList(1, 1, { filter: 'day = "2026-03-01" && type = "electricity"' })).items[0]);
   check("04 meter reading stored in PocketBase", reading?.consumption === 2777.5 && reading?.source === "smartMeter");
 
+  // ------------- F5: an approved purchase order goes to its supplier (01), overdue reminder (05)
+  {
+    const before = await su.collection("hotels").getOne(pbServer.hotelId);
+    await su.collection("hotels").update(pbServer.hotelId, {
+      settings: { ...before.settings, features: { ...(before.settings?.features || {}), recommendationLoop: true, replenishment: true } },
+    });
+    const supplier = await su.collection("suppliers").create({
+      hotel: pbServer.hotelId, name: "E2E تأمین‌کننده", email: "orders@supplier.example", baleChatId: "sup-chat", leadTimeDays: 2, active: true,
+    });
+    const item = await su.collection("inventoryItems").getFirstListItem(`hotel = "${pbServer.hotelId}" && sku = "LN-SH02"`);
+    const action = await su.collection("aiActions").create({
+      hotel: pbServer.hotelId, category: "inventory", department: "inventory", type: "createPurchaseOrder", status: "proposed", priority: "high",
+      title: "E2E سفارش خرید", reason: "e2e", source: "rules", params: {}, idempotencyKey: "e2e-po-1",
+    });
+    const po = await su.collection("purchaseOrders").create({
+      hotel: pbServer.hotelId, supplier: supplier.id, supplierName: supplier.name, status: "draft", action: action.id, leadTimeDays: 2, approvals: [],
+      lines: [{ itemId: item.id, name: "E2E-شامپو-سفارش", unit: "عدد", quantity: 40, suggested: 40, kind: "reorder", unitCost: 987654, cost: 39506160 }],
+    });
+    await su.collection("aiActions").update(action.id, { params: { purchaseOrderId: po.id } });
+    const gm = await pbLogin("0012345679");
+    await gm.send(`/api/zarin/actions/${action.id}/decide`, { method: "POST", body: { decision: "approve" } });
+    await flush();
+    if (CHANNELS) {
+      const mail = await until(() => mails.find((m) => m.to.includes("orders@supplier.example")));
+      // The body is base64 or quoted-printable, depending on how much of it is Persian.
+      const text = mail ? (() => {
+        const split = mail.raw.search(/\r?\n\r?\n/);
+        const b = mail.raw.slice(split).trim();
+        if (/Content-Transfer-Encoding: base64/i.test(mail.raw.slice(0, split))) return Buffer.from(b, "base64").toString("utf8");
+        const bytes = b.replace(/=\r?\n/g, "").replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+        return Buffer.from(bytes, "latin1").toString("utf8");
+      })() : "";
+      check("01 purchaseOrder.approved → e-mail to the supplier (items, no prices)", !!mail && text.includes("E2E-شامپو-سفارش") && !text.includes("987") && !text.includes("39506160"));
+      check("01 purchaseOrder.approved → supplier's Bale chat", !!(await until(() => toBale("sup-chat").some((m) => String(m.body.text).includes("E2E-شامپو-سفارش")))));
+      const sent = await until(async () => { const r = await su.collection("purchaseOrders").getOne(po.id); return r.status === "sent" ? r : null; });
+      check("01 marks the order sent through the signed API", !!sent, sent ? `via ${sent.sentVia}` : "");
+    } else {
+      check("01 purchase order with no channel: run succeeds, order stays approved", !!(await until(async () => (await executions(WORKFLOWS[0], "error")).length === 0 &&
+        (await su.collection("purchaseOrders").getOne(po.id)).status === "approved")));
+    }
+    await settled();
+    // Past its expected day: the daily follow-up reminds the inventory manager (once a day).
+    await su.collection("purchaseOrders").update(po.id, { expectedAt: new Date(Date.now() - 3 * 864e5).toISOString().replace("T", " ") });
+    const invMgr = await pbLogin("0078912342");
+    const late = async () => (await invMgr.collection("inbox").getFullList()).filter((n) => /سفارش خرید دیر کرده/.test(n.title)).length;
+    const before05 = http.length;
+    await run(5);
+    check("05 overdue purchase order → in-app reminder to the inventory manager", !!(await until(async () => (await late()) === 1)));
+    if (CHANNELS) check("05 overdue → Bale management group", !!(await until(() => http.slice(before05).some((r) => r.body?.chat_id === "mgmt" && String(r.body.text).includes("سفارش خرید")))));
+    await settled();
+    const runs05 = (await executions(WORKFLOWS[4], "success")).length;
+    await run(5);
+    await until(async () => (await executions(WORKFLOWS[4], "success")).length > runs05);
+    await settled();
+    check("05 repeat run the same day: no duplicate reminder", (await late()) === 1);
+    await su.collection("hotels").update(pbServer.hotelId, { settings: before.settings });
+  }
+
   // ------------- 01 signed event of a hotel not in ZARIN_HOTEL_IDS: dropped
   const runs01 = (await executions(WORKFLOWS[0], "success")).length;
   const other = JSON.stringify({ type: "alert.raised", hotelId: "otherhotel00001", data: { severity: "critical", title: "OTHER-HOTEL" } });
@@ -393,8 +451,8 @@ try {
   } catch (e) { importOut = `${e.stdout}${e.stderr}`; }
   const [w01, w02, w04] = await Promise.all([0, 1, 3].map((i) => api(`/workflows/${ids[WORKFLOWS[i]]}`)));
   const node = (w, name) => w.nodes?.find((n) => n.name === name) ?? {};
-  const mailNodes = [node(w01, EMAIL_NODES[WORKFLOWS[0]]), node(w02, EMAIL_NODES[WORKFLOWS[1]])];
-  check("importer updates all four in place", (importOut.match(/^updated/gm) ?? []).length === 4, importOut.trim().split("\n").pop());
+  const mailNodes = [...EMAIL_NODES[WORKFLOWS[0]].map((n) => node(w01, n)), ...EMAIL_NODES[WORKFLOWS[1]].map((n) => node(w02, n))];
+  check("importer updates all five in place", (importOut.match(/^updated/gm) ?? []).length === 5, importOut.trim().split("\n").pop());
   check("importer keeps the Header Auth credential", !!node(w04, "Meter gateway webhook").credentials?.httpHeaderAuth);
   if (CHANNELS) check("importer keeps SMTP credentials and switched-on e-mail nodes", mailNodes.every((n) => n.credentials?.smtp && !n.disabled));
   else check("e-mail nodes stay switched off until SMTP is set", mailNodes.every((n) => n.disabled === true && !n.credentials));
