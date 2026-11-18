@@ -13,7 +13,7 @@
  *                 approval above hotels.settings.purchaseApprovalLimit (rial)
  *                 — or any amount when no limit is set — waits for the GM:
  *                 POST /api/zarin/purchase-orders/{id}/approve  {decision, note}
- *   send          n8n (workflow 05) on purchaseOrder.approved, then
+ *   send          n8n (router 01) on purchaseOrder.approved, then
  *                 POST /v1/hotels/{id}/purchase-orders/{po}/sent (signed)
  *   receive       POST /api/zarin/purchase-orders/{id}/receive  inventory.move:
  *                 a receive movement per line; the order → receipt days are

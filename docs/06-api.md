@@ -158,11 +158,27 @@ x-zarin-signature: hex(HMAC_SHA256(INTEGRATION_SECRET, "1759650000." + rawBody))
 
 `GET /v1/hotels/{id}/summary` با پرچم `morningBriefing` فیلد `briefings: {day, roles: [{role, text, source, items, containsFinance}]}` را هم دارد (بدون پرچم `null`). جزئیات در [۱۸](18-ai-phase-1.md).
 
+## فاز ۲: هتل فعال، سفارش خرید و دستیار v2 (PocketBase)
+
+| مسیر | دسترسی | کار |
+|---|---|---|
+| `POST /api/zarin/me/active-hotel` | کاربر عضو آن هتل | `{hotelId}`؛ خطا: `not_hotel_member`. پس از آن، routeهای هتل دیگر `403 hotel_not_active` می‌دهند |
+| `POST /api/zarin/purchase-orders/{id}/lines` | `inventory.manage` [`replenishment`] | `{lines: [{itemId, quantity}]}`، فقط پیش‌نویس؛ خطاها: `purchase_order_not_draft`، `unknown_line`، `purchase_order_empty` |
+| `POST /api/zarin/purchase-orders/{id}/approve` | `generalManager`، نه تأییدکنندهٔ اول | `{decision, note}`؛ خطاها: `second_approval_not_allowed`، `same_approver`، `note_required` |
+| `POST /api/zarin/purchase-orders/{id}/receive` | `inventory.move` | `{lines: [{itemId, quantity}]}`؛ قلم ذکرنشده کامل رسیده است |
+| `POST /api/zarin/purchase-orders/{id}/cancel` | `inventory.manage` | `{note}` |
+| `POST /api/zarin/ai/conversations/{id}/action` | صاحب پاسخ [`assistantV2` و `recommendationLoop`] | `{department}` → `notifyRole` پیشنهادی؛ خطا: `invalid_department` |
+| `POST /api/zarin/admin/ai/trace` | superuser | `{conversationId}` → ابزارها و نتیجه‌هایشان (برای ارزیابی) |
+| `POST /v1/hotels/{id}/purchase-orders/{po}/sent` | HMAC | `{via}`؛ تکرار بی‌اثر است |
+| `GET /v1/hotels/{id}/purchase-orders/overdue` | HMAC | سفارش‌های باز گذشته از روز تحویل |
+
+با پرچم `assistantV2`، پاسخ `POST /api/zarin/ai/ask` فیلدهای `sources` و `conversationId` دارد. تأیید اول سفارش همان `POST /api/zarin/actions/{id}/decide` روی اقدام `createPurchaseOrder` است. جزئیات در [۲۰](20-ai-phase-2.md).
+
 ## رویدادهای خروجی (Backend → n8n)
 
 `POST N8N_WEBHOOK_URL` با همان امضا. بدنه: `{id, type, hotelId, occurredAt, data}`.
 
-نوع‌ها: `alert.raised`، `maintenance.ticket.created`، `maintenance.ticket.updated`، `energy.anomaly`، `inventory.lowStock`، `insight.created`، `user.created`. فاز ۱: `action.proposed` و `action.reminder` (فقط اولویت بالا؛ `{actionId, type, department, priority, roles}`)، `action.executed`، `action.measured` و `briefing.ready` (`{day, roles}`).
+نوع‌ها: `alert.raised`، `maintenance.ticket.created`، `maintenance.ticket.updated`، `energy.anomaly`، `inventory.lowStock`، `insight.created`، `user.created`. فاز ۱: `action.proposed` و `action.reminder` (فقط اولویت بالا؛ `{actionId, type, department, priority, roles}`)، `action.executed`، `action.measured` و `briefing.ready` (`{day, roles}`). فاز ۲: `purchaseOrder.approved` (اقلام و مقدار، بدون قیمت).
 
 فیلدهای هر نوع در [`n8n/README.md`](../n8n/README.md) آمده است.
 

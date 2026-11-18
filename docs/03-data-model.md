@@ -144,6 +144,12 @@ erDiagram
   - `aiActions`: اقدام‌های نوع‌دار، با `department`، `params`، `executedRef` و `outcome`.
   - `briefings`: یکتا روی `(hotel, day, role)`.
   - همه را فقط سرور می‌نویسد. فیلد `aiInsights.activatedAt` هم اضافه شده است. جزئیات در [۱۸](18-ai-phase-1.md).
+- **فاز ۲ ([۲۰](20-ai-phase-2.md)):**
+  - `users.activeHotel`: هتل فعال؛ قانون‌های API هتلی به آن وابسته‌اند (`@request.auth.activeHotel = hotel`).
+  - `suppliers`: تأمین‌کننده‌ها (نام، `email`، `baleChatId`، `leadTimeDays`)؛ نوشتن با `inventory.manage`.
+  - `purchaseOrders`: draft، awaitingApproval، approved، sent، received یا cancelled؛ `lines` با قیمت، `approvals`؛ فقط سرور می‌نویسد؛ خواندن با `inventory.view`.
+  - `inventoryItems`: فیلدهای `supplierRef`، `leadTimeDays`، `shelfLifeDays`، `parLevel`، `deliveryPattern` و `replenishment` (فقط سرور).
+  - `aiConversations`: فیلدهای `version`، `sources`، `tools` و `trace` (پنهان).
 
 ## نگاشت به PostgreSQL (فاز بک‌اند اختصاصی)
 
