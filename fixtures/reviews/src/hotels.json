@@ -1,0 +1,100 @@
+{
+  "_note": "Three FICTIONAL hotels for F10 tests (docs/21 §8.1). Two share a brand in different cities. The profile and listings blocks are the onboarding CLI's input format (npm run review-profile -- <hotelId> --apply <file> --key <key>). Listing URLs are invented paths; e-mail addresses use the reserved example.org domain. 'generate' only drives the synthetic generator.",
+  "hotels": [
+    {
+      "key": "niloofar-yazd",
+      "id": "fxrevhotela0001",
+      "hotel": { "name": "هتل نیلوفر کویر", "city": "یزد", "roomCount": 40, "status": "trial" },
+      "profile": {
+        "names": { "fa": "هتل نیلوفر کویر", "en": "Niloofar Kavir Hotel" },
+        "aliases": ["نیلوفر کویر", "نیلوفرکویر", "niloufar kavir"],
+        "city": "یزد",
+        "cityAliases": ["yazd"],
+        "address": "یزد، خیابان ساختگی ۱",
+        "negativeKeywords": ["کرمان", "kerman"],
+        "schedule": { "ingest": "06:00", "digest": "06:30" },
+        "recipients": { "roles": ["hotelOwner", "generalManager"], "emails": ["reviews-a@example.org"], "baleChatId": "" },
+        "toggles": { "summary": true, "showEstimated": false },
+        "retentionDays": 365,
+        "survey": { "languages": ["fa", "en"], "brandName": "نیلوفر کویر", "publicEnabled": true, "roomEnabled": true }
+      },
+      "listings": [
+        { "platform": "booking", "url": "https://www.booking.com/hotel/ir/niloofar-kavir-yazd-fx.html", "label": "Booking", "status": "confirmed" },
+        { "platform": "google", "url": "https://www.google.com/maps/place/niloofar-kavir-yazd-fx", "label": "Google Maps", "status": "confirmed" },
+        { "platform": "snapptrip", "url": "https://www.snapptrip.com/hotel/niloofar-kavir-yazd-fx", "label": "Snapptrip", "scaleMin": 1, "scaleMax": 5, "status": "confirmed" },
+        { "platform": "instagram", "url": "https://www.instagram.com/niloofar_kavir_fx/", "label": "Instagram", "status": "candidate" }
+      ],
+      "generate": {
+        "reviews": 600, "faShare": 0.8,
+        "platforms": { "booking": 0.4, "google": 0.3, "snapptrip": 0.2, "instagram": 0.1 },
+        "baseNegative": { "breakfast_fnb": 0.15, "noise": 0.08, "cleanliness": 0.1 }
+      }
+    },
+    {
+      "key": "niloofar-kerman",
+      "id": "fxrevhotelb0002",
+      "hotel": { "name": "هتل نیلوفر کویر کرمان", "city": "کرمان", "roomCount": 60, "status": "trial" },
+      "profile": {
+        "names": { "fa": "هتل نیلوفر کویر کرمان", "en": "Niloofar Kavir Kerman" },
+        "aliases": ["نیلوفر کویر"],
+        "city": "کرمان",
+        "cityAliases": ["kerman"],
+        "address": "کرمان، بلوار ساختگی ۲",
+        "negativeKeywords": ["یزد", "yazd"],
+        "schedule": { "ingest": "05:30", "digest": "06:15" },
+        "recipients": { "roles": ["operationsManager"], "emails": [], "baleChatId": "" },
+        "toggles": { "summary": true, "showEstimated": true },
+        "retentionDays": 540,
+        "survey": { "languages": ["fa"], "brandName": "", "publicEnabled": true, "roomEnabled": false }
+      },
+      "listings": [
+        { "platform": "tripadvisor", "url": "https://www.tripadvisor.com/Hotel_Review-niloofar-kavir-kerman-fx", "label": "Tripadvisor", "status": "confirmed" },
+        { "platform": "jabama", "url": "https://www.jabama.com/hotel/niloofar-kavir-kerman-fx", "label": "Jabama", "scaleMin": 1, "scaleMax": 5, "status": "confirmed" }
+      ],
+      "generate": {
+        "reviews": 300, "faShare": 0.85,
+        "platforms": { "tripadvisor": 0.5, "jabama": 0.5 },
+        "baseNegative": { "noise": 0.3, "wifi": 0.12 }
+      }
+    },
+    {
+      "key": "sepidar",
+      "id": "fxrevhotelc0003",
+      "hotel": { "name": "هتل سپیدار ساحل", "city": "بندرعباس", "roomCount": 25, "status": "trial" },
+      "profile": {
+        "names": { "fa": "هتل سپیدار ساحل", "en": "Sepidar Sahel Hotel" },
+        "aliases": ["سپیدار"],
+        "city": "بندرعباس",
+        "cityAliases": ["bandar abbas"],
+        "address": "",
+        "negativeKeywords": [],
+        "schedule": { "ingest": "07:00", "digest": "07:30" },
+        "recipients": { "roles": ["hotelOwner", "generalManager", "operationsManager"], "emails": [], "baleChatId": "" },
+        "toggles": { "summary": false, "showEstimated": false },
+        "retentionDays": 180,
+        "survey": { "languages": ["fa", "en"], "brandName": "سپیدار", "publicEnabled": false, "roomEnabled": false }
+      },
+      "listings": [
+        { "platform": "google", "url": "https://www.google.com/maps/place/sepidar-sahel-fx", "label": "Google Maps", "status": "confirmed" },
+        { "platform": "expedia", "url": "https://www.expedia.com/sepidar-sahel-fx.h1", "label": "Expedia (no reviews)", "status": "confirmed" }
+      ],
+      "generate": {
+        "reviews": 200, "faShare": 0.7,
+        "platforms": { "google": 1.0 },
+        "baseNegative": { "maintenance": 0.15, "value": 0.1 }
+      }
+    }
+  ],
+  "period": { "from": "2025-11-01", "to": "2026-10-31" },
+  "scenarios": {
+    "breakfastSpike": { "hotel": "niloofar-yazd", "aspect": "breakfast_fnb", "from": "2026-03-01", "to": "2026-03-31", "negativeShare": 0.55, "actionDay": "2026-04-05", "afterFrom": "2026-04-12", "afterNegativeShare": 0.05 },
+    "persistentNoise": { "hotel": "niloofar-kerman", "aspect": "noise" },
+    "injections": 10,
+    "pii": 20,
+    "crossPosts": { "hotel": "niloofar-yazd", "from": "booking", "to": "google", "count": 15 },
+    "edited": { "hotel": "niloofar-yazd", "platform": "booking", "count": 5 },
+    "deleted": { "hotel": "niloofar-yazd", "platform": "booking", "count": 3 },
+    "confusable": { "hotel": "niloofar-yazd", "count": 8 },
+    "emptySource": { "hotel": "sepidar", "platform": "expedia" }
+  }
+}

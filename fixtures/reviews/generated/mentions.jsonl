@@ -1,0 +1,18 @@
+{"text":"اقامت در هتل نیلوفر کویر یزد خوب بود","truth":{"hotel":"niloofar-yazd","status":"accepted"}}
+{"text":"Niloofar Kavir Hotel in Yazd was fine","truth":{"hotel":"niloofar-yazd","status":"accepted"}}
+{"text":"عالی","url":"https://www.booking.com/hotel/ir/niloofar-kavir-yazd-fx.html/review/m1","platform":"booking","truth":{"hotel":"niloofar-yazd","status":"accepted"}}
+{"text":"عالی","url":"https://www.google.com/maps/place/niloofar-kavir-yazd-fx/review/m1","platform":"google","truth":{"hotel":"niloofar-yazd","status":"accepted"}}
+{"text":"عالی","url":"https://www.snapptrip.com/hotel/niloofar-kavir-yazd-fx/review/m1","platform":"snapptrip","truth":{"hotel":"niloofar-yazd","status":"accepted"}}
+{"text":"نیلوفر کویر تمیز بود","truth":{"hotel":null,"status":"needsReview","candidates":["niloofar-kerman","niloofar-yazd"]}}
+{"text":"نیلوفرکویر تمیز بود","truth":{"hotel":"niloofar-yazd","status":"needsReview","candidates":["niloofar-yazd"]}}
+{"text":"اقامت در هتل نیلوفر کویر کرمان خوب بود","truth":{"hotel":"niloofar-kerman","status":"accepted"}}
+{"text":"Niloofar Kavir Kerman was fine","truth":{"hotel":"niloofar-kerman","status":"accepted"}}
+{"text":"عالی","url":"https://www.tripadvisor.com/Hotel_Review-niloofar-kavir-kerman-fx/review/m1","platform":"tripadvisor","truth":{"hotel":"niloofar-kerman","status":"accepted"}}
+{"text":"عالی","url":"https://www.jabama.com/hotel/niloofar-kavir-kerman-fx/review/m1","platform":"jabama","truth":{"hotel":"niloofar-kerman","status":"accepted"}}
+{"text":"اقامت در هتل سپیدار ساحل بندرعباس خوب بود","truth":{"hotel":"sepidar","status":"accepted"}}
+{"text":"Sepidar Sahel Hotel in Bandar Abbas was fine","truth":{"hotel":"sepidar","status":"accepted"}}
+{"text":"عالی","url":"https://www.google.com/maps/place/sepidar-sahel-fx/review/m1","platform":"google","truth":{"hotel":"sepidar","status":"accepted"}}
+{"text":"عالی","url":"https://www.expedia.com/sepidar-sahel-fx.h1/review/m1","platform":"expedia","truth":{"hotel":"sepidar","status":"accepted"}}
+{"text":"سپیدار تمیز بود","truth":{"hotel":"sepidar","status":"needsReview","candidates":["sepidar"]}}
+{"text":"اتاق تمیز بود و صبحانه خوب","truth":{"hotel":null,"status":"unmatched"}}
+{"text":"Nice stay, friendly staff","truth":{"hotel":null,"status":"unmatched"}}

@@ -10,13 +10,16 @@
     "check:core": "node scripts/build-core.mjs --check",
     "serve": "./bin/pocketbase serve --automigrate=false --dir=./pb_data --hooksDir=./pb_hooks --migrationsDir=./pb_migrations",
     "seed": "node scripts/seed.mjs",
-    "test": "npm run check:core && vitest run",
+    "test": "npm run check:core && npm run check:hotel-ids && node scripts/reviews-fixtures.mjs --check && vitest run",
     "create-hotel": "node scripts/create-hotel.mjs",
     "test-server": "node scripts/test-server.mjs",
     "reset-demo": "node scripts/reset-demo.mjs",
     "import-dataset": "node scripts/import-dataset.mjs",
     "integration-key": "node scripts/integration-key.mjs",
     "hotel-features": "node scripts/hotel-features.mjs",
+    "review-profile": "node scripts/review-profile.mjs",
+    "reviews-fixtures": "node scripts/reviews-fixtures.mjs",
+    "check:hotel-ids": "node scripts/check-hotel-ids.mjs",
     "check-endpoints": "node scripts/check-endpoints.mjs"
   },
   "dependencies": {

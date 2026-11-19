@@ -2670,8 +2670,24 @@ function normalizeText(s) {
 function sanitizeText(s, max = 4e3) {
   return String(s != null ? s : "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f​‎‏‪-‮⁦-⁩]/g, " ").replace(/[<>`]/g, " ").replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
 }
+var REDACTIONS = [
+  [/https?:\/\/\S+|www\.\S+/gi, "[link]"],
+  [/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]"],
+  [/(^|[^\w@])@[A-Za-z0-9_.]{2,30}/g, "$1[handle]"],
+  [/(^|[^\d])\d{3}-\d{6}-\d(?!\d)/g, "$1[id]"],
+  // national ID with dashes, before phone patterns
+  [/(^|[^\d])(?:\+98|0098|0)?9\d{2}[\s-]?\d{3}[\s-]?\d{4}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])0\d{2}[\s-]?\d{8}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])\+?\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])\d{3}-?\d{6}-?\d(?!\d)/g, "$1[id]"]
+];
 function redactText(s) {
-  return asciiDigits(String(s != null ? s : "")).replace(/https?:\/\/\S+|www\.\S+/gi, "[link]").replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]").replace(/(^|[^\w@])@[A-Za-z0-9_.]{2,30}/g, "$1[handle]").replace(/(^|[^\d])\d{3}-\d{6}-\d(?!\d)/g, "$1[id]").replace(/(^|[^\d])(?:\+98|0098|0)?9\d{2}[\s-]?\d{3}[\s-]?\d{4}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])0\d{2}[\s-]?\d{8}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])\+?\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])\d{3}-?\d{6}-?\d(?!\d)/g, "$1[id]");
+  let out = asciiDigits(String(s != null ? s : ""));
+  for (const [re, by] of REDACTIONS) {
+    re.lastIndex = 0;
+    out = out.replace(re, by);
+  }
+  return out;
 }
 function ratingTo5(raw, min, max) {
   if (raw === null || raw === void 0 || !isFinite(raw) || !(max > min)) return null;

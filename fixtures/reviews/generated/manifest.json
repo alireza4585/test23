@@ -1,0 +1,106 @@
+{
+  "generator": "pocketbase/scripts/reviews-fixtures.mjs",
+  "version": 1,
+  "seed": 1010,
+  "period": {
+    "from": "2025-11-01",
+    "to": "2026-10-31"
+  },
+  "note": "Synthetic, template-built texts: simpler than real reviews, so accuracy measured on them is optimistic. Labels are by construction.",
+  "reviews": 1115,
+  "byHotel": {
+    "niloofar-yazd": 615,
+    "niloofar-kerman": 300,
+    "sepidar": 200
+  },
+  "byHotelPlatform": {
+    "niloofar-yazd/booking": 243,
+    "niloofar-yazd/instagram": 49,
+    "niloofar-yazd/snapptrip": 129,
+    "niloofar-yazd/google": 194,
+    "niloofar-kerman/jabama": 154,
+    "niloofar-kerman/tripadvisor": 146,
+    "sepidar/google": 200
+  },
+  "byMonth": {
+    "niloofar-yazd/2025-11": 62,
+    "niloofar-yazd/2025-12": 35,
+    "niloofar-yazd/2026-01": 58,
+    "niloofar-yazd/2026-02": 49,
+    "niloofar-yazd/2026-03": 48,
+    "niloofar-yazd/2026-04": 47,
+    "niloofar-yazd/2026-05": 58,
+    "niloofar-yazd/2026-06": 52,
+    "niloofar-yazd/2026-07": 52,
+    "niloofar-yazd/2026-08": 48,
+    "niloofar-yazd/2026-09": 46,
+    "niloofar-yazd/2026-10": 60,
+    "niloofar-kerman/2025-11": 22,
+    "niloofar-kerman/2025-12": 25,
+    "niloofar-kerman/2026-01": 29,
+    "niloofar-kerman/2026-02": 25,
+    "niloofar-kerman/2026-03": 20,
+    "niloofar-kerman/2026-04": 30,
+    "niloofar-kerman/2026-05": 23,
+    "niloofar-kerman/2026-06": 38,
+    "niloofar-kerman/2026-07": 27,
+    "niloofar-kerman/2026-08": 17,
+    "niloofar-kerman/2026-09": 22,
+    "niloofar-kerman/2026-10": 22,
+    "sepidar/2025-11": 16,
+    "sepidar/2025-12": 14,
+    "sepidar/2026-01": 17,
+    "sepidar/2026-02": 11,
+    "sepidar/2026-03": 11,
+    "sepidar/2026-04": 19,
+    "sepidar/2026-05": 20,
+    "sepidar/2026-06": 18,
+    "sepidar/2026-07": 19,
+    "sepidar/2026-08": 17,
+    "sepidar/2026-09": 23,
+    "sepidar/2026-10": 15
+  },
+  "scenarios": {
+    "deleted": 3,
+    "crossPostSource": 15,
+    "edited": 5,
+    "confusable": 8,
+    "pii": 20,
+    "injection": 10,
+    "breakfastSpike": 21,
+    "breakfastAfterAction": 93,
+    "persistentNoise": 22,
+    "crossPost": 15
+  },
+  "expectedStatus": {
+    "niloofar-yazd/active": 604,
+    "niloofar-yazd/deleted": 3,
+    "niloofar-yazd/needsReview": 8,
+    "niloofar-kerman/active": 300,
+    "sepidar/active": 200
+  },
+  "emptySources": [
+    "sepidar/expedia"
+  ],
+  "actions": [
+    {
+      "hotel": "niloofar-yazd",
+      "aspect": "breakfast_fnb",
+      "day": "2026-04-05"
+    }
+  ],
+  "updates": 8,
+  "mentions": 18,
+  "files": [
+    "csv/niloofar-kerman-jabama.csv",
+    "csv/niloofar-kerman-tripadvisor.csv",
+    "csv/niloofar-yazd-booking-update.csv",
+    "csv/niloofar-yazd-booking.csv",
+    "csv/niloofar-yazd-google.csv",
+    "csv/niloofar-yazd-instagram.csv",
+    "csv/niloofar-yazd-snapptrip.csv",
+    "csv/sepidar-google.csv",
+    "mentions.jsonl",
+    "reviews.jsonl"
+  ]
+}

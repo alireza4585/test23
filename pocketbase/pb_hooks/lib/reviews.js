@@ -13,6 +13,8 @@
  *     similarity ≥ 0.85): completed (e.g. a later CSV adds the review id);
  *   - the same guest on another platform (±3 days, similarity ≥ 0.9): saved
  *     with duplicateOf, counted once.
+ *   The two similarity checks need texts of 5+ words; a later row with the same
+ *   review id and a changed text or rating is the guest's edit (editedAt).
  *
  * Routes (app; reviews.manage unless noted; [flag] needs guestReviews):
  *   GET  /api/zarin/reviews/profile?hotel=          reviews.view: the profile with defaults
@@ -44,6 +46,8 @@ const MAX_TITLE = 300;
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 5000;
 const PREVIEW_ROWS = 50;
+// Fuzzy de-duplication needs this many words: two short generic reviews ("عالی بود") are different guests.
+const FUZZY_MIN_WORDS = 5;
 const RETENTION_MAX = 730;
 const SURVEY_TEXT_MAX = 2000;
 const STAY_MAX_RESPONSES = 3;
@@ -544,9 +548,19 @@ function guessLang(text) {
   return fa >= en ? "fa" : "en";
 }
 
-/** The fields an existing record lacks and a new copy has (a later CSV completes an e-mail record). */
-function completion(existing, f) {
+/**
+ * The fields an existing record lacks and a new copy has (a later CSV completes
+ * an e-mail record). With the same review id ([sameId]) a changed text or rating
+ * is an edit by the guest: it replaces the old one and sets editedAt.
+ */
+function completion(existing, f, sameId) {
   const out = {};
+  if (sameId && !existing.textPurgedAt && f.text && existing.textKey !== f.textKey && existing.text) {
+    out.text = f.text; out.textKey = f.textKey; out.editedAt = z.pbDate(new Date());
+  }
+  if (sameId && f.rating5 !== null && existing.rating5 !== null && existing.rating5 !== undefined && existing.rating5 !== 0 && !sameRating(existing.rating5, f.rating5)) {
+    out.ratingRaw = f.ratingRaw; out.scaleMin = f.scaleMin; out.scaleMax = f.scaleMax; out.rating5 = f.rating5; out.editedAt = z.pbDate(new Date());
+  }
   const empty = (k) => { const v = existing[k]; return v === null || v === undefined || v === "" || v === 0; };
   for (const k of ["externalId", "url", "title", "postedAt", "listing"]) if (empty(k) && f[k]) out[k] = f[k];
   if ((existing.rating5 === null || existing.rating5 === 0 || existing.rating5 === undefined) && f.rating5 !== null) {
@@ -575,7 +589,7 @@ function ingest(app, hotelId, items, opts) {
   const profiles = matchProfiles(app, hotelId);
   const listingById = {};
   for (const l of listingsOf(app, hotelId, "confirmed")) listingById[l.id] = l;
-  const result = { created: 0, updated: 0, unchanged: 0, needsReview: 0, crossPosts: 0, archived: 0, errors: [], preview: [], ids: [] };
+  const result = { created: 0, updated: 0, edited: 0, unchanged: 0, needsReview: 0, crossPosts: 0, archived: 0, errors: [], preview: [], ids: [] };
 
   // Known reviews near the batch's days, plus what the batch adds (also in a dry run).
   const prepared = items.map((it) => prepare(app, hotelId, it, profiles, listingById));
@@ -597,22 +611,26 @@ function ingest(app, hotelId, items, opts) {
     const f = p.fields;
     let existing = null;
     let outcome = "created";
+    let sameId = false;
     if (f.externalId) {
       existing = byExt[`${f.platform}|${f.externalId}`] || null;
       if (!existing) {
         const r = z.findFirst(app, "reviews", "hotel = {:h} && platform = {:p} && externalId = {:x}", { h: hotelId, p: f.platform, x: f.externalId });
         if (r) existing = plain(r);
       }
+      sameId = !!existing;
     }
     const pool = p.day ? known : undated;
-    if (!existing && f.textKey) {
+    const fuzzy = f.textKey && f.textKey.split(" ").length >= FUZZY_MIN_WORDS;
+    if (!existing && fuzzy) {
       existing = pool.find((k) => k.platform === f.platform && (!k.externalId || !f.externalId) &&
         (p.day ? k.day && dayDiff(k.day, p.day) <= 1 : !k.day) &&
         sameRating(k.rating5, f.rating5) && core.textSimilarity(k.textKey, f.textKey) >= core.REVIEW_SAME_SIMILARITY) || null;
     }
     let duplicateOf = "";
     if (existing) {
-      const add = completion(existing, f);
+      const add = completion(existing, f, sameId);
+      if (add.editedAt) result.edited++;
       outcome = Object.keys(add).length ? "updated" : "unchanged";
       if (!opts.dryRun && outcome === "updated") {
         const r = z.find(app, "reviews", existing.id);
@@ -623,7 +641,7 @@ function ingest(app, hotelId, items, opts) {
       if (add.externalId) byExt[`${existing.platform}|${add.externalId}`] = existing;
       result.ids.push(existing.id);
     } else {
-      if (f.textKey && p.day) {
+      if (fuzzy && p.day) {
         const twin = known.filter((k) => k.platform !== f.platform && k.day && dayDiff(k.day, p.day) <= core.REVIEW_CROSS_POST_DAYS &&
           k.status !== "rejected" && core.textSimilarity(k.textKey, f.textKey) >= core.REVIEW_CROSS_POST_SIMILARITY)
           .sort((a, b) => (a.postedAt < b.postedAt ? -1 : 1))[0];

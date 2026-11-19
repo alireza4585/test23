@@ -60,17 +60,27 @@ export function sanitizeText(s: string, max = 4000): string {
  * Personal data out of review text: phone numbers, national-ID-like numbers,
  * e-mail addresses, @handles and links. Applied before storage and before any
  * LLM call; the reviewer's own name/handle/photo are never taken at all.
+ * The patterns are compiled once: the PocketBase JSVM recompiles a literal on
+ * every call, which made each call ~80 ms.
  */
+const REDACTIONS: [RegExp, string][] = [
+  [/https?:\/\/\S+|www\.\S+/gi, "[link]"],
+  [/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]"],
+  [/(^|[^\w@])@[A-Za-z0-9_.]{2,30}/g, "$1[handle]"],
+  [/(^|[^\d])\d{3}-\d{6}-\d(?!\d)/g, "$1[id]"], // national ID with dashes, before phone patterns
+  [/(^|[^\d])(?:\+98|0098|0)?9\d{2}[\s-]?\d{3}[\s-]?\d{4}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])0\d{2}[\s-]?\d{8}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])\+?\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}(?!\d)/g, "$1[phone]"],
+  [/(^|[^\d])\d{3}-?\d{6}-?\d(?!\d)/g, "$1[id]"],
+];
+
 export function redactText(s: string): string {
-  return asciiDigits(String(s ?? ""))
-    .replace(/https?:\/\/\S+|www\.\S+/gi, "[link]")
-    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]")
-    .replace(/(^|[^\w@])@[A-Za-z0-9_.]{2,30}/g, "$1[handle]")
-    .replace(/(^|[^\d])\d{3}-\d{6}-\d(?!\d)/g, "$1[id]") // national ID with dashes, before phone patterns
-    .replace(/(^|[^\d])(?:\+98|0098|0)?9\d{2}[\s-]?\d{3}[\s-]?\d{4}(?!\d)/g, "$1[phone]")
-    .replace(/(^|[^\d])0\d{2}[\s-]?\d{8}(?!\d)/g, "$1[phone]")
-    .replace(/(^|[^\d])\+?\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}(?!\d)/g, "$1[phone]")
-    .replace(/(^|[^\d])\d{3}-?\d{6}-?\d(?!\d)/g, "$1[id]");
+  let out = asciiDigits(String(s ?? ""));
+  for (const [re, by] of REDACTIONS) {
+    re.lastIndex = 0;
+    out = out.replace(re, by);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- ratings
