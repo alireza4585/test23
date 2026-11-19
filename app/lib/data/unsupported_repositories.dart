@@ -7,6 +7,7 @@ import '../features/energy/domain/energy_model.dart';
 import '../features/energy/domain/energy_reading.dart';
 import '../features/forecast/domain/forecast.dart';
 import '../features/inventory/domain/purchase_order.dart';
+import '../features/reviews/domain/review.dart';
 
 /// Features that exist only on the PocketBase backend (and the offline demo).
 /// The legacy Firebase backend reports them as unsupported instead of
@@ -94,4 +95,40 @@ class UnsupportedPurchaseOrdersRepository implements PurchaseOrdersRepository {
 
   @override
   Future<void> cancel(String orderId, String note) => Future.error(_why);
+}
+
+/// F10 guest reviews: PocketBase only.
+class UnsupportedReviewsRepository implements ReviewsRepository {
+  const UnsupportedReviewsRepository();
+
+  @override
+  Stream<List<GuestReview>> watchReviews(String hotelId) => Stream.error(_why);
+  @override
+  Future<List<GuestReview>> queue(String hotelId) => Future.error(_why);
+  @override
+  Future<void> decide(String reviewId, {required bool accept}) => Future.error(_why);
+  @override
+  Future<ReviewProfile> profile(String hotelId) => Future.error(_why);
+  @override
+  Future<ReviewProfile> saveProfile(String hotelId, ReviewProfileUpdate update) => Future.error(_why);
+  @override
+  Stream<List<ReviewListing>> watchListings(String hotelId) => Stream.error(_why);
+  @override
+  Future<void> addListing(String hotelId, {required String url, String? platform, String? label, bool confirm = false}) => Future.error(_why);
+  @override
+  Future<void> decideListing(String listingId, {required bool confirm}) => Future.error(_why);
+  @override
+  Future<ImportResult> importCsv(String hotelId, String csv, {String? platform, bool dryRun = true}) => Future.error(_why);
+  @override
+  Future<ReviewStatus> add(String hotelId, ReviewDraft draft) => Future.error(_why);
+  @override
+  Future<ReviewReadiness> readiness(String hotelId) => Future.error(_why);
+  @override
+  Stream<List<SurveyToken>> watchSurveyTokens(String hotelId) => Stream.error(_why);
+  @override
+  Future<void> createSurveyTokens(String hotelId, SurveyTokenKind kind) => Future.error(_why);
+  @override
+  Future<void> rotateSurveyToken(String tokenId) => Future.error(_why);
+  @override
+  Future<void> markPrinted(String hotelId, List<String> tokenIds) => Future.error(_why);
 }

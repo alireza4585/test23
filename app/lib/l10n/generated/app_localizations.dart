@@ -3871,6 +3871,612 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'تازه'**
   String get poLineNew;
+
+  /// No description provided for @navReviews.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرات مهمانان'**
+  String get navReviews;
+
+  /// No description provided for @rvTabList.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرات'**
+  String get rvTabList;
+
+  /// No description provided for @rvTabQueue.
+  ///
+  /// In fa, this message translates to:
+  /// **'بازبینی ({count})'**
+  String rvTabQueue(int count);
+
+  /// No description provided for @rvTabSettings.
+  ///
+  /// In fa, this message translates to:
+  /// **'منبع‌ها و تنظیمات'**
+  String get rvTabSettings;
+
+  /// No description provided for @rvTabQr.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرسنجی QR'**
+  String get rvTabQr;
+
+  /// No description provided for @rvEmpty.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز نظری نیست. فایل CSV وارد کنید، نظری اضافه کنید یا آن را از برنامهٔ دیگری به این برنامه بفرستید.'**
+  String get rvEmpty;
+
+  /// No description provided for @rvFilterAll.
+  ///
+  /// In fa, this message translates to:
+  /// **'همه'**
+  String get rvFilterAll;
+
+  /// No description provided for @rvFilterPlatforms.
+  ///
+  /// In fa, this message translates to:
+  /// **'سایت‌ها'**
+  String get rvFilterPlatforms;
+
+  /// No description provided for @rvFilterStaff.
+  ///
+  /// In fa, this message translates to:
+  /// **'ثبت کارکنان'**
+  String get rvFilterStaff;
+
+  /// No description provided for @rvFilterInStay.
+  ///
+  /// In fa, this message translates to:
+  /// **'در طول اقامت (QR اتاق)'**
+  String get rvFilterInStay;
+
+  /// No description provided for @rvFilterPublicQr.
+  ///
+  /// In fa, this message translates to:
+  /// **'QR عمومی'**
+  String get rvFilterPublicQr;
+
+  /// No description provided for @rvCount.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, other{{count} نظر}}'**
+  String rvCount(int count);
+
+  /// No description provided for @rvChannel.
+  ///
+  /// In fa, this message translates to:
+  /// **'{channel, select, csv{فایل} manual{ثبت دستی کارکنان} staff_share{فرستاده‌شده توسط کارکنان} email{ایمیل} survey_public{QR عمومی} survey_room{در طول اقامت} seed{دادهٔ آزمون} other{{channel}}}'**
+  String rvChannel(String channel);
+
+  /// No description provided for @rvPlatform.
+  ///
+  /// In fa, this message translates to:
+  /// **'{platform, select, booking{بوکینگ} expedia{اکسپدیا} google{گوگل} tripadvisor{تریپ‌ادوایزر} instagram{اینستاگرام} telegram{تلگرام} snapptrip{اسنپ‌تریپ} jabama{جاباما} eghamat24{اقامت۲۴} alibaba{علی‌بابا} survey{نظرسنجی} other{دیگر}}'**
+  String rvPlatform(String platform);
+
+  /// No description provided for @rvRating.
+  ///
+  /// In fa, this message translates to:
+  /// **'{value} از ۵'**
+  String rvRating(String value);
+
+  /// No description provided for @rvRatingRaw.
+  ///
+  /// In fa, this message translates to:
+  /// **'({raw} از {max})'**
+  String rvRatingRaw(String raw, String max);
+
+  /// No description provided for @rvOpenLink.
+  ///
+  /// In fa, this message translates to:
+  /// **'باز کردن در سایت'**
+  String get rvOpenLink;
+
+  /// No description provided for @rvTextPurged.
+  ///
+  /// In fa, this message translates to:
+  /// **'متن پس از دورهٔ نگهداری پاک شده است'**
+  String get rvTextPurged;
+
+  /// No description provided for @rvCrossPost.
+  ///
+  /// In fa, this message translates to:
+  /// **'در سایت دیگری هم منتشر شده (یک بار شمرده می‌شود)'**
+  String get rvCrossPost;
+
+  /// No description provided for @rvEdited.
+  ///
+  /// In fa, this message translates to:
+  /// **'ویرایش‌شده توسط مهمان'**
+  String get rvEdited;
+
+  /// No description provided for @rvAdd.
+  ///
+  /// In fa, this message translates to:
+  /// **'افزودن نظر'**
+  String get rvAdd;
+
+  /// No description provided for @rvAddManual.
+  ///
+  /// In fa, this message translates to:
+  /// **'نوشتن یا چسباندن یک نظر'**
+  String get rvAddManual;
+
+  /// No description provided for @rvImportCsv.
+  ///
+  /// In fa, this message translates to:
+  /// **'وارد کردن فایل CSV'**
+  String get rvImportCsv;
+
+  /// No description provided for @rvQueueEmpty.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظری منتظر تصمیم نیست.'**
+  String get rvQueueEmpty;
+
+  /// No description provided for @rvQueueHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'این نظرها ممکن است دربارهٔ هتل دیگری باشند. فقط نظرهای مربوط به همین هتل را بپذیرید.'**
+  String get rvQueueHint;
+
+  /// No description provided for @rvAccept.
+  ///
+  /// In fa, this message translates to:
+  /// **'مربوط به این هتل است'**
+  String get rvAccept;
+
+  /// No description provided for @rvReject.
+  ///
+  /// In fa, this message translates to:
+  /// **'مربوط به این هتل نیست'**
+  String get rvReject;
+
+  /// No description provided for @rvReason.
+  ///
+  /// In fa, this message translates to:
+  /// **'{reason, select, name{نام هتل} city{شهر} listing{صفحهٔ تأییدشده} context{برای همین هتل وارد شده} other_hotel{هتل دیگری بهتر می‌خورد} rejected_listing{صفحهٔ ردشده} survey{نظرسنجی} other{{reason}}}'**
+  String rvReason(String reason);
+
+  /// No description provided for @rvReasonNegative.
+  ///
+  /// In fa, this message translates to:
+  /// **'«{word}» را دارد (کلیدواژهٔ منفی)'**
+  String rvReasonNegative(String word);
+
+  /// No description provided for @rvDecided.
+  ///
+  /// In fa, this message translates to:
+  /// **'ثبت شد'**
+  String get rvDecided;
+
+  /// No description provided for @rvProfileTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'مشخصات هتل برای تطبیق'**
+  String get rvProfileTitle;
+
+  /// No description provided for @rvProfileHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرها با این نام‌ها به این هتل نسبت داده می‌شوند. کلیدواژهٔ منفی (مثلاً شهر هتلی با نام مشابه) نظر را به صف بازبینی می‌فرستد.'**
+  String get rvProfileHint;
+
+  /// No description provided for @rvNameFa.
+  ///
+  /// In fa, this message translates to:
+  /// **'نام رسمی (فارسی)'**
+  String get rvNameFa;
+
+  /// No description provided for @rvNameEn.
+  ///
+  /// In fa, this message translates to:
+  /// **'نام رسمی (انگلیسی)'**
+  String get rvNameEn;
+
+  /// No description provided for @rvAliases.
+  ///
+  /// In fa, this message translates to:
+  /// **'نام‌های دیگر و غلط‌های رایج (با ویرگول جدا کنید)'**
+  String get rvAliases;
+
+  /// No description provided for @rvCity.
+  ///
+  /// In fa, this message translates to:
+  /// **'شهر'**
+  String get rvCity;
+
+  /// No description provided for @rvCityAliases.
+  ///
+  /// In fa, this message translates to:
+  /// **'نگارش‌های دیگر نام شهر (با ویرگول جدا کنید)'**
+  String get rvCityAliases;
+
+  /// No description provided for @rvNegative.
+  ///
+  /// In fa, this message translates to:
+  /// **'کلیدواژه‌های منفی (با ویرگول جدا کنید)'**
+  String get rvNegative;
+
+  /// No description provided for @rvRetention.
+  ///
+  /// In fa, this message translates to:
+  /// **'نگهداری متن نظرها (روز، حداکثر ۷۳۰)'**
+  String get rvRetention;
+
+  /// No description provided for @rvRetentionConfirm.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, =0{متن‌های قدیمی‌تر در اجرای شبانهٔ بعد برای همیشه پاک می‌شوند.} other{متن {count} نظر قدیمی‌تر امشب برای همیشه پاک می‌شود.}} امتیازها، تاریخ‌ها و شمارش‌ها می‌مانند. ادامه می‌دهید؟'**
+  String rvRetentionConfirm(int count);
+
+  /// No description provided for @rvSurveyPublic.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرسنجی QR عمومی'**
+  String get rvSurveyPublic;
+
+  /// No description provided for @rvSurveyRoom.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرسنجی QR اتاق (در طول اقامت)'**
+  String get rvSurveyRoom;
+
+  /// No description provided for @rvBrand.
+  ///
+  /// In fa, this message translates to:
+  /// **'نامی که در نظرسنجی نشان داده می‌شود'**
+  String get rvBrand;
+
+  /// No description provided for @rvSave.
+  ///
+  /// In fa, this message translates to:
+  /// **'ذخیره'**
+  String get rvSave;
+
+  /// No description provided for @rvSaved.
+  ///
+  /// In fa, this message translates to:
+  /// **'ذخیره شد'**
+  String get rvSaved;
+
+  /// No description provided for @rvListingsTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'صفحهٔ هتل در سایت‌های نظر'**
+  String get rvListingsTitle;
+
+  /// No description provided for @rvListingsHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'فقط صفحهٔ تأییدشده تعیین می‌کند که نظری مال همین هتل است.'**
+  String get rvListingsHint;
+
+  /// No description provided for @rvListingUrl.
+  ///
+  /// In fa, this message translates to:
+  /// **'لینک صفحهٔ هتل'**
+  String get rvListingUrl;
+
+  /// No description provided for @rvListingConfirmNow.
+  ///
+  /// In fa, this message translates to:
+  /// **'این صفحهٔ هتل ماست'**
+  String get rvListingConfirmNow;
+
+  /// No description provided for @rvListingAdd.
+  ///
+  /// In fa, this message translates to:
+  /// **'افزودن'**
+  String get rvListingAdd;
+
+  /// No description provided for @rvListingStatus.
+  ///
+  /// In fa, this message translates to:
+  /// **'{status, select, candidate{نیاز به بررسی} confirmed{تأییدشده} rejected{مال ما نیست} other{{status}}}'**
+  String rvListingStatus(String status);
+
+  /// No description provided for @rvConfirm.
+  ///
+  /// In fa, this message translates to:
+  /// **'تأیید'**
+  String get rvConfirm;
+
+  /// No description provided for @rvNotOurs.
+  ///
+  /// In fa, this message translates to:
+  /// **'مال ما نیست'**
+  String get rvNotOurs;
+
+  /// No description provided for @rvReadyTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'بررسی راه‌اندازی'**
+  String get rvReadyTitle;
+
+  /// No description provided for @rvReadyProfile.
+  ///
+  /// In fa, this message translates to:
+  /// **'مشخصات ذخیره شده'**
+  String get rvReadyProfile;
+
+  /// No description provided for @rvReadyCity.
+  ///
+  /// In fa, this message translates to:
+  /// **'شهر تعیین شده'**
+  String get rvReadyCity;
+
+  /// No description provided for @rvReadyListings.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, =0{صفحهٔ تأییدشده‌ای نیست} other{{count} صفحهٔ تأییدشده}}'**
+  String rvReadyListings(int count);
+
+  /// No description provided for @rvReadySurvey.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرسنجی آمادهٔ دریافت پاسخ است'**
+  String get rvReadySurvey;
+
+  /// No description provided for @rvReadySurveyMissing.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرسنجی هنوز روی سرور پیکربندی نشده است (تیم پلتفرم)'**
+  String get rvReadySurveyMissing;
+
+  /// No description provided for @rvQrPublicTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'کارت QR عمومی'**
+  String get rvQrPublicTitle;
+
+  /// No description provided for @rvQrPublicHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'برای لابی یا وب‌سایت. پاسخ‌ها با عنوان «QR عمومی» گزارش می‌شوند.'**
+  String get rvQrPublicHint;
+
+  /// No description provided for @rvQrCreatePublic.
+  ///
+  /// In fa, this message translates to:
+  /// **'ساخت کارت عمومی'**
+  String get rvQrCreatePublic;
+
+  /// No description provided for @rvQrRoomsTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'کارت‌های اتاق'**
+  String get rvQrRoomsTitle;
+
+  /// No description provided for @rvQrRoomsHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'کارت هر اتاق با هر تحویل اتاق عوض می‌شود. پاسخ در طول اقامت و تا ۲۴ ساعت پس از آن پذیرفته می‌شود، سه پاسخ برای هر اقامت. شمارهٔ اتاق همراه پاسخ ذخیره نمی‌شود.'**
+  String get rvQrRoomsHint;
+
+  /// No description provided for @rvQrCreateRooms.
+  ///
+  /// In fa, this message translates to:
+  /// **'ساخت کارت برای همهٔ اتاق‌ها'**
+  String get rvQrCreateRooms;
+
+  /// No description provided for @rvQrNeedPrint.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, =0{همهٔ کارت‌ها چاپ شده‌اند} other{{count} کارت باید چاپ شود}}'**
+  String rvQrNeedPrint(int count);
+
+  /// No description provided for @rvQrPrint.
+  ///
+  /// In fa, this message translates to:
+  /// **'چاپ کارت‌ها'**
+  String get rvQrPrint;
+
+  /// No description provided for @rvQrRotate.
+  ///
+  /// In fa, this message translates to:
+  /// **'کد تازه'**
+  String get rvQrRotate;
+
+  /// No description provided for @rvQrRotateConfirm.
+  ///
+  /// In fa, this message translates to:
+  /// **'کارت چاپ‌شده بی‌درنگ از کار می‌افتد. ادامه می‌دهید؟'**
+  String get rvQrRotateConfirm;
+
+  /// No description provided for @rvQrRoom.
+  ///
+  /// In fa, this message translates to:
+  /// **'اتاق {number}'**
+  String rvQrRoom(String number);
+
+  /// No description provided for @rvQrCardTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'اقامت شما چطور بود؟'**
+  String get rvQrCardTitle;
+
+  /// No description provided for @rvQrCardHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'با دوربین گوشی اسکن کنید'**
+  String get rvQrCardHint;
+
+  /// No description provided for @rvQrDisabled.
+  ///
+  /// In fa, this message translates to:
+  /// **'این نظرسنجی در تنظیمات خاموش است.'**
+  String get rvQrDisabled;
+
+  /// No description provided for @rvAddTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظر تازه'**
+  String get rvAddTitle;
+
+  /// No description provided for @rvSharedTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظر فرستاده‌شده'**
+  String get rvSharedTitle;
+
+  /// No description provided for @rvLink.
+  ///
+  /// In fa, this message translates to:
+  /// **'لینک (اختیاری)'**
+  String get rvLink;
+
+  /// No description provided for @rvSource.
+  ///
+  /// In fa, this message translates to:
+  /// **'منبع'**
+  String get rvSource;
+
+  /// No description provided for @rvText.
+  ///
+  /// In fa, this message translates to:
+  /// **'متن نظر'**
+  String get rvText;
+
+  /// No description provided for @rvTextHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'شماره تلفن، ایمیل، کد ملی، نام کاربری و لینک پیش از ذخیره حذف می‌شوند.'**
+  String get rvTextHint;
+
+  /// No description provided for @rvDate.
+  ///
+  /// In fa, this message translates to:
+  /// **'تاریخ'**
+  String get rvDate;
+
+  /// No description provided for @rvRatingLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'امتیاز (اختیاری)'**
+  String get rvRatingLabel;
+
+  /// No description provided for @rvScaleLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'از'**
+  String get rvScaleLabel;
+
+  /// No description provided for @rvSavedQueued.
+  ///
+  /// In fa, this message translates to:
+  /// **'ذخیره شد. در صف بازبینی می‌ماند، چون ممکن است دربارهٔ هتل دیگری باشد.'**
+  String get rvSavedQueued;
+
+  /// No description provided for @rvImportTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'وارد کردن نظرها (CSV)'**
+  String get rvImportTitle;
+
+  /// No description provided for @rvImportHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'ستون‌ها: شناسه، تاریخ، امتیاز، از، متن، لینک (سرستون فارسی یا انگلیسی؛ تاریخ شمسی یا میلادی).'**
+  String get rvImportHint;
+
+  /// No description provided for @rvImportPaste.
+  ///
+  /// In fa, this message translates to:
+  /// **'فایل CSV را اینجا بچسبانید'**
+  String get rvImportPaste;
+
+  /// No description provided for @rvImportPreview.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیش‌نمایش'**
+  String get rvImportPreview;
+
+  /// No description provided for @rvImportCommit.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, other{وارد کردن {count} ردیف}}'**
+  String rvImportCommit(int count);
+
+  /// No description provided for @rvImportSummary.
+  ///
+  /// In fa, this message translates to:
+  /// **'{created} تازه · {updated} تکمیل‌شده · {unchanged} بدون تغییر · {queued} برای بازبینی · {cross} تکراری در سایت دیگر'**
+  String rvImportSummary(
+    int created,
+    int updated,
+    int unchanged,
+    int queued,
+    int cross,
+  );
+
+  /// No description provided for @rvImportErrors.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, other{{count} ردیف کنار گذاشته شد}}'**
+  String rvImportErrors(int count);
+
+  /// No description provided for @rvImportRowError.
+  ///
+  /// In fa, this message translates to:
+  /// **'ردیف {row}: {reason}'**
+  String rvImportRowError(int row, String reason);
+
+  /// No description provided for @rvImportReason.
+  ///
+  /// In fa, this message translates to:
+  /// **'{reason, select, no_text_or_rating{بدون متن و امتیاز} bad_rating{امتیاز بیرون از مقیاس} bad_scale{مقیاس نامعتبر} bad_date{تاریخ خوانا نیست} unknown_scale{مقیاس امتیاز معلوم نیست (ستون «از» را اضافه کنید)} bad_platform{منبع ناشناخته} no_text_or_rating_column{ستون متن یا امتیاز نیست} empty{فایل خالی است} other{{reason}}}'**
+  String rvImportReason(String reason);
+
+  /// No description provided for @rvImportDone.
+  ///
+  /// In fa, this message translates to:
+  /// **'وارد شد'**
+  String get rvImportDone;
+
+  /// No description provided for @errorFeatureDisabled.
+  ///
+  /// In fa, this message translates to:
+  /// **'این قابلیت برای هتل روشن نیست.'**
+  String get errorFeatureDisabled;
+
+  /// No description provided for @errorNoTextOrRating.
+  ///
+  /// In fa, this message translates to:
+  /// **'متن یا امتیاز را وارد کنید.'**
+  String get errorNoTextOrRating;
+
+  /// No description provided for @errorSourceExists.
+  ///
+  /// In fa, this message translates to:
+  /// **'این صفحه از قبل در فهرست هست.'**
+  String get errorSourceExists;
+
+  /// No description provided for @errorCsvRequired.
+  ///
+  /// In fa, this message translates to:
+  /// **'ابتدا فایل CSV را بچسبانید.'**
+  String get errorCsvRequired;
+
+  /// No description provided for @errorCsvTooLarge.
+  ///
+  /// In fa, this message translates to:
+  /// **'فایل بیش از حد بزرگ است (حداکثر ۲ مگابایت).'**
+  String get errorCsvTooLarge;
+
+  /// No description provided for @errorReviewRating.
+  ///
+  /// In fa, this message translates to:
+  /// **'امتیاز بیرون از مقیاس است.'**
+  String get errorReviewRating;
+
+  /// No description provided for @rvToReview.
+  ///
+  /// In fa, this message translates to:
+  /// **'برای بازبینی'**
+  String get rvToReview;
 }
 
 class _AppLocalizationsDelegate

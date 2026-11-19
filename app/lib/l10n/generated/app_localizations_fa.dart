@@ -2139,4 +2139,441 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get poLineNew => 'تازه';
+
+  @override
+  String get navReviews => 'نظرات مهمانان';
+
+  @override
+  String get rvTabList => 'نظرات';
+
+  @override
+  String rvTabQueue(int count) {
+    return 'بازبینی ($count)';
+  }
+
+  @override
+  String get rvTabSettings => 'منبع‌ها و تنظیمات';
+
+  @override
+  String get rvTabQr => 'نظرسنجی QR';
+
+  @override
+  String get rvEmpty =>
+      'هنوز نظری نیست. فایل CSV وارد کنید، نظری اضافه کنید یا آن را از برنامهٔ دیگری به این برنامه بفرستید.';
+
+  @override
+  String get rvFilterAll => 'همه';
+
+  @override
+  String get rvFilterPlatforms => 'سایت‌ها';
+
+  @override
+  String get rvFilterStaff => 'ثبت کارکنان';
+
+  @override
+  String get rvFilterInStay => 'در طول اقامت (QR اتاق)';
+
+  @override
+  String get rvFilterPublicQr => 'QR عمومی';
+
+  @override
+  String rvCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نظر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvChannel(String channel) {
+    String _temp0 = intl.Intl.selectLogic(channel, {
+      'csv': 'فایل',
+      'manual': 'ثبت دستی کارکنان',
+      'staff_share': 'فرستاده‌شده توسط کارکنان',
+      'email': 'ایمیل',
+      'survey_public': 'QR عمومی',
+      'survey_room': 'در طول اقامت',
+      'seed': 'دادهٔ آزمون',
+      'other': '$channel',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvPlatform(String platform) {
+    String _temp0 = intl.Intl.selectLogic(platform, {
+      'booking': 'بوکینگ',
+      'expedia': 'اکسپدیا',
+      'google': 'گوگل',
+      'tripadvisor': 'تریپ‌ادوایزر',
+      'instagram': 'اینستاگرام',
+      'telegram': 'تلگرام',
+      'snapptrip': 'اسنپ‌تریپ',
+      'jabama': 'جاباما',
+      'eghamat24': 'اقامت۲۴',
+      'alibaba': 'علی‌بابا',
+      'survey': 'نظرسنجی',
+      'other': 'دیگر',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvRating(String value) {
+    return '$value از ۵';
+  }
+
+  @override
+  String rvRatingRaw(String raw, String max) {
+    return '($raw از $max)';
+  }
+
+  @override
+  String get rvOpenLink => 'باز کردن در سایت';
+
+  @override
+  String get rvTextPurged => 'متن پس از دورهٔ نگهداری پاک شده است';
+
+  @override
+  String get rvCrossPost => 'در سایت دیگری هم منتشر شده (یک بار شمرده می‌شود)';
+
+  @override
+  String get rvEdited => 'ویرایش‌شده توسط مهمان';
+
+  @override
+  String get rvAdd => 'افزودن نظر';
+
+  @override
+  String get rvAddManual => 'نوشتن یا چسباندن یک نظر';
+
+  @override
+  String get rvImportCsv => 'وارد کردن فایل CSV';
+
+  @override
+  String get rvQueueEmpty => 'نظری منتظر تصمیم نیست.';
+
+  @override
+  String get rvQueueHint =>
+      'این نظرها ممکن است دربارهٔ هتل دیگری باشند. فقط نظرهای مربوط به همین هتل را بپذیرید.';
+
+  @override
+  String get rvAccept => 'مربوط به این هتل است';
+
+  @override
+  String get rvReject => 'مربوط به این هتل نیست';
+
+  @override
+  String rvReason(String reason) {
+    String _temp0 = intl.Intl.selectLogic(reason, {
+      'name': 'نام هتل',
+      'city': 'شهر',
+      'listing': 'صفحهٔ تأییدشده',
+      'context': 'برای همین هتل وارد شده',
+      'other_hotel': 'هتل دیگری بهتر می‌خورد',
+      'rejected_listing': 'صفحهٔ ردشده',
+      'survey': 'نظرسنجی',
+      'other': '$reason',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvReasonNegative(String word) {
+    return '«$word» را دارد (کلیدواژهٔ منفی)';
+  }
+
+  @override
+  String get rvDecided => 'ثبت شد';
+
+  @override
+  String get rvProfileTitle => 'مشخصات هتل برای تطبیق';
+
+  @override
+  String get rvProfileHint =>
+      'نظرها با این نام‌ها به این هتل نسبت داده می‌شوند. کلیدواژهٔ منفی (مثلاً شهر هتلی با نام مشابه) نظر را به صف بازبینی می‌فرستد.';
+
+  @override
+  String get rvNameFa => 'نام رسمی (فارسی)';
+
+  @override
+  String get rvNameEn => 'نام رسمی (انگلیسی)';
+
+  @override
+  String get rvAliases => 'نام‌های دیگر و غلط‌های رایج (با ویرگول جدا کنید)';
+
+  @override
+  String get rvCity => 'شهر';
+
+  @override
+  String get rvCityAliases => 'نگارش‌های دیگر نام شهر (با ویرگول جدا کنید)';
+
+  @override
+  String get rvNegative => 'کلیدواژه‌های منفی (با ویرگول جدا کنید)';
+
+  @override
+  String get rvRetention => 'نگهداری متن نظرها (روز، حداکثر ۷۳۰)';
+
+  @override
+  String rvRetentionConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'متن $count نظر قدیمی‌تر امشب برای همیشه پاک می‌شود.',
+      zero: 'متن‌های قدیمی‌تر در اجرای شبانهٔ بعد برای همیشه پاک می‌شوند.',
+    );
+    return '$_temp0 امتیازها، تاریخ‌ها و شمارش‌ها می‌مانند. ادامه می‌دهید؟';
+  }
+
+  @override
+  String get rvSurveyPublic => 'نظرسنجی QR عمومی';
+
+  @override
+  String get rvSurveyRoom => 'نظرسنجی QR اتاق (در طول اقامت)';
+
+  @override
+  String get rvBrand => 'نامی که در نظرسنجی نشان داده می‌شود';
+
+  @override
+  String get rvSave => 'ذخیره';
+
+  @override
+  String get rvSaved => 'ذخیره شد';
+
+  @override
+  String get rvListingsTitle => 'صفحهٔ هتل در سایت‌های نظر';
+
+  @override
+  String get rvListingsHint =>
+      'فقط صفحهٔ تأییدشده تعیین می‌کند که نظری مال همین هتل است.';
+
+  @override
+  String get rvListingUrl => 'لینک صفحهٔ هتل';
+
+  @override
+  String get rvListingConfirmNow => 'این صفحهٔ هتل ماست';
+
+  @override
+  String get rvListingAdd => 'افزودن';
+
+  @override
+  String rvListingStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'candidate': 'نیاز به بررسی',
+      'confirmed': 'تأییدشده',
+      'rejected': 'مال ما نیست',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConfirm => 'تأیید';
+
+  @override
+  String get rvNotOurs => 'مال ما نیست';
+
+  @override
+  String get rvReadyTitle => 'بررسی راه‌اندازی';
+
+  @override
+  String get rvReadyProfile => 'مشخصات ذخیره شده';
+
+  @override
+  String get rvReadyCity => 'شهر تعیین شده';
+
+  @override
+  String rvReadyListings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count صفحهٔ تأییدشده',
+      zero: 'صفحهٔ تأییدشده‌ای نیست',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvReadySurvey => 'نظرسنجی آمادهٔ دریافت پاسخ است';
+
+  @override
+  String get rvReadySurveyMissing =>
+      'نظرسنجی هنوز روی سرور پیکربندی نشده است (تیم پلتفرم)';
+
+  @override
+  String get rvQrPublicTitle => 'کارت QR عمومی';
+
+  @override
+  String get rvQrPublicHint =>
+      'برای لابی یا وب‌سایت. پاسخ‌ها با عنوان «QR عمومی» گزارش می‌شوند.';
+
+  @override
+  String get rvQrCreatePublic => 'ساخت کارت عمومی';
+
+  @override
+  String get rvQrRoomsTitle => 'کارت‌های اتاق';
+
+  @override
+  String get rvQrRoomsHint =>
+      'کارت هر اتاق با هر تحویل اتاق عوض می‌شود. پاسخ در طول اقامت و تا ۲۴ ساعت پس از آن پذیرفته می‌شود، سه پاسخ برای هر اقامت. شمارهٔ اتاق همراه پاسخ ذخیره نمی‌شود.';
+
+  @override
+  String get rvQrCreateRooms => 'ساخت کارت برای همهٔ اتاق‌ها';
+
+  @override
+  String rvQrNeedPrint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کارت باید چاپ شود',
+      zero: 'همهٔ کارت‌ها چاپ شده‌اند',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvQrPrint => 'چاپ کارت‌ها';
+
+  @override
+  String get rvQrRotate => 'کد تازه';
+
+  @override
+  String get rvQrRotateConfirm =>
+      'کارت چاپ‌شده بی‌درنگ از کار می‌افتد. ادامه می‌دهید؟';
+
+  @override
+  String rvQrRoom(String number) {
+    return 'اتاق $number';
+  }
+
+  @override
+  String get rvQrCardTitle => 'اقامت شما چطور بود؟';
+
+  @override
+  String get rvQrCardHint => 'با دوربین گوشی اسکن کنید';
+
+  @override
+  String get rvQrDisabled => 'این نظرسنجی در تنظیمات خاموش است.';
+
+  @override
+  String get rvAddTitle => 'نظر تازه';
+
+  @override
+  String get rvSharedTitle => 'نظر فرستاده‌شده';
+
+  @override
+  String get rvLink => 'لینک (اختیاری)';
+
+  @override
+  String get rvSource => 'منبع';
+
+  @override
+  String get rvText => 'متن نظر';
+
+  @override
+  String get rvTextHint =>
+      'شماره تلفن، ایمیل، کد ملی، نام کاربری و لینک پیش از ذخیره حذف می‌شوند.';
+
+  @override
+  String get rvDate => 'تاریخ';
+
+  @override
+  String get rvRatingLabel => 'امتیاز (اختیاری)';
+
+  @override
+  String get rvScaleLabel => 'از';
+
+  @override
+  String get rvSavedQueued =>
+      'ذخیره شد. در صف بازبینی می‌ماند، چون ممکن است دربارهٔ هتل دیگری باشد.';
+
+  @override
+  String get rvImportTitle => 'وارد کردن نظرها (CSV)';
+
+  @override
+  String get rvImportHint =>
+      'ستون‌ها: شناسه، تاریخ، امتیاز، از، متن، لینک (سرستون فارسی یا انگلیسی؛ تاریخ شمسی یا میلادی).';
+
+  @override
+  String get rvImportPaste => 'فایل CSV را اینجا بچسبانید';
+
+  @override
+  String get rvImportPreview => 'پیش‌نمایش';
+
+  @override
+  String rvImportCommit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'وارد کردن $count ردیف',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvImportSummary(
+    int created,
+    int updated,
+    int unchanged,
+    int queued,
+    int cross,
+  ) {
+    return '$created تازه · $updated تکمیل‌شده · $unchanged بدون تغییر · $queued برای بازبینی · $cross تکراری در سایت دیگر';
+  }
+
+  @override
+  String rvImportErrors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ردیف کنار گذاشته شد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvImportRowError(int row, String reason) {
+    return 'ردیف $row: $reason';
+  }
+
+  @override
+  String rvImportReason(String reason) {
+    String _temp0 = intl.Intl.selectLogic(reason, {
+      'no_text_or_rating': 'بدون متن و امتیاز',
+      'bad_rating': 'امتیاز بیرون از مقیاس',
+      'bad_scale': 'مقیاس نامعتبر',
+      'bad_date': 'تاریخ خوانا نیست',
+      'unknown_scale': 'مقیاس امتیاز معلوم نیست (ستون «از» را اضافه کنید)',
+      'bad_platform': 'منبع ناشناخته',
+      'no_text_or_rating_column': 'ستون متن یا امتیاز نیست',
+      'empty': 'فایل خالی است',
+      'other': '$reason',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvImportDone => 'وارد شد';
+
+  @override
+  String get errorFeatureDisabled => 'این قابلیت برای هتل روشن نیست.';
+
+  @override
+  String get errorNoTextOrRating => 'متن یا امتیاز را وارد کنید.';
+
+  @override
+  String get errorSourceExists => 'این صفحه از قبل در فهرست هست.';
+
+  @override
+  String get errorCsvRequired => 'ابتدا فایل CSV را بچسبانید.';
+
+  @override
+  String get errorCsvTooLarge => 'فایل بیش از حد بزرگ است (حداکثر ۲ مگابایت).';
+
+  @override
+  String get errorReviewRating => 'امتیاز بیرون از مقیاس است.';
+
+  @override
+  String get rvToReview => 'برای بازبینی';
 }

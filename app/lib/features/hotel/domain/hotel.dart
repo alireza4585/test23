@@ -45,6 +45,10 @@ enum HotelFeature {
   /// The assistant plans read-only tool calls and cites its sources
   /// (AI phase 2, F3).
   assistantV2,
+
+  /// Guest reviews: intake (CSV, manual, share-to-app, QR survey), the review
+  /// queue and listings (F10).
+  guestReviews,
 }
 
 /// Per-hotel operating parameters used by analytics and automations.

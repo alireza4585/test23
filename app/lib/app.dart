@@ -11,6 +11,7 @@ import 'core/preferences/preferences.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_providers.dart';
+import 'features/reviews/presentation/share_gate.dart';
 
 class ZarinApp extends ConsumerWidget {
   const ZarinApp({super.key});
@@ -34,7 +35,7 @@ class ZarinApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
-      builder: (context, child) => SessionGuard(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => SessionGuard(child: ShareGate(child: child ?? const SizedBox.shrink())),
     );
   }
 }

@@ -19,6 +19,7 @@ enum NavItem {
   forecasts,
   calendar,
   assistant,
+  reviews,
   users,
   profile,
 }
@@ -50,6 +51,7 @@ class NavDestinationSpec {
     NavItem.forecasts => l10n.navForecasts,
     NavItem.calendar => l10n.navCalendar,
     NavItem.assistant => l10n.navAssistant,
+    NavItem.reviews => l10n.navReviews,
     NavItem.users => l10n.navUsers,
     NavItem.profile => l10n.navProfile,
   };
@@ -74,6 +76,7 @@ abstract final class RoleExperience {
     NavDestinationSpec(item: NavItem.forecasts, path: Routes.forecasts, icon: Icons.insights_outlined, selectedIcon: Icons.insights),
     NavDestinationSpec(item: NavItem.calendar, path: Routes.calendar, icon: Icons.event_outlined, selectedIcon: Icons.event),
     NavDestinationSpec(item: NavItem.assistant, path: Routes.assistant, icon: Icons.forum_outlined, selectedIcon: Icons.forum),
+    NavDestinationSpec(item: NavItem.reviews, path: Routes.reviews, icon: Icons.reviews_outlined, selectedIcon: Icons.reviews),
     NavDestinationSpec(item: NavItem.users, path: Routes.users, icon: Icons.admin_panel_settings_outlined, selectedIcon: Icons.admin_panel_settings),
     NavDestinationSpec(item: NavItem.profile, path: Routes.profile, icon: Icons.person_outline, selectedIcon: Icons.person),
   ];

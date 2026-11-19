@@ -8,12 +8,13 @@ import 'routes.dart';
 /// Routes switched off for this build or this hotel: the assistant when
 /// `ZH_ENABLE_AI_ASSISTANT=false`, forecasts and the calendar of events while
 /// the hotel's `forecasts` flag is off. Navigation hides them and the router
-/// sends deep links to "access denied".
+/// sends deep links to "access denied". Guest reviews follow `guestReviews`.
 final disabledRoutesProvider = Provider<Set<String>>((ref) {
   final config = ref.watch(appConfigProvider);
   final settings = ref.watch(hotelSettingsProvider);
   return {
     if (!config.enableAiAssistant) Routes.assistant,
     if (!settings.has(HotelFeature.forecasts)) ...[Routes.forecasts, Routes.calendar],
+    if (!settings.has(HotelFeature.guestReviews)) Routes.reviews,
   };
 });

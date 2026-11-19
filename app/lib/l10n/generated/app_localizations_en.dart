@@ -2146,4 +2146,448 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get poLineNew => 'new';
+
+  @override
+  String get navReviews => 'Guest reviews';
+
+  @override
+  String get rvTabList => 'Reviews';
+
+  @override
+  String rvTabQueue(int count) {
+    return 'To review ($count)';
+  }
+
+  @override
+  String get rvTabSettings => 'Sources & settings';
+
+  @override
+  String get rvTabQr => 'QR survey';
+
+  @override
+  String get rvEmpty =>
+      'No reviews yet. Import a CSV, add one, or share it to this app from another app.';
+
+  @override
+  String get rvFilterAll => 'All';
+
+  @override
+  String get rvFilterPlatforms => 'Review sites';
+
+  @override
+  String get rvFilterStaff => 'Staff-captured';
+
+  @override
+  String get rvFilterInStay => 'In-stay (room QR)';
+
+  @override
+  String get rvFilterPublicQr => 'Public QR';
+
+  @override
+  String rvCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews',
+      one: '1 review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvChannel(String channel) {
+    String _temp0 = intl.Intl.selectLogic(channel, {
+      'csv': 'Imported',
+      'manual': 'Entered by staff',
+      'staff_share': 'Shared by staff',
+      'email': 'E-mail',
+      'survey_public': 'Public QR',
+      'survey_room': 'In-stay',
+      'seed': 'Test data',
+      'other': '$channel',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvPlatform(String platform) {
+    String _temp0 = intl.Intl.selectLogic(platform, {
+      'booking': 'Booking',
+      'expedia': 'Expedia',
+      'google': 'Google',
+      'tripadvisor': 'Tripadvisor',
+      'instagram': 'Instagram',
+      'telegram': 'Telegram',
+      'snapptrip': 'Snapptrip',
+      'jabama': 'Jabama',
+      'eghamat24': 'Eghamat24',
+      'alibaba': 'Alibaba',
+      'survey': 'Survey',
+      'other': 'Other',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvRating(String value) {
+    return '$value / 5';
+  }
+
+  @override
+  String rvRatingRaw(String raw, String max) {
+    return '($raw of $max)';
+  }
+
+  @override
+  String get rvOpenLink => 'Open on the site';
+
+  @override
+  String get rvTextPurged => 'Text removed after the retention period';
+
+  @override
+  String get rvCrossPost => 'Also posted on another site (counted once)';
+
+  @override
+  String get rvEdited => 'Edited by the guest';
+
+  @override
+  String get rvAdd => 'Add review';
+
+  @override
+  String get rvAddManual => 'Type or paste a review';
+
+  @override
+  String get rvImportCsv => 'Import a CSV file';
+
+  @override
+  String get rvQueueEmpty => 'Nothing is waiting for a decision.';
+
+  @override
+  String get rvQueueHint =>
+      'These may be about another hotel. Accept only what is about this hotel.';
+
+  @override
+  String get rvAccept => 'About this hotel';
+
+  @override
+  String get rvReject => 'Not about this hotel';
+
+  @override
+  String rvReason(String reason) {
+    String _temp0 = intl.Intl.selectLogic(reason, {
+      'name': 'Hotel name',
+      'city': 'City',
+      'listing': 'Confirmed listing',
+      'context': 'Came in for this hotel',
+      'other_hotel': 'Another hotel fits better',
+      'rejected_listing': 'Rejected listing',
+      'survey': 'Survey',
+      'other': '$reason',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvReasonNegative(String word) {
+    return 'Mentions “$word” (negative keyword)';
+  }
+
+  @override
+  String get rvDecided => 'Saved';
+
+  @override
+  String get rvProfileTitle => 'Hotel profile for matching';
+
+  @override
+  String get rvProfileHint =>
+      'Reviews are matched to this hotel by these names. A negative keyword (e.g. the city of a hotel with a similar name) sends a review to the queue.';
+
+  @override
+  String get rvNameFa => 'Official name (Persian)';
+
+  @override
+  String get rvNameEn => 'Official name (English)';
+
+  @override
+  String get rvAliases =>
+      'Other names and common misspellings (comma-separated)';
+
+  @override
+  String get rvCity => 'City';
+
+  @override
+  String get rvCityAliases => 'Other spellings of the city (comma-separated)';
+
+  @override
+  String get rvNegative => 'Negative keywords (comma-separated)';
+
+  @override
+  String get rvRetention => 'Keep review texts for (days, up to 730)';
+
+  @override
+  String rvRetentionConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count older review texts will be removed for good tonight.',
+      one: '1 older review text will be removed for good tonight.',
+      zero: 'Older texts will be removed for good at the next nightly run.',
+    );
+    return '$_temp0 Ratings, dates and counts stay. Continue?';
+  }
+
+  @override
+  String get rvSurveyPublic => 'Public QR survey';
+
+  @override
+  String get rvSurveyRoom => 'In-room QR survey (during the stay)';
+
+  @override
+  String get rvBrand => 'Name shown on the survey';
+
+  @override
+  String get rvSave => 'Save';
+
+  @override
+  String get rvSaved => 'Saved';
+
+  @override
+  String get rvListingsTitle => 'Hotel pages on review sites';
+
+  @override
+  String get rvListingsHint =>
+      'Only a confirmed page decides that a review is about this hotel.';
+
+  @override
+  String get rvListingUrl => 'Link to the hotel\'s page';
+
+  @override
+  String get rvListingConfirmNow => 'This is our hotel\'s page';
+
+  @override
+  String get rvListingAdd => 'Add';
+
+  @override
+  String rvListingStatus(String status) {
+    String _temp0 = intl.Intl.selectLogic(status, {
+      'candidate': 'To check',
+      'confirmed': 'Confirmed',
+      'rejected': 'Not ours',
+      'other': '$status',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConfirm => 'Confirm';
+
+  @override
+  String get rvNotOurs => 'Not ours';
+
+  @override
+  String get rvReadyTitle => 'Setup check';
+
+  @override
+  String get rvReadyProfile => 'Profile saved';
+
+  @override
+  String get rvReadyCity => 'City set';
+
+  @override
+  String rvReadyListings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count confirmed pages',
+      one: '1 confirmed page',
+      zero: 'No confirmed page',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvReadySurvey => 'The survey can take answers';
+
+  @override
+  String get rvReadySurveyMissing =>
+      'The survey is not configured on the server yet (platform team)';
+
+  @override
+  String get rvQrPublicTitle => 'Public QR card';
+
+  @override
+  String get rvQrPublicHint =>
+      'For the lobby or the website. Answers are reported as “public QR”.';
+
+  @override
+  String get rvQrCreatePublic => 'Create the public card';
+
+  @override
+  String get rvQrRoomsTitle => 'Room cards';
+
+  @override
+  String get rvQrRoomsHint =>
+      'A room\'s card changes at every check-out. Answers are accepted during the stay and 24 hours after it, three per stay. The room number is not stored with the answer.';
+
+  @override
+  String get rvQrCreateRooms => 'Create cards for all rooms';
+
+  @override
+  String rvQrNeedPrint(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards need printing',
+      one: '1 card needs printing',
+      zero: 'All cards are printed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvQrPrint => 'Print cards';
+
+  @override
+  String get rvQrRotate => 'New code';
+
+  @override
+  String get rvQrRotateConfirm =>
+      'The printed card stops working at once. Continue?';
+
+  @override
+  String rvQrRoom(String number) {
+    return 'Room $number';
+  }
+
+  @override
+  String get rvQrCardTitle => 'How was your stay?';
+
+  @override
+  String get rvQrCardHint => 'Scan with your phone\'s camera';
+
+  @override
+  String get rvQrDisabled => 'This survey is off in the settings.';
+
+  @override
+  String get rvAddTitle => 'New review';
+
+  @override
+  String get rvSharedTitle => 'Shared review';
+
+  @override
+  String get rvLink => 'Link (optional)';
+
+  @override
+  String get rvSource => 'Source';
+
+  @override
+  String get rvText => 'Review text';
+
+  @override
+  String get rvTextHint =>
+      'Phone numbers, e-mails, IDs, handles and links are removed before saving.';
+
+  @override
+  String get rvDate => 'Date';
+
+  @override
+  String get rvRatingLabel => 'Rating (optional)';
+
+  @override
+  String get rvScaleLabel => 'Out of';
+
+  @override
+  String get rvSavedQueued =>
+      'Saved. It waits in the review queue: it may be about another hotel.';
+
+  @override
+  String get rvImportTitle => 'Import reviews (CSV)';
+
+  @override
+  String get rvImportHint =>
+      'Columns: id, date, rating, scale, text, url (English or Persian headers; Jalali or Gregorian dates).';
+
+  @override
+  String get rvImportPaste => 'Paste the CSV here';
+
+  @override
+  String get rvImportPreview => 'Preview';
+
+  @override
+  String rvImportCommit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Import $count rows',
+      one: 'Import 1 row',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvImportSummary(
+    int created,
+    int updated,
+    int unchanged,
+    int queued,
+    int cross,
+  ) {
+    return '$created new · $updated completed · $unchanged unchanged · $queued to review · $cross cross-posts';
+  }
+
+  @override
+  String rvImportErrors(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rows skipped',
+      one: '1 row skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvImportRowError(int row, String reason) {
+    return 'Row $row: $reason';
+  }
+
+  @override
+  String rvImportReason(String reason) {
+    String _temp0 = intl.Intl.selectLogic(reason, {
+      'no_text_or_rating': 'no text or rating',
+      'bad_rating': 'rating outside its scale',
+      'bad_scale': 'invalid scale',
+      'bad_date': 'unreadable date',
+      'unknown_scale': 'unknown rating scale (add a scale column)',
+      'bad_platform': 'unknown source',
+      'no_text_or_rating_column': 'no text or rating column',
+      'empty': 'empty file',
+      'other': '$reason',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvImportDone => 'Imported';
+
+  @override
+  String get errorFeatureDisabled => 'This feature is off for the hotel.';
+
+  @override
+  String get errorNoTextOrRating => 'Enter the text or a rating.';
+
+  @override
+  String get errorSourceExists => 'This page is already in the list.';
+
+  @override
+  String get errorCsvRequired => 'Paste a CSV file first.';
+
+  @override
+  String get errorCsvTooLarge => 'The file is too large (2 MB at most).';
+
+  @override
+  String get errorReviewRating => 'The rating is outside its scale.';
+
+  @override
+  String get rvToReview => 'to review';
 }

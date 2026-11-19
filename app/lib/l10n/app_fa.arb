@@ -1267,5 +1267,249 @@
   "poNeedsSecond": "مبلغ از سقف هتل بیشتر است یا سقفی تعیین نشده؛ مدیرکل (فردی غیر از تأییدکنندهٔ اول) باید تأیید کند.",
   "poInvalidQuantity": "مقدار نامعتبر است",
   "unitCostHint": "فقط نقش‌هایی که درآمد را می‌بینند قیمت و ارزش موجودی را می‌بینند.",
-  "poLineNew": "تازه"
+  "poLineNew": "تازه",
+  "navReviews": "نظرات مهمانان",
+  "rvTabList": "نظرات",
+  "rvTabQueue": "بازبینی ({count})",
+  "@rvTabQueue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvTabSettings": "منبع‌ها و تنظیمات",
+  "rvTabQr": "نظرسنجی QR",
+  "rvEmpty": "هنوز نظری نیست. فایل CSV وارد کنید، نظری اضافه کنید یا آن را از برنامهٔ دیگری به این برنامه بفرستید.",
+  "rvFilterAll": "همه",
+  "rvFilterPlatforms": "سایت‌ها",
+  "rvFilterStaff": "ثبت کارکنان",
+  "rvFilterInStay": "در طول اقامت (QR اتاق)",
+  "rvFilterPublicQr": "QR عمومی",
+  "rvCount": "{count, plural, other{{count} نظر}}",
+  "@rvCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvChannel": "{channel, select, csv{فایل} manual{ثبت دستی کارکنان} staff_share{فرستاده‌شده توسط کارکنان} email{ایمیل} survey_public{QR عمومی} survey_room{در طول اقامت} seed{دادهٔ آزمون} other{{channel}}}",
+  "@rvChannel": {
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "rvPlatform": "{platform, select, booking{بوکینگ} expedia{اکسپدیا} google{گوگل} tripadvisor{تریپ‌ادوایزر} instagram{اینستاگرام} telegram{تلگرام} snapptrip{اسنپ‌تریپ} jabama{جاباما} eghamat24{اقامت۲۴} alibaba{علی‌بابا} survey{نظرسنجی} other{دیگر}}",
+  "@rvPlatform": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "rvRating": "{value} از ۵",
+  "@rvRating": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "rvRatingRaw": "({raw} از {max})",
+  "@rvRatingRaw": {
+    "placeholders": {
+      "raw": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "rvOpenLink": "باز کردن در سایت",
+  "rvTextPurged": "متن پس از دورهٔ نگهداری پاک شده است",
+  "rvCrossPost": "در سایت دیگری هم منتشر شده (یک بار شمرده می‌شود)",
+  "rvEdited": "ویرایش‌شده توسط مهمان",
+  "rvAdd": "افزودن نظر",
+  "rvAddManual": "نوشتن یا چسباندن یک نظر",
+  "rvImportCsv": "وارد کردن فایل CSV",
+  "rvQueueEmpty": "نظری منتظر تصمیم نیست.",
+  "rvQueueHint": "این نظرها ممکن است دربارهٔ هتل دیگری باشند. فقط نظرهای مربوط به همین هتل را بپذیرید.",
+  "rvAccept": "مربوط به این هتل است",
+  "rvReject": "مربوط به این هتل نیست",
+  "rvReason": "{reason, select, name{نام هتل} city{شهر} listing{صفحهٔ تأییدشده} context{برای همین هتل وارد شده} other_hotel{هتل دیگری بهتر می‌خورد} rejected_listing{صفحهٔ ردشده} survey{نظرسنجی} other{{reason}}}",
+  "@rvReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "rvReasonNegative": "«{word}» را دارد (کلیدواژهٔ منفی)",
+  "@rvReasonNegative": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "rvDecided": "ثبت شد",
+  "rvProfileTitle": "مشخصات هتل برای تطبیق",
+  "rvProfileHint": "نظرها با این نام‌ها به این هتل نسبت داده می‌شوند. کلیدواژهٔ منفی (مثلاً شهر هتلی با نام مشابه) نظر را به صف بازبینی می‌فرستد.",
+  "rvNameFa": "نام رسمی (فارسی)",
+  "rvNameEn": "نام رسمی (انگلیسی)",
+  "rvAliases": "نام‌های دیگر و غلط‌های رایج (با ویرگول جدا کنید)",
+  "rvCity": "شهر",
+  "rvCityAliases": "نگارش‌های دیگر نام شهر (با ویرگول جدا کنید)",
+  "rvNegative": "کلیدواژه‌های منفی (با ویرگول جدا کنید)",
+  "rvRetention": "نگهداری متن نظرها (روز، حداکثر ۷۳۰)",
+  "rvRetentionConfirm": "{count, plural, =0{متن‌های قدیمی‌تر در اجرای شبانهٔ بعد برای همیشه پاک می‌شوند.} other{متن {count} نظر قدیمی‌تر امشب برای همیشه پاک می‌شود.}} امتیازها، تاریخ‌ها و شمارش‌ها می‌مانند. ادامه می‌دهید؟",
+  "@rvRetentionConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvSurveyPublic": "نظرسنجی QR عمومی",
+  "rvSurveyRoom": "نظرسنجی QR اتاق (در طول اقامت)",
+  "rvBrand": "نامی که در نظرسنجی نشان داده می‌شود",
+  "rvSave": "ذخیره",
+  "rvSaved": "ذخیره شد",
+  "rvListingsTitle": "صفحهٔ هتل در سایت‌های نظر",
+  "rvListingsHint": "فقط صفحهٔ تأییدشده تعیین می‌کند که نظری مال همین هتل است.",
+  "rvListingUrl": "لینک صفحهٔ هتل",
+  "rvListingConfirmNow": "این صفحهٔ هتل ماست",
+  "rvListingAdd": "افزودن",
+  "rvListingStatus": "{status, select, candidate{نیاز به بررسی} confirmed{تأییدشده} rejected{مال ما نیست} other{{status}}}",
+  "@rvListingStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "rvConfirm": "تأیید",
+  "rvNotOurs": "مال ما نیست",
+  "rvReadyTitle": "بررسی راه‌اندازی",
+  "rvReadyProfile": "مشخصات ذخیره شده",
+  "rvReadyCity": "شهر تعیین شده",
+  "rvReadyListings": "{count, plural, =0{صفحهٔ تأییدشده‌ای نیست} other{{count} صفحهٔ تأییدشده}}",
+  "@rvReadyListings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvReadySurvey": "نظرسنجی آمادهٔ دریافت پاسخ است",
+  "rvReadySurveyMissing": "نظرسنجی هنوز روی سرور پیکربندی نشده است (تیم پلتفرم)",
+  "rvQrPublicTitle": "کارت QR عمومی",
+  "rvQrPublicHint": "برای لابی یا وب‌سایت. پاسخ‌ها با عنوان «QR عمومی» گزارش می‌شوند.",
+  "rvQrCreatePublic": "ساخت کارت عمومی",
+  "rvQrRoomsTitle": "کارت‌های اتاق",
+  "rvQrRoomsHint": "کارت هر اتاق با هر تحویل اتاق عوض می‌شود. پاسخ در طول اقامت و تا ۲۴ ساعت پس از آن پذیرفته می‌شود، سه پاسخ برای هر اقامت. شمارهٔ اتاق همراه پاسخ ذخیره نمی‌شود.",
+  "rvQrCreateRooms": "ساخت کارت برای همهٔ اتاق‌ها",
+  "rvQrNeedPrint": "{count, plural, =0{همهٔ کارت‌ها چاپ شده‌اند} other{{count} کارت باید چاپ شود}}",
+  "@rvQrNeedPrint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvQrPrint": "چاپ کارت‌ها",
+  "rvQrRotate": "کد تازه",
+  "rvQrRotateConfirm": "کارت چاپ‌شده بی‌درنگ از کار می‌افتد. ادامه می‌دهید؟",
+  "rvQrRoom": "اتاق {number}",
+  "@rvQrRoom": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "rvQrCardTitle": "اقامت شما چطور بود؟",
+  "rvQrCardHint": "با دوربین گوشی اسکن کنید",
+  "rvQrDisabled": "این نظرسنجی در تنظیمات خاموش است.",
+  "rvAddTitle": "نظر تازه",
+  "rvSharedTitle": "نظر فرستاده‌شده",
+  "rvLink": "لینک (اختیاری)",
+  "rvSource": "منبع",
+  "rvText": "متن نظر",
+  "rvTextHint": "شماره تلفن، ایمیل، کد ملی، نام کاربری و لینک پیش از ذخیره حذف می‌شوند.",
+  "rvDate": "تاریخ",
+  "rvRatingLabel": "امتیاز (اختیاری)",
+  "rvScaleLabel": "از",
+  "rvSavedQueued": "ذخیره شد. در صف بازبینی می‌ماند، چون ممکن است دربارهٔ هتل دیگری باشد.",
+  "rvImportTitle": "وارد کردن نظرها (CSV)",
+  "rvImportHint": "ستون‌ها: شناسه، تاریخ، امتیاز، از، متن، لینک (سرستون فارسی یا انگلیسی؛ تاریخ شمسی یا میلادی).",
+  "rvImportPaste": "فایل CSV را اینجا بچسبانید",
+  "rvImportPreview": "پیش‌نمایش",
+  "rvImportCommit": "{count, plural, other{وارد کردن {count} ردیف}}",
+  "@rvImportCommit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvImportSummary": "{created} تازه · {updated} تکمیل‌شده · {unchanged} بدون تغییر · {queued} برای بازبینی · {cross} تکراری در سایت دیگر",
+  "@rvImportSummary": {
+    "placeholders": {
+      "created": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      },
+      "unchanged": {
+        "type": "int"
+      },
+      "queued": {
+        "type": "int"
+      },
+      "cross": {
+        "type": "int"
+      }
+    }
+  },
+  "rvImportErrors": "{count, plural, other{{count} ردیف کنار گذاشته شد}}",
+  "@rvImportErrors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvImportRowError": "ردیف {row}: {reason}",
+  "@rvImportRowError": {
+    "placeholders": {
+      "row": {
+        "type": "int"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "rvImportReason": "{reason, select, no_text_or_rating{بدون متن و امتیاز} bad_rating{امتیاز بیرون از مقیاس} bad_scale{مقیاس نامعتبر} bad_date{تاریخ خوانا نیست} unknown_scale{مقیاس امتیاز معلوم نیست (ستون «از» را اضافه کنید)} bad_platform{منبع ناشناخته} no_text_or_rating_column{ستون متن یا امتیاز نیست} empty{فایل خالی است} other{{reason}}}",
+  "@rvImportReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "rvImportDone": "وارد شد",
+  "errorFeatureDisabled": "این قابلیت برای هتل روشن نیست.",
+  "errorNoTextOrRating": "متن یا امتیاز را وارد کنید.",
+  "errorSourceExists": "این صفحه از قبل در فهرست هست.",
+  "errorCsvRequired": "ابتدا فایل CSV را بچسبانید.",
+  "errorCsvTooLarge": "فایل بیش از حد بزرگ است (حداکثر ۲ مگابایت).",
+  "errorReviewRating": "امتیاز بیرون از مقیاس است.",
+  "rvToReview": "برای بازبینی"
 }

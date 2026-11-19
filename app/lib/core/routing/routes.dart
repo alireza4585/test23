@@ -31,6 +31,9 @@ abstract final class Routes {
   static const forecasts = '/forecasts';
   static const calendar = '/settings/calendar';
   static const assistant = '/assistant';
+  static const reviews = '/reviews';
+  static const reviewsAdd = '/reviews/add';
+  static const reviewsImport = '/reviews/import';
   static const users = '/admin/users';
   static const usersNew = '/admin/users/new';
   static const profile = '/profile';
@@ -65,6 +68,9 @@ abstract final class RouteAccess {
     (Routes.forecasts, {AppPermission.dashboardExecutive, AppPermission.dashboardOperations}),
     (Routes.calendar, {AppPermission.hotelSettings}),
     (Routes.assistant, {AppPermission.aiAssistantUse}),
+    (Routes.reviewsAdd, {AppPermission.reviewsManage}),
+    (Routes.reviewsImport, {AppPermission.reviewsManage}),
+    (Routes.reviews, {AppPermission.reviewsView}),
     (Routes.users, {AppPermission.usersManage}),
   ];
 

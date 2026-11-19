@@ -26,6 +26,7 @@ import 'package:zarin_hooshmand/data/pocketbase/pb_intelligence_repositories.dar
 import 'package:zarin_hooshmand/data/pocketbase/pb_operations_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_phase1_repositories.dart';
 import 'package:zarin_hooshmand/data/pocketbase/pb_phase2_repositories.dart';
+import 'package:zarin_hooshmand/data/pocketbase/pb_reviews_repository.dart';
 import 'package:zarin_hooshmand/features/actions/domain/ai_action.dart';
 import 'package:zarin_hooshmand/features/admin/domain/user_admin.dart';
 import 'package:zarin_hooshmand/features/ai/domain/ai_models.dart';
@@ -38,6 +39,7 @@ import 'package:zarin_hooshmand/features/inventory/domain/inventory_item.dart';
 import 'package:zarin_hooshmand/features/inventory/domain/purchase_order.dart';
 import 'package:zarin_hooshmand/features/maintenance/domain/maintenance_ticket.dart';
 import 'package:zarin_hooshmand/features/operations/domain/daily_operations.dart';
+import 'package:zarin_hooshmand/features/reviews/domain/review.dart';
 import 'package:zarin_hooshmand/features/rooms/domain/room.dart';
 
 final _url = Platform.environment['ZH_PB_TEST_URL'];
@@ -461,6 +463,79 @@ void main() {
     );
     addTearDown(() => gm.pb.collection('inventoryItems').delete(id));
     expect((await PocketBaseInventoryRepository(gm.pb).watchItem(gm.user.hotelId, id).first)!.unitCost, 4321);
+  }, skip: skip);
+
+  test('F10 guest reviews: profile, CSV preview and import, share, queue, listings, QR cards', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final hotelId = gm.user.hotelId;
+    final hotel = await gm.pb.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    final repo = PocketBaseReviewsRepository(gm.pb);
+    // Flag off: the import is refused (the preview works for onboarding).
+    await gm.pb.collection('hotels').update(hotelId, body: {'settings': {...settings, 'features': <String, bool>{}}});
+    await expectLater(repo.importCsv(hotelId, 'id,text\nx,خوب', dryRun: false), throwsA(isA<ValidationFailure>()));
+    await gm.pb.collection('hotels').update(hotelId, body: {
+      'settings': {...settings, 'features': {'guestReviews': true}},
+    });
+    addTearDown(() => gm.pb.collection('hotels').update(hotelId, body: {'settings': settings}));
+
+    final p = await repo.saveProfile(hotelId, const ReviewProfileUpdate(nameFa: 'هتل آزمایشی آلفا', city: 'تهران', negativeKeywords: ['شیراز']));
+    expect(p.saved, isTrue);
+    expect(p.feature, isTrue);
+    await expectLater(repo.saveProfile(hotelId, const ReviewProfileUpdate(retentionDays: 30)), throwsA(isA<RetentionConfirmationRequired>()));
+
+    // A fresh number per run: nothing personal is written in the repository.
+    final phone = '0912${DateTime.now().microsecondsSinceEpoch % 10000000}'.padRight(11, '7');
+    final csv = 'id,date,rating,scale,text\nad-1,2026-10-01,9,10,"اتاق تمیز بود، شماره $phone"\nad-2,2026-10-02,,,سفر به شیراز خوب بود\n';
+    final preview = await repo.importCsv(hotelId, csv, platform: 'booking');
+    expect(preview.dryRun, isTrue);
+    expect(preview.created, 2);
+    expect(preview.preview.first.text, isNot(contains(phone)));
+    final done = await repo.importCsv(hotelId, csv, platform: 'booking', dryRun: false);
+    expect(done.created, 2);
+    expect(done.needsReview, 1);
+    final list = await firstWhere(repo.watchReviews(hotelId), (l) => l.any((r) => r.platform == 'booking'));
+    final first = list.firstWhere((r) => r.platform == 'booking');
+    expect(first.rating5, closeTo(4.56, 0.001));
+    expect(first.text, contains('[phone]'));
+
+    final shared = await repo.add(hotelId, const ReviewDraft(
+      channel: ReviewChannel.staffShare, text: 'تخت راحت بود', url: 'https://www.instagram.com/p/AdapterTest/', platform: 'instagram',
+    ));
+    expect(shared, ReviewStatus.active);
+    final withShare = await firstWhere(repo.watchReviews(hotelId), (l) => l.any((r) => r.channel == ReviewChannel.staffShare));
+    expect(withShare.firstWhere((r) => r.channel == ReviewChannel.staffShare).url, 'https://www.instagram.com/p/AdapterTest/');
+
+    final queue = await repo.queue(hotelId);
+    expect(queue.single.matchReasons, ['negative:شیراز']);
+    await repo.decide(queue.single.id, accept: true);
+    expect(await repo.queue(hotelId), isEmpty);
+
+    await repo.addListing(hotelId, url: 'https://www.booking.com/hotel/ir/adapter-test.html', confirm: true);
+    final listings = await firstWhere(repo.watchListings(hotelId), (l) => l.isNotEmpty);
+    expect(listings.single.status, ListingStatus.confirmed);
+    expect(listings.single.platform, 'booking');
+
+    await repo.createSurveyTokens(hotelId, SurveyTokenKind.room);
+    final tokens = await firstWhere(repo.watchSurveyTokens(hotelId), (l) => l.length > 1);
+    final room = tokens.firstWhere((t) => t.kind == SurveyTokenKind.room);
+    expect(room.roomNumber, isNotEmpty);
+    expect(room.url, endsWith('/survey/${room.token}'));
+    expect(room.needsPrint, isTrue);
+    await repo.markPrinted(hotelId, [room.id]);
+    final after = await firstWhere(repo.watchSurveyTokens(hotelId), (l) => l.any((t) => t.id == room.id && !t.needsPrint));
+    expect(after.firstWhere((t) => t.id == room.id).printedAt, isNotNull);
+
+    final ready = await repo.readiness(hotelId);
+    expect(ready.profileSaved, isTrue);
+    expect(ready.listingsConfirmed, 1);
+    expect(ready.surveyRoomTokens, greaterThan(0));
+
+    // A view-only role reads the list but not the queue.
+    final inv = await _Session.signIn(nid(AppRole.inventoryManager));
+    expect(await PocketBaseReviewsRepository(inv.pb).watchReviews(hotelId).first, isNotEmpty);
+    await expectLater(PocketBaseReviewsRepository(inv.pb).queue(hotelId), throwsA(isA<PermissionDeniedFailure>()));
   }, skip: skip);
 
   test('a provisioned user must change the temporary password and stays signed in', () async {

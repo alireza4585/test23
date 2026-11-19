@@ -18,6 +18,8 @@ import '../../features/notifications/presentation/notifications_page.dart';
 import '../../features/operations/presentation/daily_ops_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
+import '../../features/reviews/presentation/review_form_pages.dart';
+import '../../features/reviews/presentation/reviews_page.dart';
 import '../../features/rooms/presentation/rooms_pages.dart';
 import '../../features/staff/presentation/staff_page.dart';
 import '../widgets/app_shell.dart';
@@ -167,6 +169,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: 'new', builder: (_, _) => const NewUserPage())],
           ),
           GoRoute(path: Routes.profile, pageBuilder: (_, s) => tab(const ProfilePage(), s)),
+          GoRoute(
+            path: Routes.reviews,
+            pageBuilder: (_, s) => tab(const ReviewsPage(), s),
+            routes: [
+              GoRoute(path: 'add', builder: (_, _) => const ReviewAddPage()),
+              GoRoute(path: 'import', builder: (_, _) => const ReviewImportPage()),
+            ],
+          ),
         ],
       ),
     ],

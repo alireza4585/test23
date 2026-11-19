@@ -43,6 +43,7 @@ dependencies:
   pocketbase: ^0.25.2
   http: ^1.6.0
   http_parser: ^4.1.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

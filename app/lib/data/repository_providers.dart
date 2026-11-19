@@ -19,6 +19,7 @@ import '../features/maintenance/domain/maintenance_ticket.dart';
 import '../features/notifications/domain/notification_models.dart';
 import '../features/operations/domain/daily_operations.dart';
 import '../features/reports/domain/report_models.dart';
+import '../features/reviews/domain/review.dart';
 import '../features/rooms/domain/room.dart';
 import '../features/staff/domain/staff.dart';
 import 'backend.dart';
@@ -28,6 +29,7 @@ import 'demo/demo_intelligence_repositories.dart';
 import 'demo/demo_phase1_repositories.dart';
 import 'demo/demo_phase2_repositories.dart';
 import 'demo/demo_repositories.dart';
+import 'demo/demo_reviews_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_engagement_repositories.dart';
 import 'firebase/firestore_operations_repositories.dart';
@@ -37,6 +39,7 @@ import 'pocketbase/pb_intelligence_repositories.dart';
 import 'pocketbase/pb_operations_repositories.dart';
 import 'pocketbase/pb_phase1_repositories.dart';
 import 'pocketbase/pb_phase2_repositories.dart';
+import 'pocketbase/pb_reviews_repository.dart';
 import 'unsupported_repositories.dart';
 
 /// Composition root for the data layer.
@@ -223,5 +226,15 @@ final purchaseOrdersRepositoryProvider = Provider<PurchaseOrdersRepository>(
     final PocketBaseBackend b => PocketBasePurchaseOrdersRepository(b.client),
     FirebaseBackend() => const UnsupportedPurchaseOrdersRepository(),
     final DemoBackend b => DemoPurchaseOrdersRepository(b.store),
+  },
+);
+
+// ------------------------------------------- F10 guest reviews (PocketBase + demo)
+
+final reviewsRepositoryProvider = Provider<ReviewsRepository>(
+  (ref) => switch (ref.watch(backendProvider)) {
+    final PocketBaseBackend b => PocketBaseReviewsRepository(b.client),
+    FirebaseBackend() => const UnsupportedReviewsRepository(),
+    final DemoBackend b => DemoReviewsRepository(b.store),
   },
 );
