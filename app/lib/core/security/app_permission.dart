@@ -65,7 +65,11 @@ enum AppPermission {
   // Administration
   usersManage('users.manage'),
   auditView('audit.view'),
-  hotelSettings('hotel.settings');
+  hotelSettings('hotel.settings'),
+
+  // Guest reviews (F10)
+  reviewsView('reviews.view'),
+  reviewsManage('reviews.manage');
 
   const AppPermission(this.code);
 

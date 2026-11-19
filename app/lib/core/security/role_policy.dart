@@ -37,6 +37,8 @@ abstract final class RolePolicy {
       AppPermission.usersManage,
       AppPermission.auditView,
       AppPermission.hotelSettings,
+      AppPermission.reviewsView,
+      AppPermission.reviewsManage,
     },
     AppRole.generalManager: {
       AppPermission.dashboardExecutive,
@@ -68,6 +70,8 @@ abstract final class RolePolicy {
       AppPermission.usersManage,
       AppPermission.auditView,
       AppPermission.hotelSettings,
+      AppPermission.reviewsView,
+      AppPermission.reviewsManage,
     },
     AppRole.operationsManager: {
       AppPermission.dashboardOperations,
@@ -91,6 +95,8 @@ abstract final class RolePolicy {
       AppPermission.aiInsightsView,
       AppPermission.aiAssistantUse,
       AppPermission.aiActionsApprove,
+      AppPermission.reviewsView,
+      AppPermission.reviewsManage,
     },
     AppRole.energyManager: {
       AppPermission.dashboardOperations,
@@ -123,6 +129,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiActionsApprove,
+      AppPermission.reviewsView,
     },
     AppRole.housekeepingManager: {
       AppPermission.dashboardOperations,
@@ -140,6 +147,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiActionsApprove,
+      AppPermission.reviewsView,
     },
     AppRole.restaurantManager: {
       AppPermission.dashboardOperations,
@@ -152,6 +160,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiActionsApprove,
+      AppPermission.reviewsView,
     },
     AppRole.inventoryManager: {
       AppPermission.dashboardOperations,
@@ -165,6 +174,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiActionsApprove,
+      AppPermission.reviewsView,
     },
     AppRole.hrManager: {
       AppPermission.dashboardOperations,
@@ -210,6 +220,7 @@ abstract final class RolePolicy {
       AppPermission.notificationsView,
       AppPermission.aiInsightsView,
       AppPermission.aiAssistantUse,
+      AppPermission.reviewsView,
     },
   };
 

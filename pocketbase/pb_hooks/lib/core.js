@@ -43,6 +43,13 @@ __export(index_exports, {
   MIN_MODEL_DAYS: () => MIN_MODEL_DAYS,
   PERMISSIONS: () => PERMISSIONS,
   REFIT_DAYS: () => REFIT_DAYS,
+  REVIEW_CROSS_POST_DAYS: () => CROSS_POST_DAYS,
+  REVIEW_CROSS_POST_SIMILARITY: () => CROSS_POST_SIMILARITY,
+  REVIEW_MATCH_AUTO: () => MATCH_AUTO,
+  REVIEW_MATCH_REVIEW: () => MATCH_REVIEW,
+  REVIEW_PLATFORMS: () => PLATFORMS,
+  REVIEW_PLATFORM_SCALES: () => PLATFORM_SCALES,
+  REVIEW_SAME_SIMILARITY: () => SAME_REVIEW_SIMILARITY,
   ROLES: () => ROLES,
   ROLE_ACTION_DEPARTMENTS: () => ROLE_ACTION_DEPARTMENTS,
   ROLE_PERMISSIONS: () => ROLE_PERMISSIONS,
@@ -58,6 +65,7 @@ __export(index_exports, {
   can: () => can,
   canAssign: () => canAssign,
   canDecideDepartment: () => canDecideDepartment,
+  canonicalUrl: () => canonicalUrl,
   checkReading: () => checkReading,
   computeDailyMetrics: () => computeDailyMetrics,
   dataErrorOf: () => dataErrorOf,
@@ -72,11 +80,13 @@ __export(index_exports, {
   evaluateOutcome: () => evaluateOutcome,
   exclusionMonth: () => exclusionMonth,
   expectedEnergy: () => expected,
+  firstLink: () => firstLink,
   fitBaseline: () => fitBaseline,
   fitEnergyModel: () => fitEnergyModel,
   forecastSeries: () => forecastSeries,
   forecastUsage: () => forecastUsage,
   generateInsights: () => generateInsights,
+  guessPlatform: () => guessPlatform,
   implausibleDays: () => implausibleDays,
   iranFixedHolidays: () => iranFixedHolidays,
   isActiveTicket: () => isActiveTicket,
@@ -85,16 +95,24 @@ __export(index_exports, {
   jalaliToDay: () => jalaliToDay,
   mase: () => mase,
   maskNationalId: () => maskNationalId,
+  matchMention: () => matchMention,
   measureEnergy: () => measure,
   measureWithModel: () => measureWithModel,
   normalizeNationalId: () => normalizeNationalId,
+  normalizeReviewText: () => normalizeText,
   planItem: () => planItem,
   planReplenishment: () => planReplenishment,
   predictDay: () => predictDay,
   proposeActions: () => proposeActions,
+  ratingTo5: () => ratingTo5,
+  readReviewImport: () => readImport,
+  redactReviewText: () => redactText,
+  reviewTextKey: () => textKey,
   rolesWith: () => rolesWith,
+  sanitizeReviewText: () => sanitizeText,
   scoreDay: () => scoreDay,
   shiftDay: () => shiftDay,
+  textSimilarity: () => textSimilarity,
   weekdayOf: () => weekdayOf
 });
 module.exports = __toCommonJS(index_exports);
@@ -151,7 +169,10 @@ var PERMISSIONS = [
   "ai.actions.approve",
   "users.manage",
   "audit.view",
-  "hotel.settings"
+  "hotel.settings",
+  // F10: guest reviews (read; manage: profile, listings, imports, review queue, survey QR)
+  "reviews.view",
+  "reviews.manage"
 ];
 var STAFF_COMMON = [
   "maintenance.report",
@@ -178,7 +199,9 @@ var ROLE_PERMISSIONS = {
     "ai.assistant.use",
     "users.manage",
     "audit.view",
-    "hotel.settings"
+    "hotel.settings",
+    "reviews.view",
+    "reviews.manage"
   ],
   generalManager: [
     "dashboard.executive",
@@ -209,7 +232,9 @@ var ROLE_PERMISSIONS = {
     "ai.actions.approve",
     "users.manage",
     "audit.view",
-    "hotel.settings"
+    "hotel.settings",
+    "reviews.view",
+    "reviews.manage"
   ],
   operationsManager: [
     "dashboard.operations",
@@ -232,7 +257,9 @@ var ROLE_PERMISSIONS = {
     "notifications.view",
     "ai.insights.view",
     "ai.actions.approve",
-    "ai.assistant.use"
+    "ai.assistant.use",
+    "reviews.view",
+    "reviews.manage"
   ],
   energyManager: [
     "dashboard.operations",
@@ -264,7 +291,8 @@ var ROLE_PERMISSIONS = {
     "reports.generate",
     "notifications.view",
     "ai.actions.approve",
-    "ai.insights.view"
+    "ai.insights.view",
+    "reviews.view"
   ],
   housekeepingManager: [
     "dashboard.operations",
@@ -281,7 +309,8 @@ var ROLE_PERMISSIONS = {
     "reports.view",
     "notifications.view",
     "ai.actions.approve",
-    "ai.insights.view"
+    "ai.insights.view",
+    "reviews.view"
   ],
   restaurantManager: [
     "dashboard.operations",
@@ -293,7 +322,8 @@ var ROLE_PERMISSIONS = {
     "reports.view",
     "notifications.view",
     "ai.actions.approve",
-    "ai.insights.view"
+    "ai.insights.view",
+    "reviews.view"
   ],
   inventoryManager: [
     "dashboard.operations",
@@ -306,7 +336,8 @@ var ROLE_PERMISSIONS = {
     "reports.generate",
     "notifications.view",
     "ai.actions.approve",
-    "ai.insights.view"
+    "ai.insights.view",
+    "reviews.view"
   ],
   hrManager: [
     "dashboard.operations",
@@ -341,7 +372,8 @@ var ROLE_PERMISSIONS = {
     "reports.generate",
     "notifications.view",
     "ai.insights.view",
-    "ai.assistant.use"
+    "ai.assistant.use",
+    "reviews.view"
   ]
 };
 var ACTION_DEPARTMENTS = ["energy", "maintenance", "housekeeping", "inventory", "restaurant", "operations"];
@@ -2623,4 +2655,231 @@ function briefingText(items, day) {
     lines.push(line);
   });
   return lines.join("\n");
+}
+
+// ../firebase/functions/src/analytics/reviews.ts
+var PERSIAN_DIGITS = /[۰-۹]/g;
+var ARABIC_DIGITS = /[٠-٩]/g;
+function asciiDigits(s) {
+  return s.replace(PERSIAN_DIGITS, (d) => String(d.charCodeAt(0) - 1776)).replace(ARABIC_DIGITS, (d) => String(d.charCodeAt(0) - 1632));
+}
+function normalizeText(s) {
+  return asciiDigits(String(s != null ? s : "")).toLowerCase().replace(/[يى]/g, "\u06CC").replace(/ك/g, "\u06A9").replace(/[ةۀ]/g, "\u0647").replace(/[أإآ]/g, "\u0627").replace(/ؤ/g, "\u0648").replace(/[ً-ٰٟـ]/g, "").replace(/[‌‍]/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+function sanitizeText(s, max = 4e3) {
+  return String(s != null ? s : "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f​‎‏‪-‮⁦-⁩]/g, " ").replace(/[<>`]/g, " ").replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
+}
+function redactText(s) {
+  return asciiDigits(String(s != null ? s : "")).replace(/https?:\/\/\S+|www\.\S+/gi, "[link]").replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[email]").replace(/(^|[^\w@])@[A-Za-z0-9_.]{2,30}/g, "$1[handle]").replace(/(^|[^\d])\d{3}-\d{6}-\d(?!\d)/g, "$1[id]").replace(/(^|[^\d])(?:\+98|0098|0)?9\d{2}[\s-]?\d{3}[\s-]?\d{4}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])0\d{2}[\s-]?\d{8}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])\+?\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}(?!\d)/g, "$1[phone]").replace(/(^|[^\d])\d{3}-?\d{6}-?\d(?!\d)/g, "$1[id]");
+}
+function ratingTo5(raw, min, max) {
+  if (raw === null || raw === void 0 || !isFinite(raw) || !(max > min)) return null;
+  if (raw < min || raw > max) return null;
+  return Math.round((1 + (raw - min) / (max - min) * 4) * 100) / 100;
+}
+var PLATFORM_SCALES = {
+  booking: { min: 1, max: 10 },
+  expedia: { min: 1, max: 10 },
+  google: { min: 1, max: 5 },
+  tripadvisor: { min: 1, max: 5 },
+  survey: { min: 1, max: 5 }
+};
+var MATCH_AUTO = 0.9;
+var MATCH_REVIEW = 0.5;
+var MATCH_MARGIN = 0.3;
+function canonicalUrl(url) {
+  if (!url) return null;
+  const m = /^(?:https?:\/\/)?([^/?#]+)([^?#]*)/i.exec(String(url).trim());
+  if (!m) return null;
+  return `${m[1].toLowerCase().replace(/^www\./, "")}${m[2].replace(/\/+$/, "").toLowerCase()}`;
+}
+var containsPhrase = (haystack, phrase) => {
+  const p = normalizeText(phrase);
+  return p.length > 0 && ` ${haystack} `.includes(` ${p} `);
+};
+function scoreProfile(m, p) {
+  const reasons = [];
+  const url = canonicalUrl(m.url);
+  for (const l of p.listings) {
+    const lu = canonicalUrl(l.url);
+    if (url && lu && (url === lu || url.startsWith(`${lu}/`)) || m.listingExternalId && l.externalId && m.listingExternalId === l.externalId && (!m.platform || m.platform === l.platform)) {
+      return { score: 1, reasons: ["listing"] };
+    }
+  }
+  const text = normalizeText([m.hotelName, m.title, m.text].filter(Boolean).join(" "));
+  for (const k of p.negativeKeywords) if (containsPhrase(text, k)) return { score: 0, reasons: [`negative:${k}`] };
+  let score = 0;
+  const named = [...p.names, ...p.aliases].find((n) => containsPhrase(text, n));
+  if (named) {
+    score += 0.6;
+    reasons.push("name");
+  }
+  if (p.cities.some((c) => containsPhrase(text, c))) {
+    score += named ? 0.35 : 0.1;
+    reasons.push("city");
+  }
+  return { score: Math.min(score, 0.95), reasons };
+}
+function matchMention(m, profiles, context) {
+  var _a, _b, _c, _d;
+  const scored = profiles.map((p) => ({ hotelId: p.hotelId, ...scoreProfile(m, p) })).sort((a, b) => b.score - a.score);
+  const candidates = scored.filter((s) => s.score > 0).map((s) => ({ hotelId: s.hotelId, score: Math.round(s.score * 100) / 100 }));
+  if (context) {
+    const own = (_a = scored.find((s) => s.hotelId === context)) != null ? _a : { hotelId: context, score: 0, reasons: [] };
+    const other = scored.find((s) => s.hotelId !== context);
+    if (own.reasons.includes("listing")) return { hotelId: context, status: "accepted", score: 1, reasons: ["listing"], candidates };
+    if (own.reasons.some((r) => r.startsWith("negative:"))) return { hotelId: context, status: "needsReview", score: 0, reasons: own.reasons, candidates };
+    if (other && other.score >= MATCH_REVIEW && other.score > own.score) {
+      return { hotelId: context, status: "needsReview", score: own.score, reasons: [...own.reasons, `other:${other.hotelId}`], candidates };
+    }
+    return { hotelId: context, status: "accepted", score: Math.max(own.score, 0.9), reasons: own.reasons.length ? own.reasons : ["context"], candidates };
+  }
+  const [best, next] = scored;
+  if (!best || best.score < MATCH_REVIEW) return { hotelId: null, status: "unmatched", score: (_b = best == null ? void 0 : best.score) != null ? _b : 0, reasons: (_c = best == null ? void 0 : best.reasons) != null ? _c : [], candidates };
+  const lead = best.score - ((_d = next == null ? void 0 : next.score) != null ? _d : 0);
+  const status = best.score >= MATCH_AUTO && lead >= MATCH_MARGIN ? "accepted" : "needsReview";
+  return { hotelId: best.hotelId, status, score: Math.round(best.score * 100) / 100, reasons: best.reasons, candidates };
+}
+function shingles(s) {
+  const w = normalizeText(s).split(" ").filter(Boolean);
+  const out = /* @__PURE__ */ new Set();
+  if (w.length === 1) out.add(w[0]);
+  for (let i = 0; i + 1 < w.length; i++) out.add(`${w[i]} ${w[i + 1]}`);
+  return out;
+}
+function textSimilarity(a, b) {
+  const A = shingles(a);
+  const B = shingles(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const x2 of A) if (B.has(x2)) inter++;
+  return Math.round(inter / (A.size + B.size - inter) * 1e3) / 1e3;
+}
+var SAME_REVIEW_SIMILARITY = 0.85;
+var CROSS_POST_SIMILARITY = 0.9;
+var CROSS_POST_DAYS = 3;
+function textKey(s) {
+  return normalizeText(s);
+}
+function parseCsv(text) {
+  const s = String(text != null ? text : "").replace(/^﻿/, "");
+  const rows = [];
+  let row2 = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"' && s[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") {
+      row2.push(field);
+      field = "";
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && s[i + 1] === "\n") i++;
+      row2.push(field);
+      field = "";
+      if (row2.some((x2) => x2 !== "")) rows.push(row2);
+      row2 = [];
+    } else field += c;
+  }
+  row2.push(field);
+  if (row2.some((x2) => x2 !== "")) rows.push(row2);
+  return rows;
+}
+var CSV_COLUMNS = {
+  externalId: ["id", "review_id", "externalid", "external_id", "\u0634\u0646\u0627\u0633\u0647"],
+  postedAt: ["date", "posted_at", "postedat", "review_date", "\u062A\u0627\u0631\u06CC\u062E"],
+  rating: ["rating", "score", "\u0627\u0645\u062A\u06CC\u0627\u0632"],
+  scaleMax: ["scale", "scale_max", "out_of", "\u0627\u0632"],
+  text: ["text", "review", "comment", "\u0645\u062A\u0646", "\u0646\u0638\u0631"],
+  title: ["title", "\u0639\u0646\u0648\u0627\u0646"],
+  url: ["url", "link", "\u0644\u06CC\u0646\u06A9"],
+  platform: ["platform", "source", "\u0645\u0646\u0628\u0639"],
+  hotelName: ["hotel", "property", "\u0647\u062A\u0644"],
+  deleted: ["deleted", "\u062D\u0630\u0641"]
+};
+function parseDay(v) {
+  const s = asciiDigits(String(v != null ? v : "")).trim();
+  let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(s);
+  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(s);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return null;
+}
+function readImport(text) {
+  const table = parseCsv(text);
+  if (!table.length) return { rows: [], errors: [{ row: 0, reason: "empty" }], columns: [] };
+  const header = table[0].map((h) => normalizeText(h).replace(/ /g, "_"));
+  const col = (k) => header.findIndex((h) => CSV_COLUMNS[k].includes(h));
+  const idx = Object.fromEntries(Object.keys(CSV_COLUMNS).map((k) => [k, col(k)]));
+  const columns = Object.keys(idx).filter((k) => idx[k] >= 0);
+  const rows = [];
+  const errors = [];
+  if (idx.text < 0 && idx.rating < 0) return { rows, errors: [{ row: 0, reason: "no_text_or_rating_column" }], columns };
+  table.slice(1).forEach((r, i) => {
+    const get = (k) => {
+      var _a;
+      return idx[k] >= 0 ? String((_a = r[idx[k]]) != null ? _a : "").trim() : "";
+    };
+    const ratingRaw = get("rating");
+    const rating = ratingRaw === "" ? null : Number(asciiDigits(ratingRaw).replace(",", "."));
+    const scale = get("scaleMax") === "" ? null : Number(asciiDigits(get("scaleMax")));
+    const text2 = get("text");
+    if (!text2 && (rating === null || !isFinite(rating))) {
+      errors.push({ row: i + 1, reason: "no_text_or_rating" });
+      return;
+    }
+    if (rating !== null && !isFinite(rating)) {
+      errors.push({ row: i + 1, reason: "bad_rating" });
+      return;
+    }
+    const day = get("postedAt") ? parseDay(get("postedAt")) : null;
+    if (get("postedAt") && !day) {
+      errors.push({ row: i + 1, reason: "bad_date" });
+      return;
+    }
+    rows.push({
+      externalId: get("externalId") || null,
+      postedAt: day,
+      rating,
+      scaleMax: scale && isFinite(scale) ? scale : null,
+      text: text2,
+      title: get("title") || null,
+      url: get("url") || null,
+      platform: get("platform") ? normalizeText(get("platform")) : null,
+      hotelName: get("hotelName") || null,
+      deleted: /^(1|true|yes|بله)$/i.test(get("deleted"))
+    });
+  });
+  return { rows, errors, columns };
+}
+var HOSTS = [
+  [/(^|\.)instagram\.com$|(^|\.)instagr\.am$/, "instagram"],
+  [/(^|\.)google\.[a-z.]+$|(^|\.)goo\.gl$|(^|\.)g\.co$|maps\.app\.goo\.gl$/, "google"],
+  [/(^|\.)t\.me$|(^|\.)telegram\.(me|org)$/, "telegram"],
+  [/(^|\.)booking\.com$/, "booking"],
+  [/(^|\.)expedia\.[a-z.]+$|(^|\.)hotels\.com$/, "expedia"],
+  [/(^|\.)tripadvisor\.[a-z.]+$/, "tripadvisor"],
+  [/(^|\.)snapptrip\.com$/, "snapptrip"],
+  [/(^|\.)jabama\.com$/, "jabama"],
+  [/(^|\.)eghamat24\.com$/, "eghamat24"],
+  [/(^|\.)alibaba\.ir$/, "alibaba"]
+];
+var PLATFORMS = ["booking", "expedia", "google", "tripadvisor", "instagram", "telegram", "snapptrip", "jabama", "eghamat24", "alibaba", "survey", "other"];
+function guessPlatform(url) {
+  const c = canonicalUrl(url);
+  if (!c) return "other";
+  const host = c.split("/")[0];
+  if (/(^|\.)google\./.test(host) && !c.includes("/maps")) return /maps|goo\.gl/.test(host) ? "google" : "other";
+  for (const [re, p] of HOSTS) if (re.test(host)) return p;
+  return "other";
+}
+function firstLink(text) {
+  const m = /https?:\/\/[^\s<>"']+/i.exec(String(text != null ? text : ""));
+  return m ? m[0].replace(/[).,،]+$/, "") : null;
 }

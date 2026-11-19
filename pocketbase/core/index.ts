@@ -93,3 +93,23 @@ export {
   factsOf as briefingFactsOf,
   itemsForRole as briefingItemsForRole,
 } from "../../firebase/functions/src/analytics/briefing";
+export {
+  CROSS_POST_DAYS as REVIEW_CROSS_POST_DAYS,
+  CROSS_POST_SIMILARITY as REVIEW_CROSS_POST_SIMILARITY,
+  MATCH_AUTO as REVIEW_MATCH_AUTO,
+  MATCH_REVIEW as REVIEW_MATCH_REVIEW,
+  PLATFORMS as REVIEW_PLATFORMS,
+  PLATFORM_SCALES as REVIEW_PLATFORM_SCALES,
+  SAME_REVIEW_SIMILARITY as REVIEW_SAME_SIMILARITY,
+  canonicalUrl,
+  firstLink,
+  guessPlatform,
+  matchMention,
+  normalizeText as normalizeReviewText,
+  ratingTo5,
+  readImport as readReviewImport,
+  redactText as redactReviewText,
+  sanitizeText as sanitizeReviewText,
+  textKey as reviewTextKey,
+  textSimilarity,
+} from "../../firebase/functions/src/analytics/reviews";

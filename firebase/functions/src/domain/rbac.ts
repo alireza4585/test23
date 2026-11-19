@@ -61,6 +61,9 @@ export const PERMISSIONS = [
   "users.manage",
   "audit.view",
   "hotel.settings",
+  // F10: guest reviews (read; manage: profile, listings, imports, review queue, survey QR)
+  "reviews.view",
+  "reviews.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -80,7 +83,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "dashboard.executive", "rooms.view", "housekeeping.viewAll", "maintenance.report",
     "maintenance.viewAll", "energy.view", "inventory.view", "staff.view", "finance.view",
     "reports.view", "reports.generate", "notifications.view", "ai.insights.view",
-    "ai.assistant.use", "users.manage", "audit.view", "hotel.settings",
+    "ai.assistant.use", "users.manage", "audit.view", "hotel.settings", "reviews.view", "reviews.manage",
   ],
   generalManager: [
     "dashboard.executive", "dashboard.operations", "rooms.view", "rooms.updateStatus",
@@ -89,14 +92,14 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "inventory.view", "inventory.move", "inventory.manage", "staff.view", "staff.manage",
     "operations.recordDaily", "finance.view", "finance.record", "reports.view", "reports.generate",
     "notifications.view", "ai.insights.view", "ai.assistant.use", "ai.actions.approve", "users.manage",
-    "audit.view", "hotel.settings",
+    "audit.view", "hotel.settings", "reviews.view", "reviews.manage",
   ],
   operationsManager: [
     "dashboard.operations", "rooms.view", "rooms.updateStatus", "rooms.manage",
     "housekeeping.viewAll", "housekeeping.assign", "maintenance.report", "maintenance.viewAll",
     "maintenance.manage", "energy.view", "inventory.view", "staff.view", "staff.manage",
     "operations.recordDaily", "finance.record", "reports.view", "reports.generate", "notifications.view",
-    "ai.insights.view", "ai.actions.approve", "ai.assistant.use",
+    "ai.insights.view", "ai.actions.approve", "ai.assistant.use", "reviews.view", "reviews.manage",
   ],
   energyManager: [
     "dashboard.operations", "rooms.view", "energy.view", "energy.record", "maintenance.report",
@@ -107,22 +110,23 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "dashboard.operations", "rooms.view", "rooms.updateStatus", "maintenance.report",
     "maintenance.viewAll", "maintenance.manage", "maintenance.work", "energy.view",
     "inventory.view", "inventory.move", "staff.view", "reports.view", "reports.generate",
-    "notifications.view", "ai.actions.approve", "ai.insights.view",
+    "notifications.view", "ai.actions.approve", "ai.insights.view", "reviews.view",
   ],
   housekeepingManager: [
     "dashboard.operations", "rooms.view", "rooms.updateStatus", "housekeeping.viewAll",
     "housekeeping.assign", "housekeeping.complete", "maintenance.report", "maintenance.viewOwn",
     "inventory.view", "inventory.move", "staff.view", "reports.view", "notifications.view", "ai.actions.approve",
-    "ai.insights.view",
+    "ai.insights.view", "reviews.view",
   ],
   restaurantManager: [
     "dashboard.operations", "inventory.view", "inventory.move", "maintenance.report",
     "maintenance.viewOwn", "staff.view", "reports.view", "notifications.view", "ai.actions.approve", "ai.insights.view",
+    "reviews.view",
   ],
   inventoryManager: [
     "dashboard.operations", "inventory.view", "inventory.move", "inventory.manage",
     "maintenance.report", "maintenance.viewOwn", "reports.view", "reports.generate",
-    "notifications.view", "ai.actions.approve", "ai.insights.view",
+    "notifications.view", "ai.actions.approve", "ai.insights.view", "reviews.view",
   ],
   hrManager: [
     "dashboard.operations", "staff.view", "staff.manage", "users.manage", "maintenance.report",
@@ -138,7 +142,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   analyst: [
     "dashboard.executive", "rooms.view", "housekeeping.viewAll", "maintenance.viewAll",
     "energy.view", "inventory.view", "staff.view", "finance.view", "reports.view",
-    "reports.generate", "notifications.view", "ai.insights.view", "ai.assistant.use",
+    "reports.generate", "notifications.view", "ai.insights.view", "ai.assistant.use", "reviews.view",
   ],
 };
 

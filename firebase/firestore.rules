@@ -67,7 +67,9 @@ service cloud.firestore {
         'ai.actions.approve': ['generalManager', 'operationsManager', 'energyManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager'],
         'users.manage': ['hotelOwner', 'generalManager', 'hrManager'],
         'audit.view': ['hotelOwner', 'generalManager'],
-        'hotel.settings': ['hotelOwner', 'generalManager']
+        'hotel.settings': ['hotelOwner', 'generalManager'],
+        'reviews.view': ['hotelOwner', 'generalManager', 'operationsManager', 'maintenanceManager', 'housekeepingManager', 'restaurantManager', 'inventoryManager', 'analyst'],
+        'reviews.manage': ['hotelOwner', 'generalManager', 'operationsManager']
       };
     }
 
