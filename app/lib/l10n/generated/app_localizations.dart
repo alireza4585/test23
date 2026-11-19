@@ -3865,6 +3865,12 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'فقط نقش‌هایی که درآمد را می‌بینند قیمت و ارزش موجودی را می‌بینند.'**
   String get unitCostHint;
+
+  /// No description provided for @poLineNew.
+  ///
+  /// In fa, this message translates to:
+  /// **'تازه'**
+  String get poLineNew;
 }
 
 class _AppLocalizationsDelegate

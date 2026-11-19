@@ -2143,4 +2143,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get unitCostHint =>
       'Only roles that see revenue see unit costs and stock value.';
+
+  @override
+  String get poLineNew => 'new';
 }

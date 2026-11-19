@@ -148,7 +148,7 @@ class DemoPurchaseOrdersRepository implements PurchaseOrdersRepository {
     editedByName: o.editedByName,
     lines: [
       for (final l in o.lines)
-        PurchaseOrderLine(itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, suggested: l.suggested, kind: l.kind, orderBy: l.orderBy, received: l.received),
+        PurchaseOrderLine(itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, suggested: l.suggested, kind: l.kind, orderBy: l.orderBy, received: l.received, isNew: l.isNew),
     ],
   );
 

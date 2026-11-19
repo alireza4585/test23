@@ -173,8 +173,10 @@ class _OrderCard extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 2),
               child: Text(
                 '• ${l.name}: ${fmt.number(l.quantity, decimals: l.quantity % 1 == 0 ? 0 : 1)} ${l.unit}'
-                '${l.orderBy != null && o.status == PurchaseOrderStatus.draft ? ' — ${l10n.poOrderBy(l.orderBy!)}' : ''}',
-                style: theme.textTheme.bodySmall,
+                '${l.orderBy != null && o.status == PurchaseOrderStatus.draft ? ' — ${l10n.poOrderBy(l.orderBy!)}' : ''}'
+                '${l.isNew ? ' · ${l10n.poLineNew}' : ''}',
+                key: ValueKey('po.${o.id}.line.${l.itemId}'),
+                style: theme.textTheme.bodySmall?.copyWith(fontWeight: l.isNew ? FontWeight.w600 : null),
               ),
             ),
           if (buttons.isNotEmpty) ...[

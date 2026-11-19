@@ -144,6 +144,23 @@ void main() {
     expect(store.purchaseOrders.get('po-demo-1')!.status, PurchaseOrderStatus.cancelled);
   });
 
+  testWidgets('F5: a line added by the nightly refresh is marked new', (tester) async {
+    final store = seededStore();
+    await pumpZarinApp(tester, store: store);
+    await signIn(tester, _nid(AppRole.inventoryManager));
+    await _open(tester, Routes.inventory);
+    final po = store.purchaseOrders.get('po-demo-1')!;
+    final l = po.lines.first;
+    store.purchaseOrders.put(PurchaseOrder(
+      id: po.id, supplierName: po.supplierName, status: po.status, createdAt: po.createdAt, actionId: po.actionId,
+      lines: [PurchaseOrderLine(itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, isNew: true), ...po.lines.skip(1)],
+    ));
+    await tester.pumpAndSettle();
+    final line = find.byKey(Key('po.po-demo-1.line.${l.itemId}'));
+    await tester.scrollUntilVisible(line, 200, scrollable: _pageList);
+    expect(tester.widget<Text>(line).data, contains('تازه'));
+  });
+
   testWidgets('unit cost and stock value only for roles that see revenue', (tester) async {
     final store = seededStore();
     final item = store.items.all.firstWhere((i) => (i.unitCost ?? 0) > 0);

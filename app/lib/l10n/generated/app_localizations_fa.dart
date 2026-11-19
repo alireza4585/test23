@@ -2136,4 +2136,7 @@ class AppLocalizationsFa extends AppLocalizations {
   @override
   String get unitCostHint =>
       'فقط نقش‌هایی که درآمد را می‌بینند قیمت و ارزش موجودی را می‌بینند.';
+
+  @override
+  String get poLineNew => 'تازه';
 }

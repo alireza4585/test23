@@ -18,6 +18,7 @@ class PurchaseOrderLine {
     this.unitCost,
     this.cost,
     this.received,
+    this.isNew = false,
   });
 
   final String itemId;
@@ -38,6 +39,9 @@ class PurchaseOrderLine {
   final double? unitCost;
   final double? cost;
   final double? received;
+
+  /// Added by the nightly refresh after the manager edited the draft (cleared by the next edit).
+  final bool isNew;
 }
 
 class PurchaseOrderApproval {

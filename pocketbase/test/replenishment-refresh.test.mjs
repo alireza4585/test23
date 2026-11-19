@@ -1,7 +1,9 @@
 // F5: what happens to an open draft purchase order night after night.
 // An unedited draft follows the nightly plan (quantities recomputed, lines no
-// longer needed dropped, cancelled when nothing is needed); an edited draft is
-// left as the manager edited it.
+// longer needed dropped, cancelled when nothing is needed). An edited draft
+// keeps the manager's quantities, loses lines no longer suggested and gains
+// newly needed ones marked isNew (audited). Any draft expires after 7 days
+// without a decision; a need that remains gets a fresh draft the next night.
 import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -22,7 +24,11 @@ let H;
 let inv;
 let invUser;
 const items = {};
-const analytics = () => su.send(`/api/zarin/admin/hotels/${H}/analytics`, { method: "POST", body: { insights: true } });
+// One nightly run; [daysAhead] simulates a later night.
+const analytics = (daysAhead = 0) => su.send(`/api/zarin/admin/hotels/${H}/analytics`, {
+  method: "POST", body: { insights: true, ...(daysAhead ? { now: new Date(Date.now() + daysAhead * DAY_MS).toISOString() } : {}) },
+});
+const refreshLogs = async (poId) => su.collection("auditLogs").getFullList({ filter: `resourceId = "${poId}" && action ~ "purchaseOrders."`, sort: "created" });
 const openDraft = async () => (await su.collection("purchaseOrders").getFullList({ filter: `hotel = "${H}" && status = "draft"` }))[0] ?? null;
 const lines = (po) => Object.fromEntries(po.lines.map((l) => [l.itemId, l.quantity]));
 const setStock = (sku, quantity) => su.collection("inventoryItems").update(items[sku].id, { quantity });
@@ -76,17 +82,68 @@ describe("F5 open drafts, night after night", () => {
     expect((await su.collection("aiActions").getOne(first.action)).status).toBe("expired");
   });
 
-  it("an edited draft is not refreshed: a line no longer needed stays until the manager acts", async () => {
+  it("an edited draft keeps the manager's quantities, drops lines no longer suggested and marks new ones", async () => {
     await setStock("MT-1", 30);
     await setStock("ON-1", 30);
     await analytics();
     const draft = await openDraft();
     await post(inv, `/api/zarin/purchase-orders/${draft.id}/lines`, { lines: [{ itemId: items["MT-1"].id, quantity: 25 }] });
-    await setStock("ON-1", 400); // onions no longer needed
+
+    // Onions no longer needed: the line goes, the manager's meat quantity stays.
+    await setStock("ON-1", 400);
     await analytics();
-    const after = await su.collection("purchaseOrders").getOne(draft.id);
-    expect(after.status).toBe("draft");
-    expect(lines(after)[items["MT-1"].id]).toBe(25); // the manager's quantity
-    expect(items["ON-1"].id in lines(after)).toBe(true); // stale line kept (current behaviour)
+    let po = await su.collection("purchaseOrders").getOne(draft.id);
+    expect(po.status).toBe("draft");
+    expect(lines(po)).toEqual({ [items["MT-1"].id]: 25 });
+
+    // Onions needed again: added with the suggested quantity, marked new.
+    await setStock("ON-1", 15);
+    await analytics();
+    po = await su.collection("purchaseOrders").getOne(draft.id);
+    expect(lines(po)[items["MT-1"].id]).toBe(25);
+    const onion = po.lines.find((l) => l.itemId === items["ON-1"].id);
+    expect(onion).toMatchObject({ isNew: true });
+    expect(onion.quantity).toBeGreaterThan(0);
+    expect(po.lines.find((l) => l.itemId === items["MT-1"].id).isNew).toBeUndefined();
+
+    // Both changes are in the audit log, by the system.
+    const logs = (await refreshLogs(draft.id)).filter((l) => l.action === "purchaseOrders.refresh");
+    expect(logs.map((l) => [l.changes.removed.map((x) => x.itemId), l.changes.added.map((x) => x.itemId)])).toEqual([
+      [[items["ON-1"].id], []],
+      [[], [items["ON-1"].id]],
+    ]);
+    expect(logs.every((l) => l.actor.type === "system")).toBe(true);
+
+    // The manager edits again: nothing stays marked new.
+    await post(inv, `/api/zarin/purchase-orders/${draft.id}/lines`, { lines: [{ itemId: items["ON-1"].id, quantity: 20 }] });
+    po = await su.collection("purchaseOrders").getOne(draft.id);
+    expect(po.lines.some((l) => l.isNew)).toBe(false);
+    expect(lines(po)).toEqual({ [items["MT-1"].id]: 25, [items["ON-1"].id]: 20 });
+  });
+
+  it("a draft without a decision for 7 days expires; if still needed, a fresh one comes the next night", async () => {
+    const draft = await openDraft();
+    expect(draft).toBeTruthy();
+    await setStock("MT-1", 0);
+    await setStock("ON-1", 0);
+    // Six days on: still open.
+    await analytics(6);
+    expect((await su.collection("purchaseOrders").getOne(draft.id)).status).toBe("draft");
+    // Eight days on: expired, the action too, the insight closed for a new cycle.
+    await analytics(8);
+    const expired = await su.collection("purchaseOrders").getOne(draft.id);
+    expect(expired.status).toBe("cancelled");
+    expect(expired.note).toMatch(/۷ روز/);
+    const action = await su.collection("aiActions").getOne(draft.action);
+    expect(action.status).toBe("expired");
+    const insight = await su.collection("aiInsights").getOne(action.insight);
+    expect(insight).toMatchObject({ status: "resolved", closedReason: "draft_expired" });
+    expect((await refreshLogs(draft.id)).some((l) => l.action === "purchaseOrders.expire" && l.actor.type === "system")).toBe(true);
+    // The next night (still needed): a new cycle with a fresh draft.
+    await analytics();
+    const fresh = await openDraft();
+    expect(fresh).toBeTruthy();
+    expect(fresh.id).not.toBe(draft.id);
+    expect(fresh.action).not.toBe(draft.action);
   });
 });

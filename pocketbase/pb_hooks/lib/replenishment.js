@@ -7,7 +7,9 @@
  *   nightly       plan every item (stored on inventoryItems.replenishment) and,
  *                 through the rules engine, one insight per supplier; F1 then
  *                 proposes a createPurchaseOrder action and a draft order is
- *                 attached to it (refreshed nightly until someone edits it)
+ *                 attached to it, refreshed nightly (an edited draft keeps the
+ *                 manager's quantities; lines no longer needed go, new ones are
+ *                 marked) and expired after DRAFT_MAX_AGE_DAYS without a decision
  *   edit          POST /api/zarin/purchase-orders/{id}/lines     inventory.manage, draft only
  *   approve       the action's decide route (inventory.manage); a non-GM
  *                 approval above hotels.settings.purchaseApprovalLimit (rial)
@@ -32,6 +34,10 @@ const MOVEMENT_DAYS = 90;
 const OPEN = ["awaitingApproval", "approved", "sent"];
 const MAX_QUANTITY = 1e6;
 const SECOND_APPROVERS = ["generalManager", "superAdmin"];
+// A draft nobody decides on expires after this many days; if still needed, the
+// next nightly run starts a new cycle with a fresh draft.
+const DRAFT_MAX_AGE_DAYS = 7;
+const SYSTEM = { uid: "", name: "replenishment", type: "system" };
 
 const num = (r, f) => r.getFloat(f);
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -105,6 +111,7 @@ function priced(app, hotelId, lines) {
     out.lines.push({
       itemId: item.id, name: item.getString("name"), unit: item.getString("unit"), quantity,
       suggested: l.suggested === undefined ? quantity : Number(l.suggested), kind: l.kind || "reorder", orderBy: l.orderBy || null,
+      ...(l.isNew === true ? { isNew: true } : {}),
     });
     out.costs.push({ itemId: item.id, unitCost, cost: round2(unitCost * quantity) });
   }
@@ -154,24 +161,88 @@ function attachDraft(app, action) {
   return po;
 }
 
-/** Nightly: drafts nobody has edited follow the latest plan of their insight. */
-function refreshDrafts(app, hotelId) {
+/** Writes a draft's lines (and prices, and its action's copy of the lines). */
+function writeLines(app, po, action, p) {
+  po.load({ lines: p.lines, leadTimeDays: leadTimeFor(app, p.lines) });
+  app.save(po);
+  saveCosts(app, po, p);
+  action.set("params", Object.assign({}, z.jsonOf(action, "params") || {}, {
+    lines: p.lines.map((l) => ({ itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, kind: l.kind, orderBy: l.orderBy })),
+  }));
+  app.save(action);
+}
+
+/**
+ * A draft without a decision for DRAFT_MAX_AGE_DAYS: the action expires, the
+ * draft is cancelled and the insight closes, so a need that remains starts a
+ * new cycle (a fresh draft) the next night.
+ */
+function expireDraft(app, po, action, insight) {
+  action.set("status", "expired");
+  app.save(action);
+  const fa = String(DRAFT_MAX_AGE_DAYS).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+  po.load({ status: "cancelled", note: `منقضی: ${fa} روز بدون تصمیم` });
+  app.save(po);
+  if (insight && insight.getString("status") === "active") {
+    insight.load({ status: "resolved", closedReason: "draft_expired" });
+    app.save(insight);
+  }
+  z.audit(app, po.getString("hotel"), {
+    action: "purchaseOrders.expire", collection: "purchaseOrders", id: po.id, actor: SYSTEM,
+    changes: { status: { from: "draft", to: "cancelled" }, reason: `no decision in ${DRAFT_MAX_AGE_DAYS} days`, action: action.id },
+  });
+}
+
+/**
+ * Nightly (replenishment flag only), for every open draft:
+ *   - older than DRAFT_MAX_AGE_DAYS without a decision: expired (above);
+ *   - not edited: follows the latest plan of its insight (quantities
+ *     recomputed, lines no longer needed dropped);
+ *   - edited: the manager's quantities stay; lines no longer suggested are
+ *     removed and lines newly needed are added with the suggested quantity,
+ *     marked isNew; both are written to the audit log.
+ * When nothing is needed any more the insight resolves and the action expires
+ * with it (actions.expireFor), which cancels the draft.
+ */
+function refreshDrafts(app, hotelId, now) {
+  const at = now || new Date();
   let n = 0;
-  for (const po of z.findMany(app, "purchaseOrders", "hotel = {:h} && status = 'draft' && editedBy = ''", { h: hotelId })) {
+  for (const po of z.findMany(app, "purchaseOrders", "hotel = {:h} && status = 'draft'", { h: hotelId })) {
     const action = z.findFirst(app, "aiActions", "id = {:id} && status = 'proposed'", { id: po.getString("action") });
     if (!action) continue;
     const insight = action.getString("insight") ? z.findFirst(app, "aiInsights", "id = {:id}", { id: action.getString("insight") }) : null;
+    const created = z.parseDate(po.getString("created"));
+    if (created && at.getTime() - created.getTime() >= DRAFT_MAX_AGE_DAYS * 864e5) {
+      expireDraft(app, po, action, insight);
+      n++;
+      continue;
+    }
     const subject = insight ? ((z.jsonOf(insight, "expectedImpact") || {}).subject || {}) : {};
     if (!Array.isArray(subject.lines) || !subject.lines.length) continue;
-    const p = priced(app, hotelId, subject.lines);
-    const lines = p.lines;
-    po.load({ lines, leadTimeDays: leadTimeFor(app, lines) });
-    app.save(po);
-    saveCosts(app, po, p);
-    action.set("params", Object.assign({}, z.jsonOf(action, "params") || {}, {
-      lines: lines.map((l) => ({ itemId: l.itemId, name: l.name, unit: l.unit, quantity: l.quantity, kind: l.kind, orderBy: l.orderBy })),
-    }));
-    app.save(action);
+    if (!po.getString("editedBy")) {
+      writeLines(app, po, action, priced(app, hotelId, subject.lines));
+      n++;
+      continue;
+    }
+    // Edited: keep the manager's quantities, drop what is no longer suggested, add what is new.
+    const wanted = new Map(subject.lines.map((l) => [String(l.itemId), l]));
+    const current = z.jsonOf(po, "lines") || [];
+    const removed = current.filter((l) => !wanted.has(l.itemId));
+    const added = subject.lines.filter((l) => !current.some((c) => c.itemId === String(l.itemId)));
+    if (!removed.length && !added.length) continue;
+    const kept = current.filter((l) => wanted.has(l.itemId)).map((l) => {
+      const w = wanted.get(l.itemId);
+      return Object.assign({}, l, { suggested: w.quantity, kind: w.kind || l.kind, orderBy: w.orderBy || l.orderBy });
+    });
+    const next = kept.concat(added.map((l) => Object.assign({}, l, { isNew: true })));
+    writeLines(app, po, action, priced(app, hotelId, next));
+    z.audit(app, hotelId, {
+      action: "purchaseOrders.refresh", collection: "purchaseOrders", id: po.id, actor: SYSTEM,
+      changes: {
+        removed: removed.map((l) => ({ itemId: l.itemId, name: l.name, quantity: l.quantity })),
+        added: added.map((l) => ({ itemId: String(l.itemId), quantity: l.quantity })),
+      },
+    });
     n++;
   }
   return n;
@@ -266,8 +337,9 @@ function editLines(e) {
   }
   // Only the draft's own items: a draft is edited, not turned into another order.
   for (const id of Object.keys(wanted)) if (!current.some((l) => l.itemId === id)) throw z.bad("unknown_line", { itemId: id });
+  // An edit means the manager has seen every line: none stays marked new.
   const p = priced(e.app, hotelId, current
-    .map((l) => Object.assign({}, l, { quantity: wanted[l.itemId] === undefined ? l.quantity : wanted[l.itemId] }))
+    .map((l) => Object.assign({}, l, { quantity: wanted[l.itemId] === undefined ? l.quantity : wanted[l.itemId], isNew: false }))
     .filter((l) => l.quantity > 0));
   const next = p.lines;
   if (!next.length) throw z.bad("purchase_order_empty");

@@ -117,7 +117,7 @@ function nightly(app, hotelId, now) {
   let proposed = 0;
   for (const ins of z.findMany(app, "aiInsights", "hotel = {:h} && status = 'active'", { h: hotelId })) proposed += proposeFor(app, ins, now);
   for (const ins of z.findMany(app, "aiInsights", "hotel = {:h} && status = 'resolved'", { h: hotelId })) expireFor(app, ins.id);
-  const drafts = z.feature(app, hotelId, "replenishment") ? require(`${__hooks}/lib/replenishment.js`).refreshDrafts(app, hotelId) : 0;
+  const drafts = z.feature(app, hotelId, "replenishment") ? require(`${__hooks}/lib/replenishment.js`).refreshDrafts(app, hotelId, now) : 0;
   return { proposed, drafts, reminded: remind(app, hotelId, now), measured: measureDue(app, hotelId, now) };
 }
 

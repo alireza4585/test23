@@ -106,6 +106,7 @@ PurchaseOrder purchaseOrderFromRecord(RecordModel r, {RecordModel? costs}) {
             unitCost: _num(prices[l['itemId']]?['unitCost']),
             cost: _num(prices[l['itemId']]?['cost']),
             received: _num(l['received']),
+            isNew: l['isNew'] == true,
           ),
     ],
     approvals: [
