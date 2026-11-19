@@ -12,6 +12,9 @@ names, aliases and listing URLs may appear only here, in tests and in docs
 | `generated/reviews.jsonl` | Every review with its ground truth: aspects, sentiment, 1–5 rating, expected status, scenarios |
 | `generated/csv/` | The same reviews as import files (generic format; one Persian file with Jalali dates) and an update file with edits and deletions |
 | `generated/mentions.jsonl` | Mentions without hotel context with the matcher's expected verdict |
+| `generated/eval-synthetic.jsonl` | 200 labelled reviews for the analysis eval (`pocketbase/scripts/reviews-eval.mjs`); 10 carry an injected instruction |
+| `generated/eval-synthetic-check.json` | The 20% sample a person checks |
+| `eval/results/` | Eval reports; the first line names the set and the method |
 | `eval/human/` | Slot for ≥ 50 real reviews labelled by a person (empty until the owner supplies them) |
 
 Personal data in the texts is a placeholder (`{PHONE}`, `{EMAIL}`, `{NID}`):

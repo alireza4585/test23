@@ -11,7 +11,8 @@
     "e2e:no-channels": "E2E_CHANNELS=none node e2e.mjs",
     "e2e:scoped": "E2E_SIGNING=scoped node e2e.mjs",
     "e2e:scoped-only": "E2E_SIGNING=scoped-only node e2e.mjs",
-    "browser-check": "node browser-check.mjs"
+    "browser-check": "node browser-check.mjs",
+    "e2e:reviews-mail": "node e2e-reviews-mail.mjs"
   },
   "devDependencies": {
     "n8n": "2.35.7",

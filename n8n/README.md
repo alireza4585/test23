@@ -22,6 +22,7 @@ Flutter ──► Firestore ──► Cloud Functions (triggers, analytics, AI)
 | `02-daily-management-briefing.json` | هر روز ساعت ۰۷:۱۵ (به وقت تهران) | `GET /v1/hotels/{id}/summary?narrative=fa`: شاخص‌های دیروز، هشدارهای باز، پیشنهادهای AI و یک خلاصهٔ مدیریتی فارسی که LLM می‌نویسد. خروجی به‌صورت ایمیل RTL برای GM و مالک و پیام بله فرستاده می‌شود. اگر هتل پرچم `morningBriefing` داشته باشد، گزارش صبحگاهی ذخیره‌شدهٔ GM جای متن کوتاه را در ایمیل و گروه مدیریت می‌گیرد، و گزارش مدیر انرژی و مدیر تأسیسات (اگر موردی داشته باشد و مالی نباشد) به گروه همان بخش می‌رود ([سند ۱۸](../docs/18-ai-phase-1.md#۵-n8n)). |
 | `03-maintenance-sla-escalation.json` | هر ۳۰ دقیقه | `GET /maintenance/overdue`. تیکت‌هایی که بیش از ۶۰ دقیقه از SLA عقب‌اند ← اعلان درون‌برنامه‌ای و Push به مدیر تأسیسات، GM و مدیر عملیات. برای موارد critical پیامک هم ارسال می‌شود. همان مجموعهٔ تیکت‌های دیرکرد تا ۴ ساعت دوباره اعلان نمی‌شود (`dedupeKey` در بدنهٔ اعلان) و پیامک فقط وقتی می‌رود که اعلان واقعاً ارسال شده باشد. |
 | `05-purchase-order-followup.json` | هر روز ساعت ۱۰:۱۷ (به وقت تهران) | `GET /v1/hotels/{id}/purchase-orders/overdue`. سفارش‌های تأییدشده یا ارسال‌شده‌ای که از روز تحویل مورد انتظار گذشته‌اند ← اعلان درون‌برنامه‌ای به مدیر انبار و GM، و پیام در گروه مدیریت بله. هر روز فقط یک بار برای همان مجموعهٔ سفارش‌ها (`dedupeKey`) ([سند ۲۰](../docs/20-ai-phase-2.md)). |
+| `08-reviews-email.json` (F10) | Email Trigger (IMAP)، صندوق مشترک نظرات | هر ایمیل تازه: نشانی‌های گیرنده (به‌علاوهٔ `Delivered-To`، `X-Original-To` و `X-Forwarded-To`، چون ایمیل هدایت‌شده `To:` اصلی را نگه می‌دارد) و متن ایمیل را امضاشده به `POST /v1/reviews/inbound-email` می‌فرستد. PocketBase هتل را از نشانی `r-<token>@ZARIN_REVIEWS_MAIL_DOMAIN` پیدا می‌کند، ایمیل را تجزیه و دور می‌ریزد و نظر را «منتظر بازبینی» نگه می‌دارد. ایمیلی که به دامنهٔ نظرات نرفته رد می‌شود. ایمیل پس از برداشتن «خوانده‌شده» علامت می‌خورد. Credential: «Zarin reviews mailbox» از نوع IMAP (سطح پلتفرم؛ پایین). ([سند ۲۱](../docs/21-f10-guest-reviews.md)) |
 | `04-smart-meter-ingestion.json` | Webhook `POST /webhook/meter-readings` (Header Auth) | قرائت روزانهٔ کنتورهای هوشمند را نرمال می‌کند و به `POST /energy/readings` می‌فرستد. سند ذخیره‌شده دقیقاً همان شکل ورود دستی را دارد، پس تحلیل‌ها و داشبوردها تغییری نمی‌کنند. بدنه: `{"readings":[{"hotelId","meterId","type":"electricity\|water\|gas","day":"yyyy-MM-dd","value"}]}`. برای هر هتل، روز و نوع مصرف **یک مجموع روزانه** ذخیره می‌شود و ارسال دوباره جای مقدار قبلی را می‌گیرد. اگر چند کنتور از یک نوع دارید، گیت‌وی باید مجموع آن‌ها را بفرستد. |
 
 ## کانال‌ها: یکی‌یکی فعال کنید
@@ -175,6 +176,13 @@ node n8n/scripts/import-workflows.mjs; Remove-Item Env:N8N_API_KEY
 **روش دستی:** workflow را در Editor باز کنید، از منوی ⋯ گزینهٔ *Import from File* را بزنید، فایل JSON را انتخاب کنید و Save کنید. این روش کل بوم را جایگزین می‌کند، پس Credentialها را دوباره انتخاب کنید و نودهای ایمیلی را که روشن کرده بودید دوباره روشن کنید.
 
 > فایل‌های workflow عمداً tag ندارند. n8n CLI (`import:workflow --separate`) وقتی چند فایل یک tag تازهٔ مشترک داشته باشند، با خطای `UNIQUE constraint failed: tag_entity.name` متوقف می‌شود. در صورت نیاز، tagها را پس از import در Editor اضافه کنید.
+
+## صندوق نظرات (workflow 08)
+
+- **متغیرها:** `ZARIN_REVIEWS_MAIL_DOMAIN` در n8n، و `ZH_REVIEWS_MAIL_DOMAIN` (همان دامنه) در PocketBase. بدون آن‌ها نشانی هتل در اپ نشان داده نمی‌شود.
+- **Credential IMAP** با نام «Zarin reviews mailbox»: میزبان، پورت (۹۹۳ با TLS)، کاربر و گذرواژهٔ صندوق مشترک. این مقدارها سطح پلتفرم‌اند و در Credentialهای n8n (رمزنگاری‌شده) می‌مانند، نه در repo. پس از وارد کردن workflow، این Credential را به نود «Reviews mailbox (IMAP)» وصل و workflow را فعال کنید.
+- **نگهداری:** ایمیل پس از برداشتن خوانده می‌شود. پاک‌سازی خودکار پس از ۷ روز با تنظیم خود میزبان ایمیل است. `saveDataSuccessExecution: none` متن ایمیل را در اجراهای موفق n8n نگه نمی‌دارد.
+- **آزمون:** `N8N_IMAGE=n8nio/n8n:2.26.2 npm run e2e:reviews-mail` (GreenMail محلی در Docker به‌جای صندوق).
 
 ## تست دستی
 
