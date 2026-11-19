@@ -120,6 +120,7 @@ describe("Route validation on the integration API", () => {
     expect(res.status).toBe(200);
     const rec = await su.collection("aiInsights").getOne(res.json.id);
     expect(rec.route).toBe("/inventory/abc123?tab=moves");
+    for (const a of await su.collection("aiActions").getFullList({ filter: `insight = "${rec.id}"` })) await su.collection("aiActions").delete(a.id).catch(() => {});
     await su.collection("aiInsights").delete(rec.id);
   });
 

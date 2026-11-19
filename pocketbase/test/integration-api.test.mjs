@@ -94,6 +94,10 @@ describe("integration API v1 (n8n / IoT)", () => {
     // start from none so "created" does not depend on the order the files run in.
     const cleaner = await superuser();
     for (const i of await cleaner.collection("aiInsights").getFullList({ filter: `hotel = "${hotelId()}"` })) {
+      // Their proposed actions go too: an action left without its insight breaks files that run later.
+      for (const a of await cleaner.collection("aiActions").getFullList({ filter: `insight = "${i.id}"` })) {
+        await cleaner.collection("aiActions").delete(a.id).catch(() => {});
+      }
       await cleaner.collection("aiInsights").delete(i.id);
     }
     const { status, json } = await signed(v1("/insights/run"), { method: "POST", body: {} });
