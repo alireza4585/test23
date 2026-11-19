@@ -16,6 +16,7 @@
  *  - CSV: a small RFC 4180 parser and the generic import format.
  *  - links: the platform guessed from a shared link (editable in the app).
  */
+import { jalaliToDay } from "./calendar";
 
 // ------------------------------------------------------------------- text
 const PERSIAN_DIGITS = /[۰-۹]/g;
@@ -36,7 +37,9 @@ export function normalizeText(s: string): string {
     .replace(/ؤ/g, "و")
     .replace(/[ً-ٰٟـ]/g, "") // harakat, superscript alef, tatweel
     .replace(/[‌‍]/g, " ") // ZWNJ / ZWJ
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    // Letters and digits kept by explicit ranges (the PocketBase JSVM has no \p{…} escapes):
+    // Latin, Latin-1/Extended letters, Arabic/Persian letters and their presentation forms.
+    .replace(/[^0-9a-z\u00df-\u00f6\u00f8-\u024f\u0620-\u064a\u066e-\u06d3\u06d5\u06ee\u06ef\u06fa-\u06ff\u0750-\u077f\ufb50-\ufdfb\ufe70-\ufefc]+/g, " ")
     .trim();
 }
 
@@ -270,14 +273,26 @@ export const CSV_COLUMNS: Record<keyof ImportRow, string[]> = {
 /** Gregorian YYYY-MM-DD from common forms (YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY), else null. */
 export function parseDay(v: string | null | undefined): string | null {
   const s = asciiDigits(String(v ?? "")).trim();
+  let y: number, mo: number, d: number;
   let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(s);
-  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
-  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(s);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  return null;
+  if (m) [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  else {
+    m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(s);
+    if (!m) return null;
+    [y, mo, d] = [Number(m[3]), Number(m[2]), Number(m[1])];
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  // A Persian export uses the Jalali calendar (years 1300–1499).
+  if (y >= 1300 && y < 1500) {
+    if (d > (mo <= 6 ? 31 : 30)) return null;
+    return jalaliToDay(y, mo, d);
+  }
+  if (y < 1900 || y > 2200) return null;
+  const day = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  return new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day ? day : null;
 }
 
-/** Rows of the generic format; [errors] lists rows that could not be read (1-based, header excluded). */
+/** Rows of the generic format; [errors] lists rows that could not be read (1-based, header excluded). Dates: Gregorian or Jalali. */
 export function readImport(text: string): { rows: ImportRow[]; errors: { row: number; reason: string }[]; columns: string[] } {
   const table = parseCsv(text);
   if (!table.length) return { rows: [], errors: [{ row: 0, reason: "empty" }], columns: [] };

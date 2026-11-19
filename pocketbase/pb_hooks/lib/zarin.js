@@ -229,8 +229,9 @@ function hotelSettings(app, hotelId) {
  *   recommendationLoop  auto-close and impact evaluation of recommendations;
  *                       Action Center (typed actions, decide, outcomes)
  *   morningBriefing     daily cross-department briefing per role (F4)
+ *   guestReviews        guest reviews: intake, review queue, QR survey (F10)
  */
-const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing", "replenishment", "assistantV2"];
+const FEATURES = ["energyBaseline", "forecasts", "recommendationLoop", "morningBriefing", "replenishment", "assistantV2", "guestReviews"];
 
 function features(app, hotelId) {
   const s = jsonOf(find(app, "hotels", hotelId), "settings") || {};

@@ -100,6 +100,11 @@ describe("CSV and links", () => {
     expect(rows).toEqual([expect.objectContaining({ externalId: "r1", rating: 9, scaleMax: 10, text: "عالی" })]);
     expect(errors.map((e) => e.reason)).toEqual(["no_text_or_rating", "bad_date"]);
     expect(parseDay("19/11/2026")).toBe("2026-11-19");
+    // Jalali (1405/08/28 = 2026-11-19), with Persian digits too.
+    expect(rows[0].postedAt).toBe("2026-11-19");
+    expect(parseDay("۱۴۰۵/۰۱/۰۱")).toBe("2026-03-21");
+    expect(parseDay("2026-02-30")).toBeNull();
+    expect(parseDay("1405/07/31")).toBeNull();
   });
 
   it("guesses the platform from a shared link", () => {

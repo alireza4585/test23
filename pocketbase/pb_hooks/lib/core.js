@@ -100,6 +100,7 @@ __export(index_exports, {
   measureWithModel: () => measureWithModel,
   normalizeNationalId: () => normalizeNationalId,
   normalizeReviewText: () => normalizeText,
+  parseReviewDay: () => parseDay,
   planItem: () => planItem,
   planReplenishment: () => planReplenishment,
   predictDay: () => predictDay,
@@ -2664,7 +2665,7 @@ function asciiDigits(s) {
   return s.replace(PERSIAN_DIGITS, (d) => String(d.charCodeAt(0) - 1776)).replace(ARABIC_DIGITS, (d) => String(d.charCodeAt(0) - 1632));
 }
 function normalizeText(s) {
-  return asciiDigits(String(s != null ? s : "")).toLowerCase().replace(/[يى]/g, "\u06CC").replace(/ك/g, "\u06A9").replace(/[ةۀ]/g, "\u0647").replace(/[أإآ]/g, "\u0627").replace(/ؤ/g, "\u0648").replace(/[ً-ٰٟـ]/g, "").replace(/[‌‍]/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  return asciiDigits(String(s != null ? s : "")).toLowerCase().replace(/[يى]/g, "\u06CC").replace(/ك/g, "\u06A9").replace(/[ةۀ]/g, "\u0647").replace(/[أإآ]/g, "\u0627").replace(/ؤ/g, "\u0648").replace(/[ً-ٰٟـ]/g, "").replace(/[‌‍]/g, " ").replace(/[^0-9a-z\u00df-\u00f6\u00f8-\u024f\u0620-\u064a\u066e-\u06d3\u06d5\u06ee\u06ef\u06fa-\u06ff\u0750-\u077f\ufb50-\ufdfb\ufe70-\ufefc]+/g, " ").trim();
 }
 function sanitizeText(s, max = 4e3) {
   return String(s != null ? s : "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f​‎‏‪-‮⁦-⁩]/g, " ").replace(/[<>`]/g, " ").replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
@@ -2805,11 +2806,22 @@ var CSV_COLUMNS = {
 };
 function parseDay(v) {
   const s = asciiDigits(String(v != null ? v : "")).trim();
+  let y, mo, d;
   let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(s);
-  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
-  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(s);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  return null;
+  if (m) [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  else {
+    m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(s);
+    if (!m) return null;
+    [y, mo, d] = [Number(m[3]), Number(m[2]), Number(m[1])];
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  if (y >= 1300 && y < 1500) {
+    if (d > (mo <= 6 ? 31 : 30)) return null;
+    return jalaliToDay(y, mo, d);
+  }
+  if (y < 1900 || y > 2200) return null;
+  const day = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  return (/* @__PURE__ */ new Date(`${day}T00:00:00Z`)).toISOString().slice(0, 10) === day ? day : null;
 }
 function readImport(text) {
   const table = parseCsv(text);

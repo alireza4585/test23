@@ -106,6 +106,7 @@ export {
   guessPlatform,
   matchMention,
   normalizeText as normalizeReviewText,
+  parseDay as parseReviewDay,
   ratingTo5,
   readImport as readReviewImport,
   redactText as redactReviewText,

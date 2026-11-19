@@ -27,6 +27,8 @@
  *   POST /api/zarin/briefings/{id}/rate       "useful / not useful" on one's own morning briefing [morningBriefing]
  *   GET  /api/zarin/energy/analysis           baseline, expected vs actual, CUSUM, cost, carbon [energyBaseline]
  *   POST /api/zarin/hotels/{id}/forecasts/run refresh forecasts now [forecasts]
+ *   /api/zarin/reviews/…, /api/zarin/review-sources/…   F10 guest reviews (see lib/reviews.js) [guestReviews]
+ * Routes (public): GET|POST /survey/{token}, POST /api/zarin/survey/{token}   F10 QR survey [guestReviews]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
  *                     POST /api/zarin/admin/hotels/{id}/analytics,
  *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke],
@@ -41,7 +43,7 @@
  *             insights 03:10 (06:40 Tehran) + recommendation close/evaluation [recommendationLoop],
  *             briefing 03:20 (06:50 Tehran): morning briefing per role [morningBriefing],
  *             SLA every 15 min, outbox every minute, nonce purge every 10 min,
- *             assistant conversation retention 00:25.
+ *             assistant conversation retention 00:25, review text retention 00:35 (F10).
  */
 
 // ------------------------------------------------------------- app routes
@@ -73,6 +75,24 @@ routerAdd("POST", "/api/zarin/actions/{id}/decide", (e) => require(`${__hooks}/l
 routerAdd("POST", "/api/zarin/briefings/{id}/rate", (e) => require(`${__hooks}/lib/briefing.js`).rate(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/zarin/energy/analysis", (e) => require(`${__hooks}/lib/intelligence.js`).energyAnalysis(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/hotels/{id}/forecasts/run", (e) => require(`${__hooks}/lib/intelligence.js`).runForecastsNow(e), $apis.requireAuth("users"));
+
+// ------------------------------------------------- F10 guest reviews (reviews.js)
+routerAdd("GET", "/api/zarin/reviews/profile", (e) => require(`${__hooks}/lib/reviews.js`).getProfile(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/profile", (e) => require(`${__hooks}/lib/reviews.js`).saveProfile(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/review-sources", (e) => require(`${__hooks}/lib/reviews.js`).addSource(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/review-sources/{id}/decide", (e) => require(`${__hooks}/lib/reviews.js`).decideSource(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/import", (e) => require(`${__hooks}/lib/reviews.js`).importCsv(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews", (e) => require(`${__hooks}/lib/reviews.js`).addOne(e), $apis.requireAuth("users"));
+routerAdd("GET", "/api/zarin/reviews/queue", (e) => require(`${__hooks}/lib/reviews.js`).queue(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/{id}/decide", (e) => require(`${__hooks}/lib/reviews.js`).decide(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/dry-run", (e) => require(`${__hooks}/lib/reviews.js`).dryRun(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/survey/tokens", (e) => require(`${__hooks}/lib/reviews.js`).ensureTokens(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/survey/tokens/{id}/rotate", (e) => require(`${__hooks}/lib/reviews.js`).rotateToken(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/survey/printed", (e) => require(`${__hooks}/lib/reviews.js`).markPrinted(e), $apis.requireAuth("users"));
+// Public survey (no account): the page, its form, and the same as JSON.
+routerAdd("GET", "/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`).surveyPage(e));
+routerAdd("POST", "/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`).surveyForm(e));
+routerAdd("POST", "/api/zarin/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`).surveyJson(e));
 
 // ------------------------------------------------ superuser tools (admin.js)
 routerAdd("POST", "/api/zarin/admin/import", (e) => require(`${__hooks}/lib/admin.js`).importRecords(e), $apis.requireSuperuserAuth());
@@ -108,6 +128,13 @@ onRecordUpdateRequest((e) => { require(`${__hooks}/lib/users.js`).guardSelfUpdat
 onRecordAfterCreateSuccess((e) => { require(`${__hooks}/lib/users.js`).resyncRole(e.app, e.record); e.next(); }, "roleOverrides");
 onRecordAfterUpdateSuccess((e) => { require(`${__hooks}/lib/users.js`).resyncRole(e.app, e.record); e.next(); }, "roleOverrides");
 onRecordAfterDeleteSuccess((e) => { require(`${__hooks}/lib/users.js`).resyncRole(e.app, e.record); e.next(); }, "roleOverrides");
+
+// F10: a check-out (room leaving "occupied", on any path) rotates the room's survey QR token.
+onRecordUpdate((e) => {
+  const before = e.record.original().getString("status");
+  e.next();
+  require(`${__hooks}/lib/reviews.js`).afterRoomUpdate(e.app, e.record, before);
+}, "rooms");
 
 // ------------------------------------------------- validation & stamping
 onRecordCreateRequest((e) => require(`${__hooks}/lib/ops.js`).onTaskCreate(e), "tasks");
@@ -207,6 +234,11 @@ cronAdd("zarin_sla", "*/15 * * * *", () => {
 
 cronAdd("zarin_ai_retention", "25 0 * * *", () => {
   try { require(`${__hooks}/lib/ai.js`).purgeConversations($app, new Date()); } catch (err) { console.log("ai retention failed", String(err)); }
+});
+
+// F10: review texts older than each hotel's retention are emptied (00:35 UTC, 04:05 Tehran).
+cronAdd("zarin_review_retention", "35 0 * * *", () => {
+  try { require(`${__hooks}/lib/reviews.js`).purgeTexts($app, new Date()); } catch (err) { console.log("review retention failed", String(err)); }
 });
 
 cronAdd("zarin_nonces", "*/10 * * * *", () => {
