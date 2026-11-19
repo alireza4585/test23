@@ -219,6 +219,20 @@ export function textSimilarity(a: string, b: string): number {
   return Math.round((inter / (A.size + B.size - inter)) * 1000) / 1000;
 }
 
+/**
+ * How much of the shorter text's word bigrams are in the longer one (0–1): for
+ * an e-mail notification, which wraps the review in a few extra words.
+ */
+export function textContainment(a: string, b: string): number {
+  const A = shingles(a);
+  const B = shingles(b);
+  if (!A.size || !B.size) return 0;
+  const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+  let inter = 0;
+  for (const x of small) if (big.has(x)) inter++;
+  return Math.round((inter / small.size) * 1000) / 1000;
+}
+
 export const SAME_REVIEW_SIMILARITY = 0.85; // the same review through another channel (e-mail vs CSV)
 export const CROSS_POST_SIMILARITY = 0.9; // the same guest posting on two platforms
 export const CROSS_POST_DAYS = 3;
@@ -356,6 +370,32 @@ export function guessPlatform(url: string | null | undefined): string {
   if (/(^|\.)google\./.test(host) && !c.includes("/maps")) return /maps|goo\.gl/.test(host) ? "google" : "other";
   for (const [re, p] of HOSTS) if (re.test(host)) return p;
   return "other";
+}
+
+/**
+ * A link to a person's profile rather than a post or review (it can name the
+ * reviewer): such a link is not stored with a review. Unknown sites pass.
+ */
+export function isProfileLink(url: string | null | undefined): boolean {
+  // No URL class: the PocketBase JSVM does not have one.
+  const m = /^https?:\/\/([^/?#:]+)(?::\d+)?([^?#]*)/i.exec(String(url ?? "").trim());
+  if (!m) return false;
+  const host = m[1].toLowerCase().replace(/^(www|m|mobile)\./, "");
+  const path = m[2] || "/";
+  const seg = path.split("/").filter(Boolean);
+  const first = (seg[0] ?? "").toLowerCase();
+  if (/(^|\.)instagram\.com$|(^|\.)instagr\.am$/.test(host)) return !["p", "reel", "reels", "tv"].includes(first) || seg.length < 2;
+  if (/(^|\.)t\.me$|(^|\.)telegram\.(me|org)$/.test(host)) {
+    if (first === "c") return seg.length < 3;
+    if (first === "s") return seg.length < 3;
+    return seg.length < 2 || !/^\d+$/.test(seg[1]);
+  }
+  if (/(^|\.)google\./.test(host)) return path.includes("/contrib/");
+  if (/(^|\.)tripadvisor\.[a-z.]+$/.test(host)) return /^(profile|members)/i.test(first);
+  if (/(^|\.)facebook\.com$|(^|\.)fb\.com$/.test(host)) return first === "profile.php" || first === "people" || (seg.length === 1 && !first.includes("."));
+  if (/(^|\.)(twitter|x)\.com$/.test(host)) return !seg.includes("status");
+  if (/(^|\.)linkedin\.com$/.test(host)) return first === "in";
+  return false;
 }
 
 /** The first link in a shared text, if any. */

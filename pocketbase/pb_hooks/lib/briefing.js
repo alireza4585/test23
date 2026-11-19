@@ -107,6 +107,9 @@ function generate(app, hotelId, now) {
   const input = inputFor(app, hotelId, now);
   const items = core.buildBriefingItems(input);
   const day = input.today;
+  // F10: yesterday's guest-review digest, for roles with reviews.view (category guestReviews).
+  const reviewItem = require(`${__hooks}/lib/review-analysis.js`).briefingItem(app, hotelId, day);
+  if (reviewItem) items.push(reviewItem);
   const out = { day, items: items.length, roles: {} };
   for (const role of core.rolesWith("ai.insights.view")) {
     const perms = permsOf(app, role, hotelId);

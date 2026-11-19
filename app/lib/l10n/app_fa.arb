@@ -1511,5 +1511,96 @@
   "errorCsvRequired": "ابتدا فایل CSV را بچسبانید.",
   "errorCsvTooLarge": "فایل بیش از حد بزرگ است (حداکثر ۲ مگابایت).",
   "errorReviewRating": "امتیاز بیرون از مقیاس است.",
-  "rvToReview": "برای بازبینی"
+  "rvToReview": "برای بازبینی",
+  "rvLinkRemoved": "لینک به صفحهٔ شخصی یک نفر اشاره داشت و ذخیره نشد.",
+  "rvReadyClientIp": "نشانی مهمان‌ها دیده می‌شود (سقف هر مهمان در نظرسنجی کار می‌کند)",
+  "rvReadyClientIpMissing": "سرور همهٔ مهمان‌ها را با یک نشانی می‌بیند: نظرسنجی بسته است تا تیم پلتفرم سرآیند پروکسی را در PocketBase معتبر کند",
+  "rvDigestTitle": "خلاصهٔ {date}",
+  "@rvDigestTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "rvDigestNew": "{count, plural, =0{دیروز نظر تازه‌ای نیامد} other{{count} نظر تازهٔ دیروز}}",
+  "@rvDigestNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvGroup": "{group, select, sites{سایت‌ها} staff{ثبت کارکنان} inStay{در طول اقامت} publicQr{QR عمومی} other{{group}}}",
+  "@rvGroup": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "rvScoreRated": "{label}: {value} از ۵ ({n} نظر امتیازدار، ۳۰ روز)",
+  "@rvScoreRated": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      },
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "rvScoreNotEnough": "{label}: هنوز کافی نیست ({n} از {needs})",
+  "@rvScoreNotEnough": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "n": {
+        "type": "String"
+      },
+      "needs": {
+        "type": "String"
+      }
+    }
+  },
+  "rvRatedLabel": "میانگین امتیاز داده‌شده",
+  "rvEstimatedLabel": "رضایت برآوردی از متن نظرها (جدا از امتیازها)",
+  "rvThemes": "پرتکرارترین‌ها در ۷ روز",
+  "rvTheme": "{aspect} ({count})",
+  "@rvTheme": {
+    "placeholders": {
+      "aspect": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "rvBacklog": "{count, plural, other{{count} نظر منتظر تحلیل است (سقف روزانه)}}",
+  "@rvBacklog": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rvAspect": "{aspect, select, cleanliness{نظافت} room_comfort{آسایش اتاق و تخت} amenities{اقلام اتاق} noise{سروصدا} staff_service{کارکنان} checkin_checkout{پذیرش و تسویه} breakfast_fnb{صبحانه و غذا} restaurant{رستوران} wifi{اینترنت} maintenance{تأسیسات} facilities{امکانات} value{ارزش در برابر قیمت} location{موقعیت} safety{امنیت} other{سایر}}",
+  "@rvAspect": {
+    "placeholders": {
+      "aspect": {
+        "type": "String"
+      }
+    }
+  },
+  "rvMailTitle": "نظرات از راه ایمیل",
+  "rvMailHint": "اعلان‌های نظری را که هتل از سایت‌ها می‌گیرد به این نشانی هدایت کنید. تا وقتی قالب هر سایت آماده نشده، هر ایمیل در صف بازبینی می‌ماند.",
+  "rvMailNotConfigured": "هنوز در دسترس نیست: صندوق ایمیل نظرات پلتفرم راه‌اندازی نشده است.",
+  "rvMailCreate": "ساخت نشانی",
+  "rvMailRotate": "نشانی تازه",
+  "rvMailRotateConfirm": "ایمیل‌هایی که به نشانی فعلی بروند دیگر دریافت نمی‌شوند. هدایت خودکار را در صندوق خود به‌روز کنید. ادامه می‌دهید؟"
 }

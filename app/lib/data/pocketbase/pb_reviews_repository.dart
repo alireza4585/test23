@@ -95,7 +95,7 @@ class PocketBaseReviewsRepository implements ReviewsRepository {
       importResultFromMap(await _post('/api/zarin/reviews/import', {'hotel': hotelId, 'csv': csv, 'platform': ?platform, 'dryRun': dryRun}) as Map<String, dynamic>);
 
   @override
-  Future<ReviewStatus> add(String hotelId, ReviewDraft d) async {
+  Future<AddReviewResult> add(String hotelId, ReviewDraft d) async {
     final res = await _post('/api/zarin/reviews', {
       'hotel': hotelId,
       'channel': d.channel.wire,
@@ -106,7 +106,10 @@ class PocketBaseReviewsRepository implements ReviewsRepository {
       'rating': ?d.rating,
       'scaleMax': ?d.scaleMax,
     }) as Map<String, dynamic>;
-    return res['status'] == 'needsReview' ? ReviewStatus.needsReview : ReviewStatus.active;
+    return AddReviewResult(
+      res['status'] == 'needsReview' ? ReviewStatus.needsReview : ReviewStatus.active,
+      linkRemoved: res['linkRemoved'] == true,
+    );
   }
 
   @override
@@ -122,8 +125,25 @@ class PocketBaseReviewsRepository implements ReviewsRepository {
       surveyRoomTokens: _int(c['surveyRoomTokens']),
       surveyConfigured: c['surveyConfigured'] == true,
       feature: c['feature'] == true,
+      clientIpVisible: c['clientIpVisible'] != false,
     );
   }
+
+  @override
+  Stream<ReviewDigest?> watchDigest(String hotelId) => _live
+      .list('reviewDigests', filter: _pb.filter('hotel = {:h}', {'h': hotelId}), sort: '-day', limit: 1)
+      .map((records) => records.isEmpty ? null : digestFromMap(records.first.data));
+
+  @override
+  Stream<Map<String, List<ReviewAspect>>> watchAspects(String hotelId) => _live
+      .list('reviewAnalyses', filter: _pb.filter('hotel = {:h}', {'h': hotelId}), sort: '-created', limit: 500)
+      .map((records) => {
+            for (final r in records)
+              r.str('review'): [
+                for (final a in (r.data['aspects'] as List? ?? const []).whereType<Map<String, dynamic>>())
+                  if (a['aspect'] is String) ReviewAspect(a['aspect'] as String, positive: a['sentiment'] == 'pos'),
+              ],
+          });
 
   @override
   Stream<List<SurveyToken>> watchSurveyTokens(String hotelId) {
@@ -156,6 +176,10 @@ class PocketBaseReviewsRepository implements ReviewsRepository {
         .list('reviewSurveyTokens', filter: _pb.filter('hotel = {:h}', {'h': hotelId}), limit: 1)
         .asyncMap((_) => load());
   }
+
+  @override
+  Future<String> rotateInboundAddress(String hotelId) async =>
+      ((await _post('/api/zarin/reviews/inbound-address', {'hotel': hotelId})) as Map<String, dynamic>)['address'] as String? ?? '';
 
   /// The survey page on this server (the QR card's link).
   String surveyUrl(String token) => '${_pb.baseURL.replaceFirst(RegExp(r'/+$'), '')}/survey/$token';
@@ -222,6 +246,8 @@ ReviewProfile profileFromMap(Map<String, dynamic> m) {
     ),
     showEstimated: toggles['showEstimated'] == true,
     onboarding: {for (final e in onboarding.entries) if (e.value is String) e.key: e.value as String},
+    inboundAddress: m['inboundAddress'] as String? ?? '',
+    mailConfigured: m['mailConfigured'] == true,
   );
 }
 
@@ -251,3 +277,26 @@ ImportResult importResultFromMap(Map<String, dynamic> m) => ImportResult(
       ),
   ],
 );
+
+ReviewScore _score(Object? v) {
+  final m = (v as Map?)?.cast<String, dynamic>() ?? const {};
+  return ReviewScore(value: _num(m['value']), n: _int(m['n']), needs: _int(m['needs']));
+}
+
+ReviewDigest digestFromMap(Map<String, dynamic> m) {
+  final rated = (m['rated'] as Map?)?.cast<String, dynamic>() ?? const {};
+  final est = (m['estimated'] as Map?)?.cast<String, dynamic>() ?? const {};
+  return ReviewDigest(
+    day: m['day'] as String? ?? '',
+    newCount: _int(m['newCount']),
+    byGroup: {for (final e in ((m['byGroup'] as Map?) ?? const {}).entries) '${e.key}': _int(e.value)},
+    rated: _score(rated['all']),
+    ratedByGroup: {for (final g in const ['sites', 'staff', 'inStay', 'publicQr']) if (rated[g] != null) g: _score(rated[g])},
+    estimated: est['shown'] == true ? _score(est) : null,
+    themes: [
+      for (final t in (m['themes'] as List? ?? const []).whereType<Map<String, dynamic>>())
+        ReviewTheme(aspect: t['aspect'] as String? ?? 'other', positive: t['polarity'] == 'pos', count: _int(t['count'])),
+    ],
+    backlog: _int(m['backlog']),
+  );
+}

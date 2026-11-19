@@ -111,6 +111,8 @@ class ReviewProfile {
     this.survey = const ReviewSurveySettings(),
     this.showEstimated = false,
     this.onboarding = const {},
+    this.inboundAddress = '',
+    this.mailConfigured = false,
   });
 
   /// A profile record exists (otherwise these are the defaults from the hotel).
@@ -130,6 +132,12 @@ class ReviewProfile {
 
   /// Onboarding steps done (`profile`, `listings`, `dryRunAt` → when).
   final Map<String, String> onboarding;
+
+  /// Where the hotel forwards review-site notification mails (managers only; empty until created).
+  final String inboundAddress;
+
+  /// The platform's reviews mail domain is set on the server.
+  final bool mailConfigured;
 }
 
 /// A change to the profile; null fields stay as they are.
@@ -294,6 +302,7 @@ class ReviewReadiness {
     required this.surveyRoomTokens,
     required this.surveyConfigured,
     required this.feature,
+    this.clientIpVisible = true,
   });
 
   final bool profileSaved;
@@ -304,6 +313,73 @@ class ReviewReadiness {
   final int surveyRoomTokens;
   final bool surveyConfigured;
   final bool feature;
+
+  /// False behind a proxy whose forwarding header PocketBase does not trust:
+  /// every guest would share one address, so the survey stays closed.
+  final bool clientIpVisible;
+}
+
+/// What happened to a review sent from the app.
+class AddReviewResult {
+  const AddReviewResult(this.status, {this.linkRemoved = false});
+
+  final ReviewStatus status;
+
+  /// The link pointed to a person's profile, not the review: not stored.
+  final bool linkRemoved;
+}
+
+/// One aspect the analysis found in a review (the 15-key taxonomy).
+class ReviewAspect {
+  const ReviewAspect(this.aspect, {required this.positive});
+
+  final String aspect;
+  final bool positive;
+}
+
+/// A score shown only from its minimum number of reviews: [value] is null below [needs].
+class ReviewScore {
+  const ReviewScore({this.value, this.n = 0, this.needs = 0});
+
+  final double? value;
+  final int n;
+  final int needs;
+}
+
+class ReviewTheme {
+  const ReviewTheme({required this.aspect, required this.positive, required this.count});
+
+  final String aspect;
+  final bool positive;
+  final int count;
+}
+
+/// The daily summary (rule-built). The rated average and the estimated
+/// satisfaction are separate scores and are never blended.
+class ReviewDigest {
+  const ReviewDigest({
+    required this.day,
+    this.newCount = 0,
+    this.byGroup = const {},
+    this.rated = const ReviewScore(),
+    this.ratedByGroup = const {},
+    this.estimated,
+    this.themes = const [],
+    this.backlog = 0,
+  });
+
+  final String day;
+  final int newCount;
+
+  /// sites | staff | inStay | publicQr
+  final Map<String, int> byGroup;
+  final ReviewScore rated;
+  final Map<String, ReviewScore> ratedByGroup;
+
+  /// Null unless the hotel opted in to see it.
+  final ReviewScore? estimated;
+  final List<ReviewTheme> themes;
+  final int backlog;
 }
 
 abstract interface class ReviewsRepository {
@@ -328,15 +404,24 @@ abstract interface class ReviewsRepository {
   /// CSV in the generic format; with [dryRun] nothing is saved.
   Future<ImportResult> importCsv(String hotelId, String csv, {String? platform, bool dryRun = true});
 
-  /// Returns the review's status (active or needsReview).
-  Future<ReviewStatus> add(String hotelId, ReviewDraft draft);
+  /// The review's status (active or needsReview) and whether its link was dropped.
+  Future<AddReviewResult> add(String hotelId, ReviewDraft draft);
 
   Future<ReviewReadiness> readiness(String hotelId);
+
+  /// The latest daily summary, if any.
+  Stream<ReviewDigest?> watchDigest(String hotelId);
+
+  /// Aspects found per review id (recent reviews).
+  Stream<Map<String, List<ReviewAspect>>> watchAspects(String hotelId);
 
   Stream<List<SurveyToken>> watchSurveyTokens(String hotelId);
   Future<void> createSurveyTokens(String hotelId, SurveyTokenKind kind);
   Future<void> rotateSurveyToken(String tokenId);
   Future<void> markPrinted(String hotelId, List<String> tokenIds);
+
+  /// A new forwarding address for review mails (the old one stops); returns it ('' without a mail domain).
+  Future<String> rotateInboundAddress(String hotelId);
 }
 
 /// The platform a shared link points to (editable in the form). Mirrors the

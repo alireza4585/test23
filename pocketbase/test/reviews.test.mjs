@@ -66,6 +66,8 @@ describe("JSVM compatibility", () => {
   it("the bundled core uses no Unicode property escapes (the PocketBase JSVM does not support \\p{…})", () => {
     const src = readFileSync(new URL("../pb_hooks/lib/core.js", import.meta.url), "utf8");
     expect(src).not.toMatch(/\\[pP]\{/);
+    // Nor a URL class.
+    expect(src).not.toMatch(/new URL\(/);
   });
 });
 
@@ -331,6 +333,42 @@ describe("QR survey", () => {
     expect(r2.token).not.toBe(pub);
     expect((await fetch(`${url()}/survey/${pub}`)).status).toBe(404);
     await su.collection("rooms").update(room.id, { status: room.status });
+  });
+});
+
+describe("pre-R2 owner notes", () => {
+  it("a link to a person's profile is not stored; the review is", async () => {
+    const r = await post(gm, "/api/zarin/reviews", { channel: "staff_share", text: "اتاق دلباز بود", url: "https://www.instagram.com/some.guest/" });
+    expect(r.linkRemoved).toBe(true);
+    const rec = await su.collection("reviews").getOne(r.id);
+    expect(rec.url).toBe("");
+    expect(rec.platform).toBe("instagram");
+    const csv = `id,date,text,url\npl-1,${day(-2)},کارکنان خوب بودند و صبحانه هم خوب بود,https://t.me/someone\npl-2,${day(-2)},پذیرش سریع بود و اتاق آماده بود,https://t.me/somechannel/77\n`;
+    const dry = await post(gm, "/api/zarin/reviews/import", { csv, platform: "telegram" });
+    expect(dry.linksRemoved).toBe(1);
+    expect(dry.preview.map((p) => p.linkRemoved)).toEqual([true, false]);
+  });
+
+  it("behind an untrusted proxy header the survey is closed and the setup check says so", async () => {
+    const tokens = await su.collection("reviewSurveyTokens").getFullList({ filter: `hotel = "${hotelId()}" && kind = "public"` });
+    const token = tokens[0].token;
+    const viaProxy = { "X-Forwarded-For": "203.0.113.9" };
+    expect((await fetch(`${url()}/survey/${token}`)).status).toBe(200);
+    expect((await fetch(`${url()}/survey/${token}`, { headers: viaProxy })).status).toBe(404);
+    const check = (headers) => fetch(`${url()}/api/zarin/reviews/dry-run`, {
+      method: "POST", headers: { "content-type": "application/json", Authorization: gm.authStore.token, ...headers }, body: "{}",
+    }).then((r) => r.json());
+    expect((await check({})).checks.clientIpVisible).toBe(true);
+    expect((await check(viaProxy)).checks.clientIpVisible).toBe(false);
+    // Once PocketBase trusts the header, the guest's address is visible and the survey opens.
+    const before = await su.settings.getAll();
+    await su.settings.update({ trustedProxy: { headers: ["X-Forwarded-For"], useLeftmostIP: true } });
+    try {
+      expect((await fetch(`${url()}/survey/${token}`, { headers: viaProxy })).status).toBe(200);
+      expect((await check(viaProxy)).checks.clientIpVisible).toBe(true);
+    } finally {
+      await su.settings.update({ trustedProxy: before.trustedProxy });
+    }
   });
 });
 

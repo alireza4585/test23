@@ -120,9 +120,13 @@ class UnsupportedReviewsRepository implements ReviewsRepository {
   @override
   Future<ImportResult> importCsv(String hotelId, String csv, {String? platform, bool dryRun = true}) => Future.error(_why);
   @override
-  Future<ReviewStatus> add(String hotelId, ReviewDraft draft) => Future.error(_why);
+  Future<AddReviewResult> add(String hotelId, ReviewDraft draft) => Future.error(_why);
   @override
   Future<ReviewReadiness> readiness(String hotelId) => Future.error(_why);
+  @override
+  Stream<ReviewDigest?> watchDigest(String hotelId) => Stream.error(_why);
+  @override
+  Stream<Map<String, List<ReviewAspect>>> watchAspects(String hotelId) => Stream.error(_why);
   @override
   Stream<List<SurveyToken>> watchSurveyTokens(String hotelId) => Stream.error(_why);
   @override
@@ -131,4 +135,6 @@ class UnsupportedReviewsRepository implements ReviewsRepository {
   Future<void> rotateSurveyToken(String tokenId) => Future.error(_why);
   @override
   Future<void> markPrinted(String hotelId, List<String> tokenIds) => Future.error(_why);
+  @override
+  Future<String> rotateInboundAddress(String hotelId) => Future.error(_why);
 }

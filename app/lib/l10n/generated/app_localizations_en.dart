@@ -2590,4 +2590,124 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rvToReview => 'to review';
+
+  @override
+  String get rvLinkRemoved =>
+      'The link pointed to a person\'s profile and was not stored.';
+
+  @override
+  String get rvReadyClientIp =>
+      'Guests\' addresses are visible (per-guest survey limits work)';
+
+  @override
+  String get rvReadyClientIpMissing =>
+      'The server sees every guest with one address: the survey is closed until the platform team trusts the proxy header in PocketBase';
+
+  @override
+  String rvDigestTitle(String date) {
+    return 'Summary of $date';
+  }
+
+  @override
+  String rvDigestNew(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new reviews yesterday',
+      one: '1 new review yesterday',
+      zero: 'No new reviews yesterday',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvGroup(String group) {
+    String _temp0 = intl.Intl.selectLogic(group, {
+      'sites': 'Review sites',
+      'staff': 'Staff-captured',
+      'inStay': 'In-stay',
+      'publicQr': 'Public QR',
+      'other': '$group',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvScoreRated(String label, String value, String n) {
+    return '$label: $value / 5 ($n rated reviews, 30 days)';
+  }
+
+  @override
+  String rvScoreNotEnough(String label, String n, String needs) {
+    return '$label: not enough yet ($n of $needs)';
+  }
+
+  @override
+  String get rvRatedLabel => 'Average rating';
+
+  @override
+  String get rvEstimatedLabel =>
+      'Estimated satisfaction from the texts (separate from ratings)';
+
+  @override
+  String get rvThemes => 'Most mentioned in 7 days';
+
+  @override
+  String rvTheme(String aspect, String count) {
+    return '$aspect ($count)';
+  }
+
+  @override
+  String rvBacklog(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews wait for analysis (daily limit)',
+      one: '1 review waits for analysis (daily limit)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvAspect(String aspect) {
+    String _temp0 = intl.Intl.selectLogic(aspect, {
+      'cleanliness': 'Cleanliness',
+      'room_comfort': 'Room & bed',
+      'amenities': 'Amenities',
+      'noise': 'Noise',
+      'staff_service': 'Staff',
+      'checkin_checkout': 'Check-in/out',
+      'breakfast_fnb': 'Breakfast & food',
+      'restaurant': 'Restaurant',
+      'wifi': 'Internet',
+      'maintenance': 'Maintenance',
+      'facilities': 'Facilities',
+      'value': 'Value',
+      'location': 'Location',
+      'safety': 'Safety',
+      'other': 'Other',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvMailTitle => 'Reviews by e-mail';
+
+  @override
+  String get rvMailHint =>
+      'Forward the review notifications your hotel gets from review sites to this address. Each mail waits in the review queue until per-site templates exist.';
+
+  @override
+  String get rvMailNotConfigured =>
+      'Not available yet: the platform\'s reviews mailbox is not set up.';
+
+  @override
+  String get rvMailCreate => 'Create the address';
+
+  @override
+  String get rvMailRotate => 'New address';
+
+  @override
+  String get rvMailRotateConfirm =>
+      'Mail sent to the current address will no longer be taken. Update the forwarding in your mailbox. Continue?';
 }

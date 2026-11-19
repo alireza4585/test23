@@ -64,7 +64,7 @@ class _ReviewAddPageState extends ConsumerState<ReviewAddPage> {
     final scale = double.tryParse(_ascii(_scale.text));
     setState(() => _busy = true);
     try {
-      final status = await ref.read(reviewActionsProvider).add(ReviewDraft(
+      final result = await ref.read(reviewActionsProvider).add(ReviewDraft(
         channel: _channel,
         text: _text.text,
         url: _url.text.trim().isEmpty ? null : _url.text.trim(),
@@ -74,7 +74,8 @@ class _ReviewAddPageState extends ConsumerState<ReviewAddPage> {
         scaleMax: rating == null ? null : scale,
       ));
       if (!mounted) return;
-      showSuccess(context, status == ReviewStatus.needsReview ? l10n.rvSavedQueued : l10n.rvSaved);
+      final saved = result.status == ReviewStatus.needsReview ? l10n.rvSavedQueued : l10n.rvSaved;
+      showSuccess(context, result.linkRemoved ? '$saved ${l10n.rvLinkRemoved}' : saved);
       context.pop();
     } catch (e) {
       if (mounted) showFailure(context, e);

@@ -6,7 +6,7 @@
     <!-- allowBackup=false: auth tokens and secure storage must never be
          exported via adb/cloud backup. supportsRtl: Persian UI. -->
     <application
-        android:label="زرین هوشمند"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"

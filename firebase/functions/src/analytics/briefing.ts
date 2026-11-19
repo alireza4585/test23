@@ -28,7 +28,7 @@ export const ROBUST_Z = 3;
 export const MAX_ITEMS = 7;
 export const MIN_ITEMS = 5;
 
-export type BriefingCategory = "occupancy" | "energy" | "maintenance" | "housekeeping" | "inventory" | "revenue" | "staffing";
+export type BriefingCategory = "occupancy" | "energy" | "maintenance" | "housekeeping" | "inventory" | "revenue" | "staffing" | "guestReviews";
 
 export interface BriefingInput {
   today: string;
@@ -405,6 +405,8 @@ export function categoriesFor(perms: Record<string, boolean>): Set<BriefingCateg
   if (perms["inventory.view"]) out.add("inventory");
   if (perms["staff.view"]) out.add("staffing");
   if (perms["finance.view"]) out.add("revenue");
+  // F10: the guest-review digest item (added by the server when the hotel has guestReviews).
+  if (perms["reviews.view"]) out.add("guestReviews");
   return out;
 }
 

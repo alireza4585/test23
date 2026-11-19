@@ -305,6 +305,35 @@ for (const h of hotels) {
 }
 files[`csv/${S.edited.hotel}-${S.edited.platform}-update.csv`] = csvOf(byKey[S.edited.hotel], S.edited.platform, updates, true);
 
+// ---------------------------------------------------------------- eval set
+// 200 reviews for the analysis eval (docs/21 §8.2): the same construction, a
+// separate draw after everything above (so adding it changed nothing above).
+// 10 carry an injected instruction; 20% are listed for a person to check.
+const EVAL_SIZE = 200;
+const evalSet = [];
+for (let i = 0; i < EVAL_SIZE; i++) {
+  const h = hotels[i % hotels.length];
+  const day = pick(DAYS);
+  const lang = chance(0.8) ? "fa" : "en";
+  const c = compose(h, day, lang);
+  const platform = weighted(h.generate.platforms);
+  const scale = scaleOf(h, platform);
+  const rating = scale ? ratingFor(c.sentiment, scale) : null;
+  let text = c.text;
+  const injection = i % 20 === 7;
+  if (injection) text = join2([text, sentence(pick(bank.injections[lang]), lang)]);
+  evalSet.push({
+    id: `ev-${String(i + 1).padStart(3, "0")}`, lang, text, rating: rating ? { raw: rating.raw, min: scale.min, max: scale.max } : null,
+    labels: { aspects: c.labels, sentiment: c.sentiment, rating5: rating ? rating.rating5 : null, injection },
+  });
+}
+const humanCheck = shuffle(evalSet.map((e) => e.id)).slice(0, EVAL_SIZE / 5).sort();
+files["eval-synthetic.jsonl"] = evalSet.map((e) => JSON.stringify(e)).join("\n") + "\n";
+files["eval-synthetic-check.json"] = JSON.stringify({
+  note: "20% of the synthetic eval set for a person to check: for each id, confirm or correct its labels (aspects, sentiment) in eval-synthetic.jsonl, then record who checked and when here.",
+  ids: humanCheck, checkedBy: null, checkedAt: null,
+}, null, 2) + "\n";
+
 // ----------------------------------------------------------------- manifest
 const count = (list, f) => list.reduce((m, r) => ((m[f(r)] = (m[f(r)] || 0) + 1), m), {});
 const manifest = {
@@ -320,6 +349,7 @@ const manifest = {
   actions: [{ hotel: sp.hotel, aspect: sp.aspect, day: sp.actionDay }],
   updates: updates.length,
   mentions: mentions.length,
+  evalSet: { size: EVAL_SIZE, injections: evalSet.filter((e) => e.labels.injection).length, humanCheck: humanCheck.length },
   files: Object.keys(files).sort().concat(["mentions.jsonl", "reviews.jsonl"]),
 };
 files["reviews.jsonl"] = reviews.map((r) => JSON.stringify(r)).join("\n") + "\n";

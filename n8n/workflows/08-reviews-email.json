@@ -1,0 +1,147 @@
+{
+  "name": "Zarin · 08 · Reviews by e-mail",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "read",
+        "format": "resolved",
+        "downloadAttachments": false,
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]"
+        }
+      },
+      "id": "70e5dc06-bb7d-5d0b-8cbc-4544aa4e02fd",
+      "name": "Reviews mailbox (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "notes": "Attach the IMAP credential \"Zarin reviews mailbox\" (platform level; see n8n/README.md). Marks each mail read after taking it."
+    },
+    {
+      "parameters": {
+        "jsCode": "// F10: one forwarded review notification per mail. PocketBase finds the hotel\n// from its unguessable address (r-<token>@ZARIN_REVIEWS_MAIL_DOMAIN), parses the\n// mail and keeps only the review; nothing of the mail is stored in n8n beyond\n// its execution log (keep execution data short: EXECUTIONS_DATA_MAX_AGE).\n// An auto-forwarded mail keeps its original To:, so the delivery headers count too.\nconst domain = String($env.ZARIN_REVIEWS_MAIL_DOMAIN || '').toLowerCase();\nconst list = (v) => {\n  if (!v) return [];\n  if (typeof v === 'string') return v.split(',');\n  if (Array.isArray(v)) return v.flatMap(list);\n  if (Array.isArray(v.value)) return v.value.map((a) => a.address || '').filter(Boolean);\n  if (v.text) return String(v.text).split(',');\n  return [];\n};\nreturn $input.all().flatMap((item) => {\n  const m = item.json;\n  const h = m.headers || {};\n  const to = [\n    ...list(m.to), ...list(m.cc),\n    ...list(h['delivered-to']), ...list(h['x-original-to']), ...list(h['x-forwarded-to']),\n  ].map((a) => String(a).trim()).filter(Boolean);\n  // Mail not sent to the reviews domain is not ours to send on.\n  if (domain && !to.some((a) => a.toLowerCase().includes('@' + domain))) return [];\n  const date = m.date ? new Date(m.date) : null;\n  const text = String(m.text || '').slice(0, 500000);\n  return [{ json: { requestBody: {\n    to,\n    from: typeof m.from === 'string' ? m.from : (m.from && m.from.text) || '',\n    subject: String(m.subject || '').slice(0, 500),\n    date: date && !isNaN(date.getTime()) ? date.toISOString() : '',\n    text,\n    html: text ? '' : String(m.html || m.textAsHtml || '').slice(0, 500000),\n    messageId: String(m.messageId || ''),\n  } } }];\n});"
+      },
+      "id": "bc8de6d2-b758-5142-b021-b41d98e5a4a7",
+      "name": "Mail → review payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs a request for the Zarin Integration API.\n// With ZARIN_KEY_ID and ZARIN_KEY_SECRET set (a scoped key from `npm run integration-key`):\n//   HMAC-SHA256(keySecret, `${timestamp}.${nonce}.${body}`), a fresh nonce per request (v2).\n// Otherwise the shared secret: HMAC-SHA256(ZARIN_INTEGRATION_SECRET, `${timestamp}.${body}`) (v1).\n// Requires NODE_FUNCTION_ALLOW_BUILTIN=crypto on the n8n instance.\nconst crypto = require('crypto');\nconst keyId = $env.ZARIN_KEY_ID || '';\nconst keySecret = $env.ZARIN_KEY_SECRET || '';\nconst scoped = Boolean(keyId && keySecret);\nconst sign = (json) => {\n  const body = json.requestBody ? JSON.stringify(json.requestBody) : '';\n  const timestamp = Math.floor(Date.now() / 1000);\n  const nonce = scoped ? crypto.randomBytes(16).toString('hex') : '';\n  const signature = crypto\n    .createHmac('sha256', scoped ? keySecret : $env.ZARIN_INTEGRATION_SECRET)\n    .update(scoped ? `${timestamp}.${nonce}.${body}` : `${timestamp}.${body}`)\n    .digest('hex');\n  return { ...json, rawBody: body, zarinTimestamp: String(timestamp), zarinSignature: signature, zarinKeyId: scoped ? keyId : '', zarinNonce: nonce };\n};\nreturn $input.all().map((item) => ({ json: sign(item.json) }));"
+      },
+      "id": "ba4a2fa2-4d08-5831-b48c-03f9df9e2d19",
+      "name": "Sign request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZARIN_API_BASE }}/v1/reviews/inbound-email",
+        "options": {
+          "timeout": 30000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-zarin-timestamp",
+              "value": "={{ $json.zarinTimestamp }}"
+            },
+            {
+              "name": "x-zarin-signature",
+              "value": "={{ $json.zarinSignature }}"
+            },
+            {
+              "name": "x-zarin-key-id",
+              "value": "={{ $json.zarinKeyId }}"
+            },
+            {
+              "name": "x-zarin-nonce",
+              "value": "={{ $json.zarinNonce }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.rawBody }}"
+      },
+      "id": "d4dce14a-9c04-5088-89c1-6219f75a5977",
+      "name": "POST inbound e-mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Reviews mailbox (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Mail → review payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail → review payload": {
+      "main": [
+        [
+          {
+            "node": "Sign request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign request": {
+      "main": [
+        [
+          {
+            "node": "POST inbound e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tehran",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "none"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "notes": "F10: the shared reviews mailbox (IMAP, platform level) → POST /v1/reviews/inbound-email (signed). PocketBase resolves the hotel from the address, parses and drops the mail. Generic parser only: every review waits for a person until per-site templates exist."
+  }
+}

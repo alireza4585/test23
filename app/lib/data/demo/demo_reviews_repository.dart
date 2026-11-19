@@ -190,7 +190,7 @@ class DemoReviewsRepository implements ReviewsRepository {
   }
 
   @override
-  Future<ReviewStatus> add(String hotelId, ReviewDraft d) async {
+  Future<AddReviewResult> add(String hotelId, ReviewDraft d) async {
     _require(hotelId, AppPermission.reviewsManage);
     if (d.text.trim().isEmpty && d.rating == null) throw const ValidationFailure('no_text_or_rating');
     await _store.latency();
@@ -200,7 +200,7 @@ class DemoReviewsRepository implements ReviewsRepository {
       text: d.text.replaceAll(RegExp(r'''https?://[^\s<>"']+'''), '[link]'), url: d.url,
       rating5: d.rating == null ? null : ((d.rating! - 1) / (scale - 1) * 4 + 1), postedAt: d.postedAt ?? _store.clock.now(),
     ));
-    return ReviewStatus.active;
+    return const AddReviewResult(ReviewStatus.active);
   }
 
   @override
@@ -217,6 +217,26 @@ class DemoReviewsRepository implements ReviewsRepository {
       feature: p.feature,
     );
   }
+
+  @override
+  Stream<ReviewDigest?> watchDigest(String hotelId) {
+    _seed();
+    final day = _store.clock.now();
+    return Stream.value(ReviewDigest(
+      day: '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+      newCount: 3,
+      byGroup: const {'sites': 2, 'inStay': 1},
+      rated: const ReviewScore(n: 4, needs: 5),
+      themes: const [ReviewTheme(aspect: 'breakfast_fnb', positive: false, count: 2)],
+    ));
+  }
+
+  @override
+  Stream<Map<String, List<ReviewAspect>>> watchAspects(String hotelId) => Stream.value(const {
+    'rv-demo-1': [ReviewAspect('cleanliness', positive: true), ReviewAspect('breakfast_fnb', positive: true)],
+    'rv-demo-2': [ReviewAspect('noise', positive: false), ReviewAspect('staff_service', positive: true)],
+    'rv-demo-6': [ReviewAspect('breakfast_fnb', positive: false)],
+  });
 
   String _url(String token) => 'https://demo.invalid/survey/$token';
 
@@ -252,6 +272,9 @@ class DemoReviewsRepository implements ReviewsRepository {
     final token = 'demo${now.microsecondsSinceEpoch}';
     _s.tokens.put(SurveyToken(id: t.id, kind: t.kind, token: token, url: _url(token), roomId: t.roomId, roomNumber: t.roomNumber, rotatedAt: now, printedAt: t.printedAt));
   }
+
+  @override
+  Future<String> rotateInboundAddress(String hotelId) async => '';
 
   @override
   Future<void> markPrinted(String hotelId, List<String> tokenIds) async {

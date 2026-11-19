@@ -42,8 +42,12 @@ function secretsKey() {
   return k.length === 32 ? k : null;
 }
 
-/** v2: scoped key + nonce. Returns nothing; throws when the request is not valid. */
-function verifyKey(e, keyId, ts, sig, raw, fresh) {
+/**
+ * v2: scoped key + nonce. Returns nothing; throws when the request is not valid.
+ * [hotelOf] (optional) finds the hotel from the body for routes without one in
+ * the path (F10 inbound e-mail); the key must cover that hotel too.
+ */
+function verifyKey(e, keyId, ts, sig, raw, fresh, hotelOf) {
   const nonce = String(e.request.header.get("x-zarin-nonce") || "");
   const master = secretsKey();
   if (!fresh || !sig || !NONCE_RE.test(nonce) || !master) throw denied();
@@ -56,7 +60,7 @@ function verifyKey(e, keyId, ts, sig, raw, fresh) {
     throw denied();
   }
   if (!secret || !$security.equal(sig, sign(secret, ts, `${nonce}.${raw}`))) throw denied();
-  const hotelId = e.request.pathValue("hotelId");
+  const hotelId = hotelOf ? hotelOf(raw) : e.request.pathValue("hotelId");
   if (!hotelId || z.arr(key.getStringSlice("hotels")).indexOf(hotelId) < 0) {
     throw z.forbidden("key_not_allowed_for_hotel");
   }
@@ -73,14 +77,14 @@ function verifyKey(e, keyId, ts, sig, raw, fresh) {
 }
 
 /** Verifies the request signature (v1 or v2) and returns the parsed JSON body. */
-function verified(e) {
+function verified(e, hotelOf) {
   const raw = e.request.body ? toString(e.request.body) : "";
   const ts = Number(e.request.header.get("x-zarin-timestamp"));
   const sig = String(e.request.header.get("x-zarin-signature") || "");
   const fresh = isFinite(ts) && Math.abs(Date.now() / 1000 - ts) <= MAX_SKEW_SECONDS;
   const keyId = String(e.request.header.get("x-zarin-key-id") || "");
   if (keyId) {
-    verifyKey(e, keyId, ts, sig, raw, fresh);
+    verifyKey(e, keyId, ts, sig, raw, fresh, hotelOf);
   } else {
     const secret = $os.getenv("ZH_INTEGRATION_SECRET");
     if (!sharedSecretAllowed() || !secret || !fresh || !sig || !$security.equal(sig, sign(secret, ts, raw))) {

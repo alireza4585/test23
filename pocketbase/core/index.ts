@@ -104,6 +104,7 @@ export {
   canonicalUrl,
   firstLink,
   guessPlatform,
+  isProfileLink,
   matchMention,
   normalizeText as normalizeReviewText,
   parseDay as parseReviewDay,
@@ -111,6 +112,27 @@ export {
   readImport as readReviewImport,
   redactText as redactReviewText,
   sanitizeText as sanitizeReviewText,
+  textContainment,
   textKey as reviewTextKey,
   textSimilarity,
 } from "../../firebase/functions/src/analytics/reviews";
+export {
+  ANALYSIS_PROMPT_VERSION as REVIEW_PROMPT_VERSION,
+  ANALYSIS_SYSTEM as REVIEW_ANALYSIS_SYSTEM,
+  ASPECTS as REVIEW_ASPECTS,
+  analysisMessage as reviewAnalysisMessage,
+  aspectLabel as reviewAspectLabel,
+  buildDigest as buildReviewDigest,
+  digestBriefingItem as reviewDigestBriefingItem,
+  groupOf as reviewGroupOf,
+  parseAnalysis as parseReviewAnalysis,
+  rulesAnalyze as reviewRulesAnalyze,
+} from "../../firebase/functions/src/analytics/review-analysis";
+export {
+  bodyOf as mailBodyOf,
+  forwardingConfirmation,
+  htmlToText,
+  inboundToken,
+  parseGeneric as parseGenericMail,
+  ratingIn as mailRatingIn,
+} from "../../firebase/functions/src/analytics/review-email";

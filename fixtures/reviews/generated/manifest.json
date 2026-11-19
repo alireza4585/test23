@@ -91,6 +91,11 @@
   ],
   "updates": 8,
   "mentions": 18,
+  "evalSet": {
+    "size": 200,
+    "injections": 10,
+    "humanCheck": 40
+  },
   "files": [
     "csv/niloofar-kerman-jabama.csv",
     "csv/niloofar-kerman-tripadvisor.csv",
@@ -100,6 +105,8 @@
     "csv/niloofar-yazd-instagram.csv",
     "csv/niloofar-yazd-snapptrip.csv",
     "csv/sepidar-google.csv",
+    "eval-synthetic-check.json",
+    "eval-synthetic.jsonl",
     "mentions.jsonl",
     "reviews.jsonl"
   ]

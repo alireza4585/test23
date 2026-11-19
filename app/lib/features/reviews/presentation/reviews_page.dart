@@ -105,6 +105,7 @@ class _ReviewListState extends ConsumerState<_ReviewList> {
       value: ref.watch(reviewsProvider),
       data: (all) {
         final visible = all.where((r) => _matches(_filter, r)).toList();
+        final aspects = ref.watch(reviewAspectsProvider).value ?? const <String, List<ReviewAspect>>{};
         return PageBody(
           maxWidth: 900,
           children: [
@@ -122,10 +123,12 @@ class _ReviewListState extends ConsumerState<_ReviewList> {
               ],
             ),
             const SizedBox(height: Insets.md),
+            const DigestCard(),
             if (visible.isEmpty)
               Padding(padding: const EdgeInsets.only(top: Insets.xl), child: EmptyState(message: l10n.rvEmpty, icon: Icons.reviews_outlined))
             else
-              for (final r in visible) Padding(padding: const EdgeInsets.only(bottom: Insets.sm), child: ReviewTile(review: r)),
+              for (final r in visible)
+                Padding(padding: const EdgeInsets.only(bottom: Insets.sm), child: ReviewTile(review: r, aspects: aspects[r.id] ?? const [])),
             const SizedBox(height: 80),
           ],
         );
@@ -145,9 +148,12 @@ class _ReviewListState extends ConsumerState<_ReviewList> {
 /// One review: source, channel, rating (1–5 and the original scale), date,
 /// text and a link to the site. [actions] for the queue.
 class ReviewTile extends StatelessWidget {
-  const ReviewTile({super.key, required this.review, this.actions});
+  const ReviewTile({super.key, required this.review, this.actions, this.aspects = const []});
 
   final GuestReview review;
+
+  /// Found by the analysis (LLM or rules).
+  final List<ReviewAspect> aspects;
   final Widget? actions;
 
   String _num(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
@@ -187,6 +193,20 @@ class ReviewTile extends StatelessWidget {
             Text(l10n.rvTextPurged, style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic))
           else if (r.text.isNotEmpty)
             Text(r.text, style: theme.textTheme.bodyMedium),
+          if (aspects.isNotEmpty) ...[
+            const SizedBox(height: Insets.xs),
+            Wrap(
+              spacing: Insets.xs,
+              runSpacing: Insets.xs,
+              children: [
+                for (final a in aspects)
+                  StatusPill(
+                    label: '${l10n.rvAspect(a.aspect)} ${a.positive ? '+' : '−'}',
+                    color: a.positive ? Colors.green.shade700 : scheme.error,
+                  ),
+              ],
+            ),
+          ],
           if (r.duplicateOf != null || r.editedAt != null || r.matchReasons.isNotEmpty || r.url != null) ...[
             const SizedBox(height: Insets.xs),
             Wrap(
@@ -273,6 +293,69 @@ class _QueueTab extends ConsumerWidget {
                 ),
               ),
         ],
+      ),
+    );
+  }
+}
+
+/// The latest daily summary: new reviews by channel group, the rated average
+/// and (if the hotel opted in) the estimated satisfaction, each only from its
+/// minimum n, and the most mentioned aspects.
+class DigestCard extends ConsumerWidget {
+  const DigestCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final d = ref.watch(reviewDigestProvider).value;
+    if (d == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final fmt = context.fmt;
+    final theme = Theme.of(context);
+    String score(String label, ReviewScore s) => s.value == null
+        ? l10n.rvScoreNotEnough(label, fmt.digits('${s.n}'), fmt.digits('${s.needs}'))
+        : l10n.rvScoreRated(label, fmt.digits(s.value!.toStringAsFixed(2)), fmt.digits('${s.n}'));
+    final day = DateTime.tryParse(d.day);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Insets.md),
+      child: ZCard(
+        key: const ValueKey('rv-digest'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.rvDigestTitle(day == null ? d.day : fmt.date(day)), style: theme.textTheme.titleSmall),
+            const SizedBox(height: Insets.xs),
+            Text([
+              l10n.rvDigestNew(d.newCount),
+              for (final e in d.byGroup.entries.where((e) => e.value > 0)) '${l10n.rvGroup(e.key)} ${fmt.digits('${e.value}')}',
+            ].join(' · ')),
+            Text(score(l10n.rvRatedLabel, d.rated)),
+            for (final g in const ['inStay', 'publicQr'])
+              if ((d.ratedByGroup[g]?.n ?? 0) > 0) Text(score(l10n.rvGroup(g), d.ratedByGroup[g]!), style: theme.textTheme.bodySmall),
+            if (d.estimated != null)
+              Text(
+                d.estimated!.value == null
+                    ? l10n.rvScoreNotEnough(l10n.rvEstimatedLabel, fmt.digits('${d.estimated!.n}'), fmt.digits('${d.estimated!.needs}'))
+                    : l10n.rvScoreRated(l10n.rvEstimatedLabel, fmt.digits(d.estimated!.value!.toStringAsFixed(2)), fmt.digits('${d.estimated!.n}')),
+                key: const ValueKey('rv-digest-estimated'),
+              ),
+            if (d.themes.isNotEmpty) ...[
+              const SizedBox(height: Insets.xs),
+              Text(l10n.rvThemes, style: theme.textTheme.labelMedium),
+              Wrap(
+                spacing: Insets.xs,
+                runSpacing: Insets.xs,
+                children: [
+                  for (final t in d.themes)
+                    StatusPill(
+                      label: l10n.rvTheme('${l10n.rvAspect(t.aspect)} ${t.positive ? '+' : '−'}', fmt.digits('${t.count}')),
+                      color: t.positive ? Colors.green.shade700 : theme.colorScheme.error,
+                    ),
+                ],
+              ),
+            ],
+            if (d.backlog > 0) Text(l10n.rvBacklog(d.backlog), style: theme.textTheme.bodySmall),
+          ],
+        ),
       ),
     );
   }

@@ -56,6 +56,18 @@ final reviewReadinessProvider = FutureProvider.autoDispose<ReviewReadiness?>((re
   return ref.watch(reviewsRepositoryProvider).readiness(hotelId);
 });
 
+final reviewDigestProvider = StreamProvider.autoDispose<ReviewDigest?>((ref) {
+  final hotelId = ref.watch(_reviewsHotelProvider);
+  if (hotelId == null) return Stream.value(null);
+  return ref.watch(reviewsRepositoryProvider).watchDigest(hotelId);
+});
+
+final reviewAspectsProvider = StreamProvider.autoDispose<Map<String, List<ReviewAspect>>>((ref) {
+  final hotelId = ref.watch(_reviewsHotelProvider);
+  if (hotelId == null) return Stream.value(const {});
+  return ref.watch(reviewsRepositoryProvider).watchAspects(hotelId);
+});
+
 final reviewActionsProvider = Provider<ReviewActions>(ReviewActions.new);
 
 /// Every change goes through here (the server checks it all again).
@@ -107,7 +119,7 @@ class ReviewActions {
     return r;
   }
 
-  Future<ReviewStatus> add(ReviewDraft draft) async {
+  Future<AddReviewResult> add(ReviewDraft draft) async {
     if (draft.text.trim().isEmpty && draft.rating == null) throw const ValidationFailure('no_text_or_rating');
     final s = await _repo.add(_hotelId, draft);
     ref.invalidate(reviewQueueProvider);
@@ -122,4 +134,10 @@ class ReviewActions {
   Future<void> rotateSurveyToken(String id) => _repo.rotateSurveyToken(id);
 
   Future<void> markPrinted(List<String> ids) => _repo.markPrinted(_hotelId, ids);
+
+  Future<String> rotateInboundAddress() async {
+    final a = await _repo.rotateInboundAddress(_hotelId);
+    ref.invalidate(reviewProfileProvider);
+    return a;
+  }
 }

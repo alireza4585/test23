@@ -2576,4 +2576,121 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get rvToReview => 'برای بازبینی';
+
+  @override
+  String get rvLinkRemoved =>
+      'لینک به صفحهٔ شخصی یک نفر اشاره داشت و ذخیره نشد.';
+
+  @override
+  String get rvReadyClientIp =>
+      'نشانی مهمان‌ها دیده می‌شود (سقف هر مهمان در نظرسنجی کار می‌کند)';
+
+  @override
+  String get rvReadyClientIpMissing =>
+      'سرور همهٔ مهمان‌ها را با یک نشانی می‌بیند: نظرسنجی بسته است تا تیم پلتفرم سرآیند پروکسی را در PocketBase معتبر کند';
+
+  @override
+  String rvDigestTitle(String date) {
+    return 'خلاصهٔ $date';
+  }
+
+  @override
+  String rvDigestNew(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نظر تازهٔ دیروز',
+      zero: 'دیروز نظر تازه‌ای نیامد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvGroup(String group) {
+    String _temp0 = intl.Intl.selectLogic(group, {
+      'sites': 'سایت‌ها',
+      'staff': 'ثبت کارکنان',
+      'inStay': 'در طول اقامت',
+      'publicQr': 'QR عمومی',
+      'other': '$group',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String rvScoreRated(String label, String value, String n) {
+    return '$label: $value از ۵ ($n نظر امتیازدار، ۳۰ روز)';
+  }
+
+  @override
+  String rvScoreNotEnough(String label, String n, String needs) {
+    return '$label: هنوز کافی نیست ($n از $needs)';
+  }
+
+  @override
+  String get rvRatedLabel => 'میانگین امتیاز داده‌شده';
+
+  @override
+  String get rvEstimatedLabel => 'رضایت برآوردی از متن نظرها (جدا از امتیازها)';
+
+  @override
+  String get rvThemes => 'پرتکرارترین‌ها در ۷ روز';
+
+  @override
+  String rvTheme(String aspect, String count) {
+    return '$aspect ($count)';
+  }
+
+  @override
+  String rvBacklog(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نظر منتظر تحلیل است (سقف روزانه)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvAspect(String aspect) {
+    String _temp0 = intl.Intl.selectLogic(aspect, {
+      'cleanliness': 'نظافت',
+      'room_comfort': 'آسایش اتاق و تخت',
+      'amenities': 'اقلام اتاق',
+      'noise': 'سروصدا',
+      'staff_service': 'کارکنان',
+      'checkin_checkout': 'پذیرش و تسویه',
+      'breakfast_fnb': 'صبحانه و غذا',
+      'restaurant': 'رستوران',
+      'wifi': 'اینترنت',
+      'maintenance': 'تأسیسات',
+      'facilities': 'امکانات',
+      'value': 'ارزش در برابر قیمت',
+      'location': 'موقعیت',
+      'safety': 'امنیت',
+      'other': 'سایر',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get rvMailTitle => 'نظرات از راه ایمیل';
+
+  @override
+  String get rvMailHint =>
+      'اعلان‌های نظری را که هتل از سایت‌ها می‌گیرد به این نشانی هدایت کنید. تا وقتی قالب هر سایت آماده نشده، هر ایمیل در صف بازبینی می‌ماند.';
+
+  @override
+  String get rvMailNotConfigured =>
+      'هنوز در دسترس نیست: صندوق ایمیل نظرات پلتفرم راه‌اندازی نشده است.';
+
+  @override
+  String get rvMailCreate => 'ساخت نشانی';
+
+  @override
+  String get rvMailRotate => 'نشانی تازه';
+
+  @override
+  String get rvMailRotateConfirm =>
+      'ایمیل‌هایی که به نشانی فعلی بروند دیگر دریافت نمی‌شوند. هدایت خودکار را در صندوق خود به‌روز کنید. ادامه می‌دهید؟';
 }

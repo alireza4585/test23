@@ -4477,6 +4477,126 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'برای بازبینی'**
   String get rvToReview;
+
+  /// No description provided for @rvLinkRemoved.
+  ///
+  /// In fa, this message translates to:
+  /// **'لینک به صفحهٔ شخصی یک نفر اشاره داشت و ذخیره نشد.'**
+  String get rvLinkRemoved;
+
+  /// No description provided for @rvReadyClientIp.
+  ///
+  /// In fa, this message translates to:
+  /// **'نشانی مهمان‌ها دیده می‌شود (سقف هر مهمان در نظرسنجی کار می‌کند)'**
+  String get rvReadyClientIp;
+
+  /// No description provided for @rvReadyClientIpMissing.
+  ///
+  /// In fa, this message translates to:
+  /// **'سرور همهٔ مهمان‌ها را با یک نشانی می‌بیند: نظرسنجی بسته است تا تیم پلتفرم سرآیند پروکسی را در PocketBase معتبر کند'**
+  String get rvReadyClientIpMissing;
+
+  /// No description provided for @rvDigestTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'خلاصهٔ {date}'**
+  String rvDigestTitle(String date);
+
+  /// No description provided for @rvDigestNew.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, =0{دیروز نظر تازه‌ای نیامد} other{{count} نظر تازهٔ دیروز}}'**
+  String rvDigestNew(int count);
+
+  /// No description provided for @rvGroup.
+  ///
+  /// In fa, this message translates to:
+  /// **'{group, select, sites{سایت‌ها} staff{ثبت کارکنان} inStay{در طول اقامت} publicQr{QR عمومی} other{{group}}}'**
+  String rvGroup(String group);
+
+  /// No description provided for @rvScoreRated.
+  ///
+  /// In fa, this message translates to:
+  /// **'{label}: {value} از ۵ ({n} نظر امتیازدار، ۳۰ روز)'**
+  String rvScoreRated(String label, String value, String n);
+
+  /// No description provided for @rvScoreNotEnough.
+  ///
+  /// In fa, this message translates to:
+  /// **'{label}: هنوز کافی نیست ({n} از {needs})'**
+  String rvScoreNotEnough(String label, String n, String needs);
+
+  /// No description provided for @rvRatedLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'میانگین امتیاز داده‌شده'**
+  String get rvRatedLabel;
+
+  /// No description provided for @rvEstimatedLabel.
+  ///
+  /// In fa, this message translates to:
+  /// **'رضایت برآوردی از متن نظرها (جدا از امتیازها)'**
+  String get rvEstimatedLabel;
+
+  /// No description provided for @rvThemes.
+  ///
+  /// In fa, this message translates to:
+  /// **'پرتکرارترین‌ها در ۷ روز'**
+  String get rvThemes;
+
+  /// No description provided for @rvTheme.
+  ///
+  /// In fa, this message translates to:
+  /// **'{aspect} ({count})'**
+  String rvTheme(String aspect, String count);
+
+  /// No description provided for @rvBacklog.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count, plural, other{{count} نظر منتظر تحلیل است (سقف روزانه)}}'**
+  String rvBacklog(int count);
+
+  /// No description provided for @rvAspect.
+  ///
+  /// In fa, this message translates to:
+  /// **'{aspect, select, cleanliness{نظافت} room_comfort{آسایش اتاق و تخت} amenities{اقلام اتاق} noise{سروصدا} staff_service{کارکنان} checkin_checkout{پذیرش و تسویه} breakfast_fnb{صبحانه و غذا} restaurant{رستوران} wifi{اینترنت} maintenance{تأسیسات} facilities{امکانات} value{ارزش در برابر قیمت} location{موقعیت} safety{امنیت} other{سایر}}'**
+  String rvAspect(String aspect);
+
+  /// No description provided for @rvMailTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'نظرات از راه ایمیل'**
+  String get rvMailTitle;
+
+  /// No description provided for @rvMailHint.
+  ///
+  /// In fa, this message translates to:
+  /// **'اعلان‌های نظری را که هتل از سایت‌ها می‌گیرد به این نشانی هدایت کنید. تا وقتی قالب هر سایت آماده نشده، هر ایمیل در صف بازبینی می‌ماند.'**
+  String get rvMailHint;
+
+  /// No description provided for @rvMailNotConfigured.
+  ///
+  /// In fa, this message translates to:
+  /// **'هنوز در دسترس نیست: صندوق ایمیل نظرات پلتفرم راه‌اندازی نشده است.'**
+  String get rvMailNotConfigured;
+
+  /// No description provided for @rvMailCreate.
+  ///
+  /// In fa, this message translates to:
+  /// **'ساخت نشانی'**
+  String get rvMailCreate;
+
+  /// No description provided for @rvMailRotate.
+  ///
+  /// In fa, this message translates to:
+  /// **'نشانی تازه'**
+  String get rvMailRotate;
+
+  /// No description provided for @rvMailRotateConfirm.
+  ///
+  /// In fa, this message translates to:
+  /// **'ایمیل‌هایی که به نشانی فعلی بروند دیگر دریافت نمی‌شوند. هدایت خودکار را در صندوق خود به‌روز کنید. ادامه می‌دهید؟'**
+  String get rvMailRotateConfirm;
 }
 
 class _AppLocalizationsDelegate

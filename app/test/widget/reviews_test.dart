@@ -174,4 +174,16 @@ void main() {
     final tokens = await c.read(reviewsRepositoryProvider).watchSurveyTokens(hotelId).first;
     expect(tokens.where((t) => t.kind == SurveyTokenKind.room && t.needsPrint), isNotEmpty);
   });
+
+  testWidgets('summary card: a score below its minimum n says "not enough", never a number; aspects on reviews', (tester) async {
+    await pumpZarinApp(tester);
+    await signIn(tester, _nid(AppRole.inventoryManager));
+    await _open(tester, Routes.reviews);
+    expect(find.byKey(const ValueKey('rv-digest')), findsOneWidget);
+    expect(find.textContaining('هنوز کافی نیست (۴ از ۵)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rv-digest-estimated')), findsNothing);
+    expect(find.textContaining('صبحانه و غذا −'), findsWidgets);
+    expect(find.textContaining('نظافت +'), findsOneWidget);
+  });
 }
+

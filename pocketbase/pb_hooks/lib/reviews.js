@@ -204,7 +204,13 @@ function getProfile(e) {
   z.requirePerm(c, "reviews.view");
   const p = profileOf(e.app, hotelId);
   // Recipients and survey settings are for managers.
-  if (!z.has(c, "reviews.manage")) { delete p.recipients; delete p.onboarding; }
+  if (!z.has(c, "reviews.manage")) { delete p.recipients; delete p.onboarding; } else {
+    // The hotel's forwarding address (F10 e-mail intake); empty until created, or without a mail domain.
+    const mail = require(`${__hooks}/lib/reviews-email.js`);
+    const rec = profileRecord(e.app, hotelId);
+    p.inboundAddress = rec ? mail.addressOf(rec.getString("inboundToken")) : "";
+    p.mailConfigured = !!mail.domain();
+  }
   p.feature = z.feature(e.app, hotelId, FLAG);
   return e.json(200, p);
 }
@@ -481,11 +487,14 @@ function dayDiff(a, b) {
  *        deleted?, hotelName?, listingId?}
  */
 function prepare(app, hotelId, item, profiles, listingById) {
-  const url = cleanUrl(item.url);
+  let url = cleanUrl(item.url);
+  // A link to a person's profile (not the post or review) can name the reviewer: not stored.
+  const linkRemoved = !!url && core.isProfileLink(url);
   let listing = item.listingId ? listingById[item.listingId] : null;
   if (item.listingId && !listing) return { error: "unknown_listing" };
   const platform = item.platform ? String(item.platform).toLowerCase() : listing ? listing.platform : core.guessPlatform(url);
   if (PLATFORMS.indexOf(platform) < 0 || (platform === "survey" && item.channel.indexOf("survey") !== 0)) return { error: "bad_platform" };
+  if (linkRemoved) url = null;
   if (!listing && url) listing = listingFor(app, hotelId, url, platform);
   const text = core.redactReviewText(core.sanitizeReviewText(String(item.text || ""), MAX_TEXT));
   const title = core.redactReviewText(core.sanitizeReviewText(String(item.title || ""), MAX_TITLE)).replace(/\n/g, " ");
@@ -526,6 +535,11 @@ function prepare(app, hotelId, item, profiles, listingById) {
       reasons = ["rejected_listing"];
     }
   }
+  // E-mail without a per-site template: a person confirms it.
+  if (item.forceReview && status === "active") {
+    status = "needsReview";
+    reasons = reasons.concat([item.forceReview]);
+  }
   if (item.deleted) status = "deleted";
   return {
     fields: {
@@ -536,8 +550,10 @@ function prepare(app, hotelId, item, profiles, listingById) {
       status, matchScore: Math.round(score * 100) / 100, matchReasons: publicReasons(reasons), candidates,
       capturedBy: item.capturedBy || "", authorHash: item.authorHash || "",
       deletedAt: item.deleted ? z.pbDate(new Date()) : "",
+      intakeKey: item.intakeKey || "",
     },
     day,
+    linkRemoved,
   };
 }
 
@@ -557,6 +573,7 @@ function completion(existing, f, sameId) {
   const out = {};
   if (sameId && !existing.textPurgedAt && f.text && existing.textKey !== f.textKey && existing.text) {
     out.text = f.text; out.textKey = f.textKey; out.editedAt = z.pbDate(new Date());
+    out.analyzedAt = ""; // analysed again
   }
   if (sameId && f.rating5 !== null && existing.rating5 !== null && existing.rating5 !== undefined && existing.rating5 !== 0 && !sameRating(existing.rating5, f.rating5)) {
     out.ratingRaw = f.ratingRaw; out.scaleMin = f.scaleMin; out.scaleMax = f.scaleMax; out.rating5 = f.rating5; out.editedAt = z.pbDate(new Date());
@@ -568,6 +585,11 @@ function completion(existing, f, sameId) {
   }
   if (empty("text") && f.text && !existing.textPurgedAt) { out.text = f.text; out.textKey = f.textKey; }
   if (f.status === "deleted" && existing.status !== "deleted") { out.status = "deleted"; out.deletedAt = f.deletedAt; }
+  // A generic e-mail review waits for a person; the hotel's own export of the same review settles it.
+  else if (existing.status === "needsReview" && (existing.reasons || []).indexOf("email_generic") >= 0 && f.status === "active" && f.channel !== "email") {
+    out.status = "active";
+    out.matchReasons = f.matchReasons;
+  }
   return out;
 }
 
@@ -577,6 +599,7 @@ function plain(r) {
     title: r.getString("title"), text: r.getString("text"), textKey: r.getString("textKey"), rating5: r.get("rating5") === null ? null : r.getFloat("rating5"),
     postedAt: r.getString("postedAt"), listing: r.getString("listing"), status: r.getString("status"),
     textPurgedAt: r.getString("textPurgedAt"), duplicateOf: r.getString("duplicateOf"), day: dayOf(r), created: r.getString("created"),
+    reasons: z.jsonOf(r, "matchReasons") || [], channel: r.getString("channel"),
   };
 }
 
@@ -589,7 +612,7 @@ function ingest(app, hotelId, items, opts) {
   const profiles = matchProfiles(app, hotelId);
   const listingById = {};
   for (const l of listingsOf(app, hotelId, "confirmed")) listingById[l.id] = l;
-  const result = { created: 0, updated: 0, edited: 0, unchanged: 0, needsReview: 0, crossPosts: 0, archived: 0, errors: [], preview: [], ids: [] };
+  const result = { created: 0, updated: 0, edited: 0, unchanged: 0, needsReview: 0, crossPosts: 0, archived: 0, linksRemoved: 0, errors: [], preview: [], ids: [] };
 
   // Known reviews near the batch's days, plus what the batch adds (also in a dry run).
   const prepared = items.map((it) => prepare(app, hotelId, it, profiles, listingById));
@@ -609,6 +632,7 @@ function ingest(app, hotelId, items, opts) {
     const row = items[i].row || i + 1;
     if (p.error) { result.errors.push({ row, reason: p.error }); return; }
     const f = p.fields;
+    if (p.linkRemoved) result.linksRemoved++;
     let existing = null;
     let outcome = "created";
     let sameId = false;
@@ -625,7 +649,7 @@ function ingest(app, hotelId, items, opts) {
     if (!existing && fuzzy) {
       existing = pool.find((k) => k.platform === f.platform && (!k.externalId || !f.externalId) &&
         (p.day ? k.day && dayDiff(k.day, p.day) <= 1 : !k.day) &&
-        sameRating(k.rating5, f.rating5) && core.textSimilarity(k.textKey, f.textKey) >= core.REVIEW_SAME_SIMILARITY) || null;
+        sameRating(k.rating5, f.rating5) && similar(k, f) >= core.REVIEW_SAME_SIMILARITY) || null;
     }
     let duplicateOf = "";
     if (existing) {
@@ -655,7 +679,7 @@ function ingest(app, hotelId, items, opts) {
         app.save(rec);
         id = rec.id;
       }
-      const k = { id, platform: f.platform, externalId: f.externalId, url: f.url, title: f.title, text: f.text, textKey: f.textKey,
+      const k = { id, channel: f.channel, platform: f.platform, externalId: f.externalId, url: f.url, title: f.title, text: f.text, textKey: f.textKey,
         rating5: f.rating5, postedAt: f.postedAt, listing: f.listing, status: f.status, textPurgedAt: "", duplicateOf, day: p.day };
       if (p.day) known.push(k); else undated.push(k);
       if (f.externalId) byExt[`${f.platform}|${f.externalId}`] = k;
@@ -670,12 +694,17 @@ function ingest(app, hotelId, items, opts) {
     if (opts.dryRun && result.preview.length < PREVIEW_ROWS) {
       result.preview.push({
         row, outcome, status: existing ? existing.status : f.status, platform: f.platform, rating5: f.rating5,
-        postedAt: p.day, reasons: f.matchReasons, crossPost: !!duplicateOf, text: f.text.slice(0, 200),
+        postedAt: p.day, reasons: f.matchReasons, crossPost: !!duplicateOf, linkRemoved: p.linkRemoved, text: f.text.slice(0, 200),
       });
     }
   });
   if (!opts.dryRun) delete result.preview;
   return result;
+}
+
+/** Text closeness of two copies of a review: containment when one is an e-mail (wrapped in extra words). */
+function similar(k, f) {
+  return k.channel === "email" || f.channel === "email" ? core.textContainment(k.textKey, f.textKey) : core.textSimilarity(k.textKey, f.textKey);
 }
 
 function sameRating(a, b) {
@@ -773,7 +802,10 @@ function addOne(e) {
     z.audit(tx, hotelId, { action: `reviews.${channel}`, collection: "reviews", id: result.ids[0], actor: z.actorOf(c), source: "client", changes: { created: result.created, updated: result.updated } });
   });
   const r = z.find(e.app, "reviews", result.ids[0]);
-  return e.json(200, { id: r.id, status: r.getString("status"), platform: r.getString("platform"), outcome: result.created ? "created" : result.updated ? "updated" : "unchanged" });
+  return e.json(200, {
+    id: r.id, status: r.getString("status"), platform: r.getString("platform"),
+    outcome: result.created ? "created" : result.updated ? "updated" : "unchanged", linkRemoved: result.linksRemoved > 0,
+  });
 }
 
 // ------------------------------------------------------------------ queue
@@ -840,6 +872,7 @@ function dryRun(e) {
     surveyPublicToken: tokens.some((t) => t.getString("kind") === "public"),
     surveyRoomTokens: tokens.filter((t) => t.getString("kind") === "room").length,
     surveyConfigured: !!salt(),
+    clientIpVisible: clientAddress(e).visible,
     feature: z.feature(e.app, hotelId, FLAG),
   };
   if (p.id) touchOnboarding(e.app, hotelId, "dryRunAt", new Date());
@@ -967,9 +1000,30 @@ function findToken(app, token) {
   return null;
 }
 
+/**
+ * The guest's address as PocketBase sees it, and whether it is really theirs.
+ * Behind a proxy (Liara) PocketBase must be told to trust its forwarding
+ * header (Settings → "User IP proxy headers"); until then every guest shows
+ * the proxy's address, and one per-address cap would hit them all. A
+ * forwarding header that does not contain the address PocketBase reports
+ * means exactly that, so the survey fails closed and the setup check says why.
+ */
+function clientAddress(e) {
+  const ip = e.realIP();
+  const h = e.request.header;
+  const forwarded = [h.get("X-Forwarded-For"), h.get("X-Real-IP"), h.get("CF-Connecting-IP")]
+    .join(",").split(",").map((x) => x.trim()).filter(Boolean);
+  return { ip, visible: forwarded.length === 0 || forwarded.indexOf(ip) >= 0 };
+}
+
 /** Why a token cannot take answers now (null: it can). */
-function surveyBlock(app, found) {
+function surveyBlock(e, found) {
+  const app = e.app;
   if (!found || !salt()) return "unavailable";
+  if (!clientAddress(e).visible) {
+    console.log("survey closed: client address not visible (trust the proxy's forwarding header in PocketBase settings)");
+    return "unavailable";
+  }
   const hotelId = found.rec.getString("hotel");
   if (!z.feature(app, hotelId, FLAG)) return "unavailable";
   const s = profileOf(app, hotelId).survey;
@@ -1016,7 +1070,7 @@ function message(e, status, lang, text) {
 function surveyPage(e) {
   const token = e.request.pathValue("token");
   const found = findToken(e.app, token);
-  const block = surveyBlock(e.app, found);
+  const block = surveyBlock(e, found);
   if (block) return message(e, 404, "fa", `${TEXT.fa.unavailable} / ${TEXT.en.unavailable}`);
   const hotelId = found.rec.getString("hotel");
   const p = profileOf(e.app, hotelId);
@@ -1049,7 +1103,7 @@ function submit(e) {
   const b = e.requestInfo().body || {};
   if (b.website) return { status: 200, code: "ok" };
   const found = findToken(e.app, token);
-  if (surveyBlock(e.app, found)) return { status: 404, code: "unavailable" };
+  if (surveyBlock(e, found)) return { status: 404, code: "unavailable" };
   const ts = Number(b.t);
   const age = Date.now() - ts;
   if (!isFinite(ts) || typeof b.sig !== "string" || b.sig !== $security.hs256(`${token}.${String(b.t)}`, salt()) || age < FORM_MIN_MS || age > FORM_MAX_MS) {
@@ -1062,7 +1116,7 @@ function submit(e) {
   const kind = found.rec.getString("kind");
   const now = new Date();
   const day = z.dayKey(now);
-  const authorHash = $security.hs256(`survey|${e.realIP()}|${day}|${hotelId}`, salt());
+  const authorHash = $security.hs256(`survey|${clientAddress(e).ip}|${day}|${hotelId}`, salt());
   let out = { status: 200, code: "ok" };
   e.app.runInTransaction((tx) => {
     const t = z.find(tx, "reviewSurveyTokens", found.rec.id);
@@ -1128,6 +1182,12 @@ function purgeTexts(app, now) {
       for (const r of batch) {
         r.load({ text: "", title: "", textKey: "", textPurgedAt: z.pbDate(now) });
         app.save(r);
+        // The analysis keeps its labels, not the quoted words.
+        const a = z.findFirst(app, "reviewAnalyses", "review = {:r}", { r: r.id });
+        if (a) {
+          a.set("aspects", (z.jsonOf(a, "aspects") || []).map((x) => ({ aspect: x.aspect, sentiment: x.sentiment, evidence: "" })));
+          app.save(a);
+        }
         purged++;
       }
     }

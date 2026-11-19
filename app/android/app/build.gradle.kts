@@ -1,7 +1,24 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Demo build (offline demo backend, installs next to the real app):
+//   flutter build apk --android-project-arg=zhDemo=true --dart-define=ZH_BACKEND=demo
+// A Gradle property instead of a product flavor: with flavors every
+// production build would need --flavor (and a default flavor also applies to
+// the iOS schemes). Without the property nothing changes.
+val zhDemo = project.findProperty("zhDemo")?.toString() == "true"
+if (zhDemo) {
+    // Flutter passes --dart-define values base64-encoded in "dart-defines".
+    val defines = (project.findProperty("dart-defines") as String?).orEmpty()
+        .split(",").filter { it.isNotBlank() }
+        .map { String(Base64.getDecoder().decode(it)) }
+    val backend = defines.firstOrNull { it.startsWith("ZH_BACKEND=") }?.substringAfter("=") ?: "demo"
+    require(backend == "demo") { "zhDemo=true builds the demo app only: use --dart-define=ZH_BACKEND=demo (got $backend)" }
 }
 
 android {
@@ -25,6 +42,11 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        if (zhDemo) {
+            applicationIdSuffix = ".demo"
+            versionNameSuffix = "-demo"
+        }
+        manifestPlaceholders["appLabel"] = if (zhDemo) "زرین (نسخهٔ نمایشی)" else "زرین هوشمند"
     }
 
     buildTypes {

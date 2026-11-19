@@ -30,20 +30,23 @@
  *   /api/zarin/reviews/…, /api/zarin/review-sources/…   F10 guest reviews (see lib/reviews.js) [guestReviews]
  * Routes (public): GET|POST /survey/{token}, POST /api/zarin/survey/{token}   F10 QR survey [guestReviews]
  * Routes (superuser): POST /api/zarin/admin/import (trial hotels only),
+ *                     POST /api/zarin/admin/hotels/{id}/reviews/run (F10 analysis + digest now),
  *                     POST /api/zarin/admin/hotels/{id}/analytics,
  *                     POST /api/zarin/admin/integration-keys[/{keyId}/revoke],
  *                     POST /api/zarin/admin/ai/context (what the assistant sees for a user),
  *                     POST /api/zarin/admin/ai/trace (assistant v2: tool calls and results of one answer)
  * Routes (n8n / IoT / AI worker, HMAC-signed): /v1/... (shared secret or scoped key, see integration.js),
  *                     including POST /v1/hotels/{id}/weather (daily temperature, second path to lib/weather.js)
- *                     and POST /v1/hotels/{id}/purchase-orders/{po}/sent, GET …/purchase-orders/overdue (F5, n8n 05)
+ *                     and POST /v1/hotels/{id}/purchase-orders/{po}/sent, GET …/purchase-orders/overdue (F5, n8n 05),
+ *                     POST /v1/reviews/inbound-email (F10 e-mail intake, n8n 08; hotel from the address)
  * [flag]: needs the hotel's feature flag (hotels.settings.features).
  * Cron (UTC): rollup 20:50 (00:20 Tehran), forecasts 21:40 (01:10 Tehran) [forecasts],
  *             energy 22:10 (01:40 Tehran): weather, F2 model refit and scoring [energyBaseline],
  *             insights 03:10 (06:40 Tehran) + recommendation close/evaluation [recommendationLoop],
  *             briefing 03:20 (06:50 Tehran): morning briefing per role [morningBriefing],
  *             SLA every 15 min, outbox every minute, nonce purge every 10 min,
- *             assistant conversation retention 00:25, review text retention 00:35 (F10).
+ *             assistant conversation retention 00:25, review text retention 00:35 (F10),
+ *             reviews every 15 min: analysis, then each hotel's digest at its own time [guestReviews].
  */
 
 // ------------------------------------------------------------- app routes
@@ -88,6 +91,7 @@ routerAdd("POST", "/api/zarin/reviews/{id}/decide", (e) => require(`${__hooks}/l
 routerAdd("POST", "/api/zarin/reviews/dry-run", (e) => require(`${__hooks}/lib/reviews.js`).dryRun(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/reviews/survey/tokens", (e) => require(`${__hooks}/lib/reviews.js`).ensureTokens(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/reviews/survey/tokens/{id}/rotate", (e) => require(`${__hooks}/lib/reviews.js`).rotateToken(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/zarin/reviews/inbound-address", (e) => require(`${__hooks}/lib/reviews-email.js`).rotateAddress(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/zarin/reviews/survey/printed", (e) => require(`${__hooks}/lib/reviews.js`).markPrinted(e), $apis.requireAuth("users"));
 // Public survey (no account): the page, its form, and the same as JSON.
 routerAdd("GET", "/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`).surveyPage(e));
@@ -95,6 +99,7 @@ routerAdd("POST", "/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`)
 routerAdd("POST", "/api/zarin/survey/{token}", (e) => require(`${__hooks}/lib/reviews.js`).surveyJson(e));
 
 // ------------------------------------------------ superuser tools (admin.js)
+routerAdd("POST", "/api/zarin/admin/hotels/{id}/reviews/run", (e) => require(`${__hooks}/lib/review-analysis.js`).runNow(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/import", (e) => require(`${__hooks}/lib/admin.js`).importRecords(e), $apis.requireSuperuserAuth());
 routerAdd("POST", "/api/zarin/admin/hotels/{id}/analytics", (e) => require(`${__hooks}/lib/admin.js`).runAnalytics(e), $apis.requireSuperuserAuth());
 
@@ -118,6 +123,7 @@ routerAdd("POST", "/v1/hotels/{hotelId}/metrics/rollup", (e) => require(`${__hoo
 routerAdd("POST", "/v1/hotels/{hotelId}/insights/run", (e) => require(`${__hooks}/lib/integration.js`).runInsights(e));
 routerAdd("GET", "/v1/hotels/{hotelId}/ai/budget", (e) => require(`${__hooks}/lib/integration.js`).aiBudget(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/ai/usage", (e) => require(`${__hooks}/lib/integration.js`).aiUsage(e));
+routerAdd("POST", "/v1/reviews/inbound-email", (e) => require(`${__hooks}/lib/reviews-email.js`).inbound(e));
 routerAdd("POST", "/v1/hotels/{hotelId}/forecasts/run", (e) => require(`${__hooks}/lib/integration.js`).runForecasts(e));
 
 // ------------------------------------------------------------- users
@@ -237,6 +243,11 @@ cronAdd("zarin_ai_retention", "25 0 * * *", () => {
 });
 
 // F10: review texts older than each hotel's retention are emptied (00:35 UTC, 04:05 Tehran).
+// F10: review analysis every 15 min, and each hotel's digest once its schedule.digest time has passed.
+cronAdd("zarin_reviews", "*/15 * * * *", () => {
+  try { require(`${__hooks}/lib/review-analysis.js`).tick($app, new Date()); } catch (err) { console.log("reviews tick failed", String(err)); }
+});
+
 cronAdd("zarin_review_retention", "35 0 * * *", () => {
   try { require(`${__hooks}/lib/reviews.js`).purgeTexts($app, new Date()); } catch (err) { console.log("review retention failed", String(err)); }
 });

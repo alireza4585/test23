@@ -503,7 +503,8 @@ void main() {
     final shared = await repo.add(hotelId, const ReviewDraft(
       channel: ReviewChannel.staffShare, text: 'تخت راحت بود', url: 'https://www.instagram.com/p/AdapterTest/', platform: 'instagram',
     ));
-    expect(shared, ReviewStatus.active);
+    expect(shared.status, ReviewStatus.active);
+    expect(shared.linkRemoved, isFalse);
     final withShare = await firstWhere(repo.watchReviews(hotelId), (l) => l.any((r) => r.channel == ReviewChannel.staffShare));
     expect(withShare.firstWhere((r) => r.channel == ReviewChannel.staffShare).url, 'https://www.instagram.com/p/AdapterTest/');
 
@@ -537,6 +538,32 @@ void main() {
     expect(await PocketBaseReviewsRepository(inv.pb).watchReviews(hotelId).first, isNotEmpty);
     await expectLater(PocketBaseReviewsRepository(inv.pb).queue(hotelId), throwsA(isA<PermissionDeniedFailure>()));
   }, skip: skip);
+
+  test('F10 R2: analysis and the daily summary reach the app; forwarding address; setup check', () async {
+    String nid(AppRole r) => DemoSeed.accounts.firstWhere((a) => a.$3 == r).$2;
+    final gm = await _Session.signIn(nid(AppRole.generalManager));
+    final hotelId = gm.user.hotelId;
+    final hotel = await gm.pb.collection('hotels').getOne(hotelId);
+    final settings = Map<String, dynamic>.from(hotel.data['settings'] as Map? ?? const {});
+    await gm.pb.collection('hotels').update(hotelId, body: {'settings': {...settings, 'features': {'guestReviews': true}}});
+    addTearDown(() => gm.pb.collection('hotels').update(hotelId, body: {'settings': settings}));
+    final repo = PocketBaseReviewsRepository(gm.pb);
+    await repo.add(hotelId, const ReviewDraft(channel: ReviewChannel.manual, text: 'صبحانه سرد بود ولی اتاق تمیز بود'));
+    final su = PocketBase(_url!);
+    await su.collection('_superusers').authWithPassword(suEmail!, suPassword!);
+    final today = DayKey.of(DateTime.now());
+    await su.send('/api/zarin/admin/hotels/$hotelId/reviews/run', method: 'POST', body: {'day': today});
+    final digest = await firstWhere(repo.watchDigest(hotelId), (d) => d != null);
+    expect(digest!.day, today);
+    expect(digest.rated.needs, 5);
+    final aspects = await firstWhere(repo.watchAspects(hotelId), (m) => m.values.any((l) => l.isNotEmpty));
+    expect(aspects.values.expand((l) => l).map((a) => a.aspect), containsAll(['breakfast_fnb', 'cleanliness']));
+    // No mail domain on the test server: the address is created but not shown.
+    expect(await repo.rotateInboundAddress(hotelId), '');
+    final p = await repo.profile(hotelId);
+    expect(p.mailConfigured, isFalse);
+    expect((await repo.readiness(hotelId)).clientIpVisible, isTrue);
+  }, skip: skip ?? (suEmail == null ? 'needs ZH_PB_SUPERUSER_EMAIL / ZH_PB_SUPERUSER_PASSWORD' : null));
 
   test('a provisioned user must change the temporary password and stays signed in', () async {
     final hr = await _Session.signIn('0089123451');

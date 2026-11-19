@@ -33,6 +33,7 @@ class ReviewSettingsTab extends ConsumerWidget {
               children: [
                 const _Readiness(),
                 _ProfileForm(key: ValueKey(p.hashCode), profile: p),
+                _MailAddress(profile: p),
                 const _Listings(),
                 const SizedBox(height: _fabRoom),
               ],
@@ -64,6 +65,7 @@ class _Readiness extends ConsumerWidget {
           row(r.city, l10n.rvReadyCity),
           row(r.listingsConfirmed > 0, l10n.rvReadyListings(r.listingsConfirmed)),
           row(r.surveyConfigured, r.surveyConfigured ? l10n.rvReadySurvey : l10n.rvReadySurveyMissing),
+          row(r.clientIpVisible, r.clientIpVisible ? l10n.rvReadyClientIp : l10n.rvReadyClientIpMissing),
         ],
       ),
     );
@@ -244,6 +246,61 @@ class _ListingsState extends ConsumerState<_Listings> {
             child: Text(l10n.rvListingAdd),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// The hotel's forwarding address for review-site notification mails.
+class _MailAddress extends ConsumerWidget {
+  const _MailAddress({required this.profile});
+
+  final ReviewProfile profile;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    Future<void> rotate() async {
+      if (profile.inboundAddress.isNotEmpty) {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            content: Text(l10n.rvMailRotateConfirm),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: Text(MaterialLocalizations.of(c).cancelButtonLabel)),
+              FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(l10n.rvConfirm)),
+            ],
+          ),
+        );
+        if (ok != true) return;
+      }
+      try {
+        await ref.read(reviewActionsProvider).rotateInboundAddress();
+        if (context.mounted) showSuccess(context, l10n.rvSaved);
+      } catch (e) {
+        if (context.mounted) showFailure(context, e);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(title: l10n.rvMailTitle, subtitle: l10n.rvMailHint),
+        if (!profile.mailConfigured)
+          Text(l10n.rvMailNotConfigured, style: theme.textTheme.bodySmall)
+        else ...[
+          if (profile.inboundAddress.isNotEmpty)
+            SelectableText(profile.inboundAddress, key: const ValueKey('rv-mail-address'), textDirection: TextDirection.ltr, style: theme.textTheme.titleSmall),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              key: const ValueKey('rv-mail-rotate'),
+              onPressed: rotate,
+              child: Text(profile.inboundAddress.isEmpty ? l10n.rvMailCreate : l10n.rvMailRotate),
+            ),
+          ),
+        ],
       ],
     );
   }

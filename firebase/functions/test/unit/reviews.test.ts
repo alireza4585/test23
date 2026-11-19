@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  canonicalUrl, firstLink, guessPlatform, matchMention, normalizeText, parseCsv, parseDay, ratingTo5,
-  readImport, redactText, sanitizeText, textSimilarity, type ProfileForMatch,
+  canonicalUrl, firstLink, guessPlatform, isProfileLink, matchMention, normalizeText, parseCsv, parseDay, ratingTo5,
+  readImport, redactText, sanitizeText, textContainment, textSimilarity, type ProfileForMatch,
 } from "../../src/analytics/reviews";
 
 // Two fictional hotels with the same brand in different cities, and a third one.
@@ -86,6 +86,10 @@ describe("duplicates", () => {
   it("near-identical texts score high, different ones low", () => {
     expect(textSimilarity("صبحانه عالی بود و کارکنان مهربان بودند", "صبحانه عالی بود، و کارکنان مهربان بودند!")).toBeGreaterThanOrEqual(0.9);
     expect(textSimilarity("صبحانه عالی بود", "اتاق سرد بود و صدای خیابان زیاد")).toBeLessThan(0.2);
+    // An e-mail wraps the review in a few words: containment, not similarity.
+    const review = "صبحانه سرد بود و صدای خیابان تا صبح می آمد";
+    expect(textSimilarity(`Score 4/10 ${review} read more`, review)).toBeLessThan(0.85);
+    expect(textContainment(`Score 4/10 ${review} read more`, review)).toBe(1);
   });
 });
 
@@ -118,4 +122,18 @@ describe("CSV and links", () => {
     expect(firstLink("این نظر را ببین: https://t.me/c/1/2، ممنون")).toBe("https://t.me/c/1/2");
     expect(canonicalUrl("HTTPS://www.Booking.com/hotel/x.html/?a=1#r")).toBe("booking.com/hotel/x.html");
   });
+
+  it("tells a person's profile link from a post or review link", () => {
+    for (const u of [
+      "https://www.instagram.com/some.guest/", "https://instagram.com/stories/some.guest/123", "https://t.me/someone",
+      "https://www.google.com/maps/contrib/1234567890/reviews", "https://www.tripadvisor.com/Profile/someone",
+      "https://www.facebook.com/profile.php?id=1", "https://x.com/someone", "https://www.linkedin.com/in/someone",
+    ]) expect(isProfileLink(u), u).toBe(true);
+    for (const u of [
+      "https://www.instagram.com/p/AbC123/", "https://www.instagram.com/reel/AbC/", "https://t.me/somechannel/12", "https://t.me/c/123/45",
+      "https://www.google.com/maps/place/x/review/1", "https://maps.app.goo.gl/xyz", "https://www.booking.com/hotel/ir/x.html",
+      "https://www.tripadvisor.com/ShowUserReviews-g1-d2-r3", "https://x.com/someone/status/1", null, "not a url",
+    ]) expect(isProfileLink(u), String(u)).toBe(false);
+  });
 });
+
